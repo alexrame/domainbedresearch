@@ -1,6 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
-from backpack import extensions
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

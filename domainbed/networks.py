@@ -8,6 +8,8 @@ import torchvision.models
 import numpy as np
 from domainbed.lib import wide_resnet
 import copy
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def remove_batch_norm_from_resnet(model):

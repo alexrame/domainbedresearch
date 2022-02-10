@@ -64,27 +64,19 @@ Send us a PR to add your dataset! Any custom image dataset with folder structure
 Download the datasets:
 
 ```sh
-python3 -m domainbed.scripts.download \
-       --data_dir=./domainbed/data
+python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 ```
 
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train\
-       --data_dir=./domainbed/data/MNIST/\
-       --algorithm IGA\
-       --dataset ColoredMNIST\
-       --test_env 2
+python3 -m domainbed.scripts.train --data_dir=./data/domainbed/MNIST/ --algorithm IGA --dataset ColoredMNIST --test_env 2
 ```
 
 Launch a sweep:
 
 ```sh
-python -m domainbed.scripts.sweep launch\
-       --data_dir=/my/datasets/path\
-       --output_dir=/my/sweep/output/path\
-       --command_launcher MyLauncher
+CUDA_VISIBLE_DEVICES=0,1 python -m domainbed.scripts.sweep launch --data_dir=./data/domainbed/MNIST/ --output_dir=./output --command_launcher multi_gpu --dataset ColoredMNIST
 ```
 
 Here, `MyLauncher` is your cluster's command launcher, as implemented in `command_launchers.py`. At the time of writing, the entire sweep trains tens of thousands of models (all algorithms x all datasets x 3 independent trials x 20 random hyper-parameter choices). You can pass arguments to make the sweep smaller:
@@ -121,6 +113,11 @@ By default, this only runs tests which don't depend on a dataset directory. To r
 
 ```sh
 DATA_DIR=/my/datasets/path python -m unittest discover
+```
+
+
+```sh
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output --command_launcher multi_gpu --datasets PACS --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1
 ```
 
 ## License
