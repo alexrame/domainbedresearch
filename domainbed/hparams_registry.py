@@ -14,9 +14,7 @@ def _hparams(algorithm, dataset, random_seed):
     Global registry of hyperparams. Each entry is a (default, random) tuple.
     New algorithms / networks / etc. should add entries here.
     """
-    SMALL_IMAGES = [
-        'Debug28', 'RotatedMNIST', 'ColoredMNIST', 'CustomColoredMNIST', 'CustomGrayColoredMNIST'
-    ]
+    SMALL_IMAGES = ['Debug28', 'RotatedMNIST', 'ColoredMNIST', 'CustomColoredMNIST', 'CustomGrayColoredMNIST']
     MAX_EPOCH_5000 = dataset != 'CelebA_Blond'
 
     hparams = {}
@@ -334,7 +332,6 @@ def _hparams(algorithm, dataset, random_seed):
     else:
         _hparam('lrdecay', 0, lambda r: 0)
 
-
     if os.environ.get("HP") == "D":
         _hparam('weight_decay', 0., lambda r: 0)
     elif os.environ.get("HP") == "1":
@@ -347,7 +344,6 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -2))
 
     # batch size
-
     if os.environ.get("HP") in ["1", "D"]:
         _hparam('batch_size', 32, lambda r: 32)
     elif dataset == "Spirals":

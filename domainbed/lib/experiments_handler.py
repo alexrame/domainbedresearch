@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import re
-import pandas as pd
 import mlflow
 import datetime
 from domainbed.lib import misc
@@ -13,10 +12,12 @@ def set_mlflow_experiment(experiment_name):
     mlflow.set_experiment(experiment_name)
     assert mlflow.get_tracking_uri() == TRACKING_URI
 
+
 VERSION = "v9" if os.environ.get("HP") != "D" else "v8"
 
+
 def set_experiment_name(args):
-    if os.environ.get("USER") in ["rame", "utr15kn"]:
+    if os.environ.get("USER") in ["rame", "utr15kn", "m.kirchmeyer"]:
         test_env = args["test_envs"][0]
         if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
             return args["dataset"] + str(test_env) + VERSION
@@ -49,7 +50,6 @@ def set_experiment_name(args):
     #     cfg.MLFLOW.EXPERIMENT_NAME)
 
 
-
 def get_run_name(args, hparams, hp):
     name = "_".join([args[key] for key in [
         "dataset",
@@ -59,17 +59,17 @@ def get_run_name(args, hparams, hp):
     if args["algorithm"] in ["FisherMMD", "IRMAdv"]:
         keys = [
             "strategy",
-                "mmd_lambda",
-                "ema",
-                # "beta1",
-                "batch_size",
-                "lr",
-                # "strategy_cov",
-                # "strategy_mean",
-                # "grad_wrt",
-                # "penalty_anneal_iters",
-                # "pd_penalty_anneal_iters"
-            ]
+            "mmd_lambda",
+            "ema",
+            # "beta1",
+            "batch_size",
+            "lr",
+            # "strategy_cov",
+            # "strategy_mean",
+            # "grad_wrt",
+            # "penalty_anneal_iters",
+            # "pd_penalty_anneal_iters"
+        ]
     else:
         keys = sorted(hparams.keys())
     keys.extend(list(hp.keys()))
@@ -91,6 +91,7 @@ def get_run_name(args, hparams, hp):
     name += "_" + "_".join([key[:3].replace("_", "") + params_to_str(hparams[key]) for key in keys])
     name += "_" + datetime.datetime.now().strftime("%d%H%M%S")
     return name
+
 
 def split_args_between_tags_and_params(args):
     dict_tags = {}
@@ -149,11 +150,9 @@ def add_artifact_to_run(output_folder):
     try:
         list_tensorboard_paths = _get_tensorboard_paths(output_folder, topn=None)
         for tensorboard_path in list_tensorboard_paths:
-            mlflow.log_artifact(
-                tensorboard_path)
+            mlflow.log_artifact(tensorboard_path)
     except:
         print("Could not because run was not finished ?", exc_info=True)
-
     try:
         logs_path = _get_logs_path(output_folder)
         mlflow.log_artifact(logs_path)
@@ -162,15 +161,12 @@ def add_artifact_to_run(output_folder):
 
 
 BAD_PARAMS = []
-def main_mlflow(run_name, metrics, args, output_dir, hparams, move_artifacts=True):
 
-    set_mlflow_experiment(
-        experiment_name=set_experiment_name(args)
-    )
+
+def main_mlflow(run_name, metrics, args, output_dir, hparams, move_artifacts=True):
+    set_mlflow_experiment(experiment_name=set_experiment_name(args))
     dict_tags, new_params = split_args_between_tags_and_params(args)
-    new_params.update(
-        {k: v for k, v in hparams.items() }
-        )
+    new_params.update({k: v for k, v in hparams.items()})
     metrics = clean_metrics(metrics)
 
     with mlflow.start_run(run_name=run_name) as run:
@@ -182,12 +178,10 @@ def main_mlflow(run_name, metrics, args, output_dir, hparams, move_artifacts=Tru
                 #     mlflow.log_metric(key, value)
                 # else:
                 mlflow.log_param(key, value)
-
         mlflow.set_tags(dict_tags)
         mlflow.log_metrics(metrics)
 
         # Upload the TensorBoard event logs as a run artifact
-
         if output_dir is not None and move_artifacts:
             add_artifact_to_run(output_folder=output_dir)
     print(f"Finishing run: {run.info} for run_name: {run_name}")

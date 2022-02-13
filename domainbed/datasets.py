@@ -1,4 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
+from wilds.datasets.fmow_dataset import FMoWDataset
 
 from domainbed.lib.misc import DictDataset
 import os, pickle
@@ -584,7 +586,6 @@ class WILDSFMoW(WILDSDataset):
 
 
 class ColoredMNISTLFFDataset(Dataset):
-
     def __init__(
         self,
         split="train",
@@ -694,6 +695,7 @@ class BARDataset(Dataset):
         # int
         return len(self.filenames)
 
+
 class BAR(MultipleDomainDataset):
     ENVIRONMENTS = ["train", "test"]
     CUSTOM_DATASET = True
@@ -711,6 +713,7 @@ class BAR(MultipleDomainDataset):
         self.datasets = [train, test]
         self.input_shape = self.INPUT_SHAPE
 
+
 class Collage(MultipleDomainDataset):
     ENVIRONMENTS = ["train", "cifar", "fashion", "mnist", "svhn", "val-all"]
     CUSTOM_DATASET = False
@@ -720,7 +723,6 @@ class Collage(MultipleDomainDataset):
     CHECKPOINT_FREQ = 1000
     CLASSES = ["zero", "one"]
     NO_EVAL = ["env_0_in"]
-
 
     def __init__(
         self, root, test_envs, hparams,
@@ -761,6 +763,7 @@ class Collage(MultipleDomainDataset):
                 root=os.path.join(data_dir, f"val-all"), transform=self.transforms,
             )
         )
+
 
 # this class is adapted from https://github.com/chingyaoc/fair-mixup/blob/master/celeba/main_dp.py
 class CelebA(torch.utils.data.Dataset):
@@ -828,6 +831,7 @@ class CelebA_Blond(MultipleDomainDataset):
     ENVIRONMENTS = ["unbalanced_1", "unbalanced_2", "balanced"]
     N_STEPS = 2001
     CHECKPOINT_FREQ = 200
+
     def __init__(self, root, test_envs, hparams):
         super().__init__()
         environments = self.ENVIRONMENTS
@@ -879,6 +883,7 @@ class CelebA_Blond(MultipleDomainDataset):
         te_dataset = CelebA(pd.DataFrame(te_env), images_path, target_id, transform=transform)
 
         self.datasets = [tr_dataset_1, tr_dataset_2, te_dataset]
+
 
 class Spirals(MultipleDomainDataset):
     CHECKPOINT_FREQ = 10

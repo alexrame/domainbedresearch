@@ -70,7 +70,7 @@ python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train --data_dir=./data/domainbed/MNIST/ --algorithm IGA --dataset ColoredMNIST --test_env 2
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -92,13 +92,12 @@ python -m domainbed.scripts.sweep launch\
        --n_trials 1
 ```
 
-After all jobs have either succeeded or failed, you can delete the data from failed jobs with ``python -m domainbed.scripts.sweep delete_incomplete`` and then re-launch them by running ``python -m domainbed.scripts.sweep launch`` again. Specify the same command-line arguments in all calls to `sweep` as you did the first time; this is how the sweep script knows which jobs were launched originally.
+After all jobs have either succeeded or failed, you can delete the data from failed jobs with ``python -m domainbed.scripts.sweep delete_incomplete --output_dir=./output/swa --datasets PACS`` and then re-launch them by running ``python -m domainbed.scripts.sweep launch`` again. Specify the same command-line arguments in all calls to `sweep` as you did the first time; this is how the sweep script knows which jobs were launched originally.
 
 To view the results of your sweep:
 
 ````sh
-python -m domainbed.scripts.collect_results\
-       --input_dir=/my/sweep/output/path
+python -m domainbed.scripts.collect_results --input_dir=./output/swa
 ````
 
 ## Running unit tests
@@ -117,7 +116,32 @@ DATA_DIR=/my/datasets/path python -m unittest discover
 
 
 ```sh
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output --command_launcher multi_gpu --datasets PACS --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa --command_launcher multi_gpu --datasets PACS --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
+KEYACC=mav python3 -m domainbed.scripts.collect_results --input_dir ./output/swa
+KEYACC=net python3 -m domainbed.scripts.collect_results --input_dir ./output/swa
+KEYACC=mav - moving average
+KEYACC=net - réseau final ERM
+
+HP=D -- lr=5e-5, dropout=, weight_decay=0, batch_size=32
+```
+
+```sh
+export MLFLOW_TRACKING_URI=/home/m.kirchmeyer/sync/domainbedresearch/mlruns
+export ML=$MLFLOW_TRACKING_URI
+LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef88798914dcc80efb8
+
+python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
+.bashrc
+tb()
+{
+        echo $LOGDIR
+        export TMPDIR=/tmp/$USER_$1; mkdir -p $TMPDIR; tensorboard --port $1 --logdir_spec $LOGDIR
+}
+Définir LOGDIR 
+Faire tb 6001
+Expés sur test_env=0 OfficeHome
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
 ```
 
 ## License

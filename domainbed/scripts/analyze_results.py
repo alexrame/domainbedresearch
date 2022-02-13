@@ -1,26 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-import collections
-
 import argparse
-import functools
-import glob
-import pickle
-import itertools
 import json
 import os
-import random
-import sys
-
 import numpy as np
 import tqdm
-
 from domainbed import datasets
 from domainbed import algorithms
 from domainbed.lib import misc, reporting
-from domainbed import model_selection
 from domainbed.lib.query import Q
-import warnings
 
 
 def format_mean(data, latex):
@@ -136,15 +124,6 @@ def print_results_tables(records):
     col_labels = ["Algorithm", *dataset_names, "Avg"]
     header_text = f"Averages, model selection method: {selection_method.name}"
     print_table(table, header_text, alg_names, col_labels, colwidth=25, latex=latex)
-
-import collections
-
-import json
-import os
-
-import tqdm
-
-from domainbed.lib.query import Q
 
 def load_records(path):
     records = []

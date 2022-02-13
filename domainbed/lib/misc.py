@@ -5,28 +5,18 @@ Things that don't belong anywhere else
 """
 
 import hashlib
-import json
-import os
 import sys
-import math
-from shutil import copyfile
 from collections import OrderedDict, defaultdict
 from numbers import Number
 import operator
-
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import dataset
 from torch.utils.data.dataset import Dataset
-import tqdm
 from collections import Counter
 import socket
 import copy
-
-import itertools
-from statistics import mean
-
 try:
     from torchmetrics import Precision, Recall
 except:
@@ -46,10 +36,10 @@ class MovingAvg:
 
     def update(self):
         self.global_iter += 1
-        if self.global_iter>=self.mav_start_iter:
+        if self.global_iter >= self.mav_start_iter:
             self.mav_count += 1
             for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
-                param_k.data = (param_k.data* self.mav_count + param_q.data)/(1.+self.mav_count)
+                param_k.data = (param_k.data * self.mav_count + param_q.data) / (1. + self.mav_count)
         else:
             for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
                 param_k.data = param_q.data
@@ -116,7 +106,6 @@ def l2_between_dicts(dict_1, dict_2):
 
 
 class MovingAverage:
-
     def __init__(self, ema, oneminusema_correction=True):
         self.ema = ema
         self.ema_data = {}
@@ -178,6 +167,7 @@ def make_weights_for_balanced_classes(dataset):
         weights[i] = weight_per_class[int(y)]
 
     return weights
+
 
 def pdb():
     sys.stdout = sys.__stdout__
@@ -269,6 +259,7 @@ def compute_correct_batch(predictions, weights, y, device):
     total += batch_weights.sum().item()
     return correct, total
 
+
 def accuracy(network, loader, weights, device):
     network.eval()
 
@@ -314,6 +305,7 @@ class Tee:
     def flush(self):
         self.stdout.flush()
         self.file.flush()
+
 
 class ParamDict(OrderedDict):
     """Code adapted from https://github.com/Alok/rl_implementations/tree/master/reptile.
@@ -363,6 +355,7 @@ class CustomToRegularDataset(Dataset):
     def __len__(self) -> int:
         return len(self.dataset)
 
+
 def dict_batch_to_device(batch, device):
     for key in batch:
         if isinstance(batch[key], torch.Tensor):
@@ -384,12 +377,13 @@ class DictDataset(Dataset):
             key: self.dict[key][index]
             for key in self.keys
         }
+
     def __len__(self):
         return len(self.dict[self.keys[0]])
 
+
 def get_machine_name():
     return socket.gethostname()
-
 
 
 def one_hot_embedding(labels, num_classes):

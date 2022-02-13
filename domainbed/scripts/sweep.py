@@ -27,6 +27,7 @@ from domainbed import command_launchers
 import tqdm
 import shlex
 
+
 class Job:
     NOT_LAUNCHED = 'Not launched'
     INCOMPLETE = 'Incomplete'
@@ -89,6 +90,7 @@ class Job:
             shutil.rmtree(job.output_dir)
         print(f'Deleted {len(jobs)} jobs!')
 
+
 def all_test_env_combinations(n):
     """
     For a dataset with n >= 3 envs, return all combinations of 1 and 2 test
@@ -100,10 +102,9 @@ def all_test_env_combinations(n):
         for j in range(i+1, n):
             yield [i, j]
 
-def make_args_list(
-    n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps, data_dir, task,
-    holdout_fraction, single_test_envs, hparams, test_envs, hp, sweep_id, seed
-):
+
+def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps, data_dir, task,
+                   holdout_fraction, single_test_envs, hparams, test_envs, hp, sweep_id, seed):
     args_list = []
     for trial_seed in range(n_trials):
         trial_seed += seed
@@ -111,12 +112,11 @@ def make_args_list(
             for algorithm in algorithms:
                 if test_envs is not None:
                     if not single_test_envs:
-                        all_test_envs =  [test_envs]
+                        all_test_envs = [test_envs]
                     else:
                         all_test_envs = test_envs
                 elif single_test_envs:
-                    all_test_envs = [
-                        [i] for i in range(datasets.num_environments(dataset))]
+                    all_test_envs = [[i] for i in range(datasets.num_environments(dataset))]
                 else:
                     all_test_envs = all_test_env_combinations(
                         datasets.num_environments(dataset))
@@ -133,9 +133,7 @@ def make_args_list(
                         train_args['task'] = task
                         train_args["sweep_id"] = sweep_id
                         train_args['trial_seed'] = trial_seed
-                        train_args['seed'] = misc.seed_hash(
-                            dataset, algorithm, _test_envs, hparams_seed, trial_seed
-                        )
+                        train_args['seed'] = misc.seed_hash(dataset, algorithm, _test_envs, hparams_seed, trial_seed)
                         if steps is not None:
                             train_args['steps'] = steps
                         if hparams is not None:
@@ -145,13 +143,16 @@ def make_args_list(
                         args_list.append(train_args)
     return args_list
 
+
 def ask_for_confirmation():
     response = input('Are you sure? (y/n) ')
     if not response.lower().strip()[:1] == "y":
         print('Nevermind!')
         exit(0)
 
+
 DATASETS = [d for d in datasets.DATASETS if "Debug" not in d]
+
 
 if __name__ == "__main__":
     #  --n_hparams 20 --n_trials 3
@@ -166,8 +167,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_dir', type=str, default="default")
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_trials', type=int, default=3)
-    parser.add_argument('--command_launcher', type=str,
-                        default="local")
+    parser.add_argument('--command_launcher', type=str, default="local")
     parser.add_argument('--steps', type=int, default=None)
     parser.add_argument('--hparams', type=str, default=None)
     parser.add_argument("--hp", nargs=2, action="append")
@@ -178,11 +178,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.data_dir == "default":
         if os.environ.get("DATAQUICK", "none") not in [None, "none"]:
-            args.data_dir =  os.path.join(os.environ.get("DATAQUICK"), "dataplace/domainbed/")
+            args.data_dir = os.path.join(os.environ.get("DATAQUICK"), "dataplace/domainbed/")
         else:
-            args.data_dir = os.path.join(
-                os.environ.get("DATA", ""),
-                "data/domainbed/")
+            args.data_dir = os.path.join(os.environ.get("DATA", ""), "data/domainbed/")
     args_list = make_args_list(
         n_trials=args.n_trials,
         dataset_names=args.datasets,

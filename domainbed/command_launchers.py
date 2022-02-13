@@ -11,10 +11,12 @@ import subprocess
 import time
 import torch
 
+
 def local_launcher(commands):
     """Launch commands serially on the local machine."""
     for cmd in commands:
         subprocess.call(cmd, shell=True)
+
 
 def dummy_launcher(commands):
     """
@@ -23,6 +25,7 @@ def dummy_launcher(commands):
     """
     for cmd in commands:
         print(f'Dummy launcher: {cmd}')
+
 
 def multi_gpu_launcher(commands):
     """
@@ -55,6 +58,7 @@ def multi_gpu_launcher(commands):
     for p in procs_by_gpu:
         if p is not None:
             p.wait()
+
 
 REGISTRY = {
     'local': local_launcher,

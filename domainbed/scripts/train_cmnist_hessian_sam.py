@@ -197,10 +197,7 @@ for restart in range(flags.n_restarts):
             loss.backward()
 
         dict_batchhessian = OrderedDict(
-            {
-                n: p.diag_h_batch.clone().view(p.diag_h_batch.size(0), -1)
-                for n, p in classifier.named_parameters()
-            }
+            {n: p.diag_h_batch.clone().view(p.diag_h_batch.size(0), -1) for n, p in classifier.named_parameters()}
         )
         dict_hessian = {}
         for n, _batchhessian in dict_batchhessian.items():
@@ -341,26 +338,16 @@ for restart in range(flags.n_restarts):
             fishr_zero = {
                 key: torch.zeros_like(value) for key, value in dict_grads_cov_mean.items()
             }
-            fishr_norm = (
-                l2(envs[0]["grads_cov"], fishr_zero) - l2(envs[1]["grads_cov"], fishr_zero)
-            )**2
+            fishr_norm = (l2(envs[0]["grads_cov"], fishr_zero) - l2(envs[1]["grads_cov"], fishr_zero))**2
 
             if flags.verbose:
                 hessian_penalty = (l2(envs[0]["hessian"], envs[1]["hessian"]))
                 dict_hessian_zero = {
                     key: torch.zeros_like(value) for key, value in envs[0]["hessian"].items()
                 }
-                hessian_norm = (
-                    l2(envs[0]["hessian"], dict_hessian_zero) -
-                    l2(envs[1]["hessian"], dict_hessian_zero)
-                )**2
-                hessian_meannorm = (
-                    l2(envs[0]["hessian"], dict_hessian_zero) +
-                    l2(envs[1]["hessian"], dict_hessian_zero)
-                ) / 2
-                hessian_intradomain_penalty = cosine_distance(
-                    envs[0]["hessian"], envs[1]["hessian"]
-                )
+                hessian_norm = (l2(envs[0]["hessian"], dict_hessian_zero) - l2(envs[1]["hessian"], dict_hessian_zero))**2
+                hessian_meannorm = (l2(envs[0]["hessian"], dict_hessian_zero) + l2(envs[1]["hessian"], dict_hessian_zero)) / 2
+                hessian_intradomain_penalty = cosine_distance(envs[0]["hessian"], envs[1]["hessian"])
 
             # apply the good regularization
             if flags.algorithm == "erm":

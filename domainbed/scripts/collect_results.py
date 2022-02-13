@@ -1,27 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
-import collections
-
-
 import argparse
-import functools
-import glob
-import pickle
-import itertools
-import json
 import os
-import random
 import sys
-
 import numpy as np
-import tqdm
-
 from domainbed import datasets
 from domainbed import algorithms
 from domainbed.lib import misc, reporting
 from domainbed import model_selection
 from domainbed.lib.query import Q
-import warnings
+
 
 def format_mean(data, latex):
     """Given a list of datapoints, return a string describing their mean and
@@ -35,8 +22,8 @@ def format_mean(data, latex):
     else:
         return mean, err, "{:.1f} +/- {:.1f}".format(mean, err)
 
-def print_table(table, header_text, row_labels, col_labels, colwidth=10,
-    latex=True):
+
+def print_table(table, header_text, row_labels, col_labels, colwidth=10, latex=True):
     """Pretty-print a 2D array of data, optionally with row/col labels"""
     print("")
 
@@ -66,6 +53,7 @@ def print_table(table, header_text, row_labels, col_labels, colwidth=10,
         print("\\end{tabular}}")
         print("\\end{center}")
 
+
 def print_results_tables(records, selection_method, latex):
     """Given all records, print a results table for each dataset."""
     grouped_records = reporting.get_grouped_records(records).map(lambda group:
@@ -87,7 +75,6 @@ def print_results_tables(records, selection_method, latex):
             print("\\subsubsection{{{}}}".format(dataset))
         test_envs = range(datasets.num_environments(dataset))
 
-
         table = [[None for _ in [*test_envs, "Avg"]] for _ in alg_names]
         for i, algorithm in enumerate(alg_names):
             means = []
@@ -107,10 +94,8 @@ def print_results_tables(records, selection_method, latex):
             *datasets.get_dataset_class(dataset).ENVIRONMENTS,
             "Avg"
         ]
-        header_text = (f"Dataset: {dataset}, "
-            f"model selection method: {selection_method.name}")
-        print_table(table, header_text, alg_names, list(col_labels),
-            colwidth=20, latex=latex)
+        header_text = (f"Dataset: {dataset}, model selection method: {selection_method.name}")
+        print_table(table, header_text, alg_names, list(col_labels), colwidth=20, latex=latex)
 
     # Print an "averages" table
     if latex:
@@ -138,14 +123,13 @@ def print_results_tables(records, selection_method, latex):
 
     col_labels = ["Algorithm", *dataset_names, "Avg"]
     header_text = f"Averages, model selection method: {selection_method.name}"
-    print_table(table, header_text, alg_names, col_labels, colwidth=25,
-        latex=latex)
+    print_table(table, header_text, alg_names, col_labels, colwidth=25, latex=latex)
+
 
 if __name__ == "__main__":
     np.set_printoptions(suppress=True)
 
-    parser = argparse.ArgumentParser(
-        description="Domain generalization testbed")
+    parser = argparse.ArgumentParser(description="Domain generalization testbed")
     parser.add_argument("--input_dir", type=str, required=True)
     parser.add_argument("--latex", action="store_true", default=True)
     args = parser.parse_args()
@@ -168,7 +152,6 @@ if __name__ == "__main__":
 
     SELECTION_METHODS = [
         model_selection.IIDAccuracySelectionMethod,
-
         # model_selection.LeaveOneOutSelectionMethod,
         model_selection.OracleSelectionMethod,
     ]

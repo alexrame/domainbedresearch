@@ -4,16 +4,13 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-import pdb
 import random
 import argparse
 import numpy as np
 from collections import OrderedDict
-
 import torch
 from torchvision import datasets
 from torch import nn, optim, autograd
-
 from backpack import backpack, extend
 from backpack.extensions import BatchGrad, DiagHessian, BatchDiagHessian
 from backpack.extensions import SumGradSquared, Variance
@@ -75,9 +72,7 @@ final_test_accs = []
 final_graytest_accs = []
 for restart in range(flags.n_restarts):
     print("Restart", restart)
-
     # Load MNIST, make train/val splits, and shuffle train set examples
-
     mnist = datasets.MNIST('~/datasets/mnist', train=True, download=True)
     mnist_train = (mnist.data[:50000], mnist.targets[:50000])
     mnist_val = (mnist.data[50000:], mnist.targets[50000:])
@@ -88,10 +83,7 @@ for restart in range(flags.n_restarts):
     np.random.shuffle(mnist_train[1].numpy())
 
     # Build environments
-
-
     def make_environment(images, labels, e, grayscale=False):
-
         def torch_bernoulli(p, size):
             return (torch.rand(size) < p).float()
 
@@ -119,10 +111,7 @@ for restart in range(flags.n_restarts):
     ]
 
     # Define and instantiate the model
-
-
     class MLP(nn.Module):
-
         def __init__(self):
             super(MLP, self).__init__()
             if flags.grayscale_model:
@@ -157,8 +146,6 @@ for restart in range(flags.n_restarts):
     mlp = MLP().cuda()
 
     # Define loss function helpers
-
-
     def mean_nll(logits, y):
         if flags.output_size == 2:
             return nn.CrossEntropyLoss()(logits, y[:, 0].long())
@@ -182,7 +169,6 @@ for restart in range(flags.n_restarts):
     bce_extended = extend(nn.BCEWithLogitsLoss(reduction='sum'))
     ce_extended = extend(nn.CrossEntropyLoss(reduction='sum'))
 
-
     def compute_hessian(features, labels, classifier):
         # due to our reliance on backpack and DiagHessian
         logits = classifier(features.detach())
@@ -192,10 +178,7 @@ for restart in range(flags.n_restarts):
             loss.backward()
 
         dict_batchhessian = OrderedDict(
-            {
-                n: p.diag_h_batch.clone().view(p.diag_h_batch.size(0), -1)
-                for n, p in classifier.named_parameters()
-            }
+            {n: p.diag_h_batch.clone().view(p.diag_h_batch.size(0), -1) for n, p in classifier.named_parameters()}
         )
         dict_hessian = {}
         for n, _batchhessian in dict_batchhessian.items():
@@ -215,13 +198,10 @@ for restart in range(flags.n_restarts):
         # calling first-order derivatives in the network while maintaining the per-sample gradients
 
         with backpack(Variance()):
-            loss.backward(
-                inputs=list(network.parameters()), retain_graph=True, create_graph=True
-            )
+            loss.backward(inputs=list(network.parameters()), retain_graph=True, create_graph=True)
 
         dict_grads_variance_backpack = {
-            name: weights.variance.clone().view(-1)
-            for name, weights in network.named_parameters()
+            name: weights.variance.clone().view(-1) for name, weights in network.named_parameters()
         }
 
         return dict_grads_variance_backpack
@@ -328,25 +308,16 @@ for restart in range(flags.n_restarts):
             if edx in [0, 1]:
                 optimizer.zero_grad()
                 if "fullnetwork" not in flags.algorithm.split("_"):
-                    env["grads_cov"] = compute_grads_cov(
-                        features, env['labels'], mlp.classifier
-                    )
+                    env["grads_cov"] = compute_grads_cov(features, env['labels'], mlp.classifier)
                     if flags.verbose:
-                        env["hessian"] = compute_hessian(
-                            features, env['labels'], mlp.classifier
-                        )
+                        env["hessian"] = compute_hessian(features, env['labels'], mlp.classifier)
                 else:
-                    env["grads_cov"] = compute_grads_cov(
-                        mlp.prepare_input(env["images"]), env['labels'],
-                        mlp.fullnetwork
-                    )
+                    env["grads_cov"] = compute_grads_cov(mlp.prepare_input(env["images"]), env['labels'], mlp.fullnetwork)
                     if flags.verbose:
                         num_hessian = int(flags.verbose.split("-")[1])
                         env["hessian"] = compute_hessian(
-                            mlp.prepare_input(env["images"][:num_hessian]),
-                            env['labels'][:num_hessian], mlp.fullnetwork
+                            mlp.prepare_input(env["images"][:num_hessian]), env['labels'][:num_hessian], mlp.fullnetwork
                         )
-
         train_nll = torch.stack([envs[0]['nll'], envs[1]['nll']]).mean()
         train_acc = torch.stack([envs[0]['acc'], envs[1]['acc']]).mean()
 
