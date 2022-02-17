@@ -385,6 +385,7 @@ for restart in range(flags.n_restarts):
 
         test_acc = envs[2]['acc']
         grayscale_test_acc = envs[3]['acc']
+
         if step % 100 == 0:
             # or flags.penalty_anneal_iters - 15 < step < flags.penalty_anneal_iters + 15:
             pretty_print(

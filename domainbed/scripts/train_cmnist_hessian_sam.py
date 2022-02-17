@@ -422,8 +422,7 @@ for restart in range(flags.n_restarts):
                 first_step["hessian_penalty"].detach().cpu().numpy() if flags.verbose else "",
                 first_step["hessian_norm"].detach().cpu().numpy() if flags.verbose else "",
                 first_step["hessian_meannorm"].detach().cpu().numpy() if flags.verbose else "",
-                first_step["hessian_intradomain_penalty"].detach().cpu().numpy()
-                if flags.verbose else "",
+                first_step["hessian_intradomain_penalty"].detach().cpu().numpy() if flags.verbose else "",
             )
         if flags.plot:
             all_train_nlls[restart, step] = first_step["train_nll"].detach().cpu().numpy()
@@ -435,16 +434,13 @@ for restart in range(flags.n_restarts):
             all_rex_penalties[restart, step] = first_step["rex_penalty"].detach().cpu().numpy()
             all_fishr_penalties[restart, step] = first_step["fishr_penalty"].detach().cpu().numpy()
             all_fishr_norm[restart, step] = first_step["fishr_norm"].detach().cpu().numpy()
-            all_fishr_intradomain_penalties[restart, step] = first_step["fishr_intradomain_penalty"
-                                                                       ].detach().cpu().numpy()
+            all_fishr_intradomain_penalties[restart, step] = first_step["fishr_intradomain_penalty"].detach().cpu().numpy()
             if flags.verbose:
-                all_hessian_penalties[restart, step] = first_step["hessian_penalty"].detach().cpu(
-                ).numpy()
+                all_hessian_penalties[restart, step] = first_step["hessian_penalty"].detach().cpu().numpy()
                 all_hessian_norm[restart, step] = first_step["hessian_norm"].detach().cpu().numpy()
-                all_hessian_meannorm[restart, step] = first_step["hessian_meannorm"].detach().cpu(
-                ).numpy()
-                all_hessian_intradomain_penalties[restart, step] = first_step[
-                    "hessian_intradomain_penalty"].detach().cpu().numpy()
+                all_hessian_meannorm[restart, step] = first_step["hessian_meannorm"].detach().cpu().numpy()
+                all_hessian_intradomain_penalties[restart, step] = \
+                    first_step["hessian_intradomain_penalty"].detach().cpu().numpy()
 
     final_train_accs.append(first_step["train_acc"].detach().cpu().numpy())
     final_test_accs.append(test_acc.detach().cpu().numpy())

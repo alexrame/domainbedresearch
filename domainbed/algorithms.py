@@ -284,10 +284,13 @@ class ERM(Algorithm):
             feats0 = dict_stats[key0]["feats"]
             labels0 = dict_stats[key0]["labels"]
             eigenvals = flatness_metrics.hessian_trace(feats0, labels0, extend(self.classifier))
-            print(eigenvals)
-            results[f"Flatness/{regex}trace"] = torch.sum(eigenvals.values())
-            for i in range(10):
-                results[f"Flatness/{regex}eigenval{i+1}"] = eigenvals[i].cpu().numpy()
+            eigenvals_flat = torch.cat([eigenvals["weight"], eigenvals["bias"]])
+            results[f"Flatness/{regex}trace"] = torch.sum(torch.topk(eigenvals_flat, 100).values).cpu().numpy()
+            i = 1
+            top10 = torch.topk(eigenvals_flat, 10).values
+            for eigenval in top10:
+                results[f"Flatness/{regex}topeigenval{i+1}"] = eigenval.cpu().numpy()
+                i += 1
         self.train()
         return results
 
