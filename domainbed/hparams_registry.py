@@ -79,15 +79,9 @@ def _hparams(algorithm, dataset, random_seed):
             _hparam('lambdamean', 0, lambda r: 0)
 
         if os.environ.get("WARMUP"):
-            _hparam(
-                'penalty_anneal_iters', 500,
-                lambda r: int(10**r.uniform(0, 4 if MAX_EPOCH_5000 else 3.5))
-            )
+            _hparam('penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4 if MAX_EPOCH_5000 else 3.5)))
         else:
-            _hparam(
-                'penalty_anneal_iters', 1500,
-                lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000))
-            )
+            _hparam('penalty_anneal_iters', 1500, lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000)))
 
         _hparam('ema', 0.95, lambda r: r.uniform(0.9, 0.99))
         _hparam('method', "", lambda r: r.choice([""]))
@@ -267,12 +261,9 @@ def _hparams(algorithm, dataset, random_seed):
 
     if algorithm in ["Ensembling", "SWA"]:
         if os.environ.get("HP") == "D":
-            _hparam(
-                'penalty_anneal_iters', 1500, lambda r: 1500)
+            _hparam('penalty_anneal_iters', 1500, lambda r: 1500)
         else:
-            _hparam(
-                'penalty_anneal_iters', 1500, lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000))
-            )
+            _hparam('penalty_anneal_iters', 1500, lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000)))
         _hparam("diversity_loss", "none", lambda r: "none")
         # for sampling diversity
         if os.environ.get("DIV") == "1":

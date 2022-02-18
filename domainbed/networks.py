@@ -29,8 +29,7 @@ def remove_batch_norm_from_resnet(model):
                                 fuse(module2, getattr(bottleneck, bn_name)))
                         setattr(bottleneck, bn_name, nn.Identity())
                 if isinstance(bottleneck.downsample, torch.nn.Sequential):
-                    bottleneck.downsample[0] = fuse(bottleneck.downsample[0],
-                                                    bottleneck.downsample[1])
+                    bottleneck.downsample[0] = fuse(bottleneck.downsample[0], bottleneck.downsample[1])
                     bottleneck.downsample[1] = nn.Identity()
     model.train()
     return model
@@ -114,18 +113,13 @@ class ResNet(torch.nn.Module):
         nc = input_shape[0]
         if nc != 3:
             tmp = self.network.conv1.weight.data.clone()
-
-            self.network.conv1 = nn.Conv2d(
-                nc, 64, kernel_size=(7, 7),
-                stride=(2, 2), padding=(3, 3), bias=False)
-
+            self.network.conv1 = nn.Conv2d(nc, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
             for i in range(nc):
                 self.network.conv1.weight.data[:, i, :, :] = tmp[:, i % 3, :, :]
 
         # save memory
         del self.network.fc
         self.network.fc = nn.Identity()
-
         self.unfreeze_bn = hparams.get('unfreeze_resnet_bn', False)
         self.freeze_bn()
         self.hparams = hparams

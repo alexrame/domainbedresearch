@@ -70,7 +70,7 @@ python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_hutch --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_hutch_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -147,8 +147,9 @@ HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output
 3 -> sans hessienne
 4 -> dernier run avec hessienne
 analyser tensorboard single run
-swa_officehome_0_hess_fixed -> mav_classifier
+swa_officehome_0_hess_fixed -> diag hessian mav_classifier
 hutch -> hutch trace for mav_classifier
+swa_officehome_0_hutch_temp -> power iteration hessian
 ```
 
 ## License

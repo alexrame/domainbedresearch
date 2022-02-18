@@ -1,13 +1,18 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
 import pdb
 import random
+
+from torch.utils.data import TensorDataset, DataLoader
+
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav, flatness_metrics
 from domainbed.lib.flatness_metrics import hutchinson_trace_hmp
+from hessian_eigenthings import compute_hessian_eigenthings
 
 try:
     from torchmetrics import Precision, Recall
@@ -217,27 +222,32 @@ class ERM(Algorithm):
     def accuracy(self, loader, device):
         self.eval()
         batch_classes = []
-        # batch_x = []
+        subset_classes = []
+        batch_x = []
         dict_stats = {}
+        i = 0
         with torch.no_grad():
             for batch in loader:
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
-                dict_feats = self.predict_feat(x)
+                # dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
-                # batch_x.append(x)
+                if i < 10:
+                    batch_x.append(x)
+                    subset_classes.append(y)
+                    i += 1
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": [], "feats": []}
+                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}  # , "feats": []}
                     logits = dict_logits[key]
                     try:
                         preds = logits.argmax(1)
                     except:
                         pdb.set_trace()
                     dict_stats[key]["preds"].append(preds.cpu())
-                    dict_stats[key]["feats"].append(dict_feats[key])
+                    # dict_stats[key]["feats"].append(dict_feats[key])
                     dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
 
@@ -282,20 +292,29 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # Flatness metrics
-            feats0 = dict_stats[key0]["feats"]
-            # trace_val = hutchinson_trace_hmp(feats0, targets_torch, extend(self.mav.get_classifier()), device=device)
+            dataset = TensorDataset(torch.cat(batch_x), torch.cat(subset_classes))
+            del batch_x
+            eigenvals_flatten, _ = compute_hessian_eigenthings(
+                self.mav.network_mav, DataLoader(dataset, batch_size=64), nn.CrossEntropyLoss(reduction='sum'),
+                num_eigenthings=5)
+            # feats0 = dict_stats[key0]["feats"]
             # inputs_torch = torch.cat(batch_x)
             # trace_val = hutchinson_trace_hmp(inputs_torch[:100], targets_torch[:100], extend(self.mav.network_mav), device=device)
+            # trace_val = hutchinson_trace_hmp(feats0, targets_torch, extend(self.mav.get_classifier()), device=device)
             # eigenvals = flatness_metrics.hessian_diag_full(inputs_torch[:100], targets_torch[:100], extend(self.mav.network_mav))
-            eigenvals = flatness_metrics.hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
-            eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
-            trace_val = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
+            # eigenvals = flatness_metrics.hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
+            # eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
+            # trace_val = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
+            print(eigenvals_flatten)
+            trace_val = np.sum(eigenvals_flatten)
+            # trace_val = torch.sum(eigenvals_flatten).cpu().numpy()
             results[f"Flatness/{regex}trace"] = trace_val
-            i = 1
-            top10 = torch.topk(eigenvals_flatten, 10).values
-            for eigenval in top10:
-                results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
-                i += 1
+            for i in range(len(eigenvals_flatten)):
+                results[f"Flatness/{regex}topeigenval{i+1}"] = eigenvals_flatten[i]
+            # top10 = torch.topk(eigenvals_flatten, 10).values
+            # for eigenval in top10:
+            #     results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
+            #     i += 1
         self.train()
         return results
 
@@ -528,9 +547,7 @@ class FishrDomainMatcher():
             "penalty_var": self._compute_distance(grads_var_per_domain)
         }
 
-    def compute_fishr_penalty_mav(
-        self, all_logits, all_classes, classifier, all_logits_mav, classifier_mav
-    ):
+    def compute_fishr_penalty_mav(self, all_logits, all_classes, classifier, all_logits_mav, classifier_mav):
         grads = self._compute_grads(all_logits, all_classes, classifier)
         grads_mean_per_domain, grads_var_per_domain = self._compute_grads_mean_var(
             grads, self.ema_per_domain_mean, self.ema_per_domain_var
@@ -754,8 +771,7 @@ class Ensembling(Algorithm):
             self.domain_matchers = None
         elif self.hparams["similarity_loss"] == "fishr":
             self.domain_matchers = [
-                FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains)
-                for _ in range(self.num_members)
+                FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains) for _ in range(self.num_members)
             ]
         else:
             raise ValueError(self.hparams["similarity_loss"])

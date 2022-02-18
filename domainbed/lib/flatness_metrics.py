@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from backpack.extensions import BatchDiagHessian, HMP
+from backpack.extensions import BatchDiagHessian, HMP, DiagHessian
 from backpack import backpack, extend
 from torch import nn
 import torch
