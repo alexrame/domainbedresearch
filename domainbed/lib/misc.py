@@ -85,9 +85,8 @@ def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
             avg_confs_in_bins.append(avg_confidence_in_bin)
             ece += np.abs(delta) * prop_in_bin
             if verbose:
-                print(
-                    f"From {bin_lower:4.5} to {bin_upper:4.5} and mean {avg_confidence_in_bin:3.5}, {(prop_in_bin * 100):4.5} % samples with accuracy {accuracy_in_bin:4.5}"
-                    )
+                print(f"From {bin_lower:4.5} to {bin_upper:4.5} and mean {avg_confidence_in_bin:3.5}, "
+                      f"{(prop_in_bin * 100):4.5} % samples with accuracy {accuracy_in_bin:4.5}")
         else:
             avg_confs_in_bins.append(None)
             acc_in_bin_list.append(None)

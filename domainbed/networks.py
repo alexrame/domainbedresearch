@@ -1,6 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-from domainbed.pretrained_resnets import PretrainedResnet18, PretrainedResnetExtractor
+from domainbed.pretrained_resnets import PretrainedResnet18
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +17,7 @@ def remove_batch_norm_from_resnet(model):
     model.eval()
 
     model.conv1 = fuse(model.conv1, model.bn1)
-    model.bn1 = Identity()
+    model.bn1 = nn.Identity()
 
     for name, module in model.named_modules():
         if name.startswith("layer") and len(name) == 6:
@@ -27,33 +27,22 @@ def remove_batch_norm_from_resnet(model):
                         bn_name = "bn" + name2[-1]
                         setattr(bottleneck, name2,
                                 fuse(module2, getattr(bottleneck, bn_name)))
-                        setattr(bottleneck, bn_name, Identity())
+                        setattr(bottleneck, bn_name, nn.Identity())
                 if isinstance(bottleneck.downsample, torch.nn.Sequential):
                     bottleneck.downsample[0] = fuse(bottleneck.downsample[0],
                                                     bottleneck.downsample[1])
-                    bottleneck.downsample[1] = Identity()
+                    bottleneck.downsample[1] = nn.Identity()
     model.train()
     return model
 
 
-class Identity(nn.Module):
-    """An identity layer"""
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
-
-
-
 def MLP2(n_inputs, n_outputs, hparams):
     layers = []
-    activation =  hparams.get("mlp_activation", "relu")
+    activation = hparams.get("mlp_activation", "relu")
     if activation == "relu":
-        activation_f = lambda :nn.ReLU()
+        activation_f = lambda: nn.ReLU()
     elif activation == "leaky-relu":
         activation_f = lambda: nn.LeakyReLU(hparams["mlp_leaky_relu_slope"])
-
     if hparams['mlp_depth'] == 1:
         layers.append(nn.Linear(n_inputs, n_outputs))
     else:
@@ -61,15 +50,16 @@ def MLP2(n_inputs, n_outputs, hparams):
         layers.append(nn.Dropout(hparams['mlp_dropout']))
         layers.append(activation_f())
         for _ in range(hparams['mlp_depth']-2):
-            layers.append( nn.Linear(hparams['mlp_width'], hparams['mlp_width']))
+            layers.append(nn.Linear(hparams['mlp_width'], hparams['mlp_width']))
             layers.append(nn.Dropout(hparams['mlp_dropout']))
             layers.append(activation_f)
         layers.append(nn.Linear(hparams['mlp_width'], n_outputs))
 
-    model =  nn.Sequential(*layers)
+    model = nn.Sequential(*layers)
     model.n_outputs = n_outputs
     model.n_inputs = n_inputs
     return model
+
 
 class MLP(nn.Module):
     """Just  an MLP"""
@@ -83,13 +73,11 @@ class MLP(nn.Module):
         else:
             self.input = nn.Linear(n_inputs, hparams['mlp_width'])
             self.dropout = nn.Dropout(hparams['mlp_dropout'])
-            self.hiddens = nn.ModuleList([
-                nn.Linear(hparams['mlp_width'], hparams['mlp_width'])
-                for _ in range(hparams['mlp_depth']-2)])
+            self.hiddens = nn.ModuleList(
+                [nn.Linear(hparams['mlp_width'], hparams['mlp_width']) for _ in range(hparams['mlp_depth']-2)])
             self.output = nn.Linear(hparams['mlp_width'], n_outputs)
             self.n_outputs = n_outputs
-
-        activation =  hparams.get("mlp_activation", "relu")
+        activation = hparams.get("mlp_activation", "relu")
         if activation == "relu":
             self.activation = nn.ReLU()
         elif activation == "leaky-relu":
@@ -99,7 +87,6 @@ class MLP(nn.Module):
         x = self.input(x)
         # if self.hparams['mlp_depth'] == 1:
         #     return x
-
         x = self.dropout(x)
         x = self.activation(x)
         for hidden in self.hiddens:
@@ -137,7 +124,7 @@ class ResNet(torch.nn.Module):
 
         # save memory
         del self.network.fc
-        self.network.fc = Identity()
+        self.network.fc = nn.Identity()
 
         self.unfreeze_bn = hparams.get('unfreeze_resnet_bn', False)
         self.freeze_bn()
@@ -226,12 +213,13 @@ class ContextNet(nn.Module):
     def forward(self, x):
         return self.context_net(x)
 
+
 def Featurizer(input_shape, hparams):
     """Auto-select an appropriate featurizer for the given input shape."""
     if hparams["model"] == "identity":
-        network = Identity()
+        network = nn.Identity()
         network.n_outputs = input_shape
-        return  network
+        return network
     elif hparams["model"] == "flatten":
         network = nn.Flatten()
         network.n_outputs = np.prod(input_shape)
@@ -254,10 +242,9 @@ def Featurizer(input_shape, hparams):
         raise NotImplementedError
 
 
-
 def Classifier(in_features, out_features, is_nonlinear=False, name=None, hparams=dict()):
     if hparams.get("classifier", None) == "mlp":
-        m =  MLP(in_features, out_features, hparams)
+        m = MLP(in_features, out_features, hparams)
     elif hparams.get("classifier", None) == "mlp2":
         m = MLP2(in_features, out_features, hparams)
     elif is_nonlinear:
@@ -278,13 +265,8 @@ class WholeFish(nn.Module):
     def __init__(self, input_shape, num_classes, hparams, weights=None):
         super(WholeFish, self).__init__()
         featurizer = Featurizer(input_shape, hparams)
-        classifier = Classifier(
-            featurizer.n_outputs,
-            num_classes,
-            hparams['nonlinear_classifier'])
-        self.net = nn.Sequential(
-            featurizer, classifier
-        )
+        classifier = Classifier(featurizer.n_outputs, num_classes, hparams['nonlinear_classifier'])
+        self.net = nn.Sequential(featurizer, classifier)
         if weights is not None:
             self.load_state_dict(copy.deepcopy(weights))
 

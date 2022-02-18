@@ -7,6 +7,8 @@ import pdb
 import random
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav, flatness_metrics
+from domainbed.lib.flatness_metrics import hutchinson_trace_hmp
+
 try:
     from torchmetrics import Precision, Recall
 except:
@@ -281,11 +283,14 @@ class ERM(Algorithm):
 
             # Flatness metrics
             feats0 = dict_stats[key0]["feats"]
-            eigenvals = flatness_metrics.hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
+            # trace_val = hutchinson_trace_hmp(feats0, targets_torch, extend(self.mav.get_classifier()), device=device)
             # inputs_torch = torch.cat(batch_x)
-            # eigenvals = flatness_metrics.hessian_diag_full(inputs_torch, targets_torch, extend(self.mav.network_mav))
+            # trace_val = hutchinson_trace_hmp(inputs_torch[:100], targets_torch[:100], extend(self.mav.network_mav), device=device)
+            # eigenvals = flatness_metrics.hessian_diag_full(inputs_torch[:100], targets_torch[:100], extend(self.mav.network_mav))
+            eigenvals = flatness_metrics.hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
             eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
-            results[f"Flatness/{regex}trace"] = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
+            trace_val = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
+            results[f"Flatness/{regex}trace"] = trace_val
             i = 1
             top10 = torch.topk(eigenvals_flatten, 10).values
             for eigenval in top10:

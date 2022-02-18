@@ -47,9 +47,7 @@ def multi_gpu_launcher(commands):
                 # Nothing is running on this GPU; launch a command.
                 cmd = commands.pop(0)
                 print(cmd)
-                new_proc = subprocess.Popen(
-                    f'CUDA_VISIBLE_DEVICES={list_gpu_idxs[gpu_idx]} {cmd}', shell=True
-                )
+                new_proc = subprocess.Popen(f'CUDA_VISIBLE_DEVICES={list_gpu_idxs[gpu_idx]} {cmd}', shell=True)
                 procs_by_gpu[gpu_idx] = new_proc
                 break
         time.sleep(1)
