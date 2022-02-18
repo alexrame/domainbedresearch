@@ -96,10 +96,7 @@ class ERM(Algorithm):
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(ERM, self).__init__(input_shape, num_classes, num_domains, hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
-        self.classifier = networks.Classifier(
-            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
-        )
-
+        self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
         self.network = nn.Sequential(self.featurizer, self.classifier)
         self._init_mav()
         self._init_optimizer()
@@ -218,6 +215,7 @@ class ERM(Algorithm):
     def accuracy(self, loader, device):
         self.eval()
         batch_classes = []
+        # batch_x = []
         dict_stats = {}
         with torch.no_grad():
             for batch in loader:
@@ -227,9 +225,10 @@ class ERM(Algorithm):
                 dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
+                # batch_x.append(x)
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": [], "feats": [], "labels": []}
+                        dict_stats[key] = {"preds": [], "confs": [], "correct": [], "feats": []}
                     logits = dict_logits[key]
                     try:
                         preds = logits.argmax(1)
@@ -237,7 +236,6 @@ class ERM(Algorithm):
                         pdb.set_trace()
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["feats"].append(dict_feats[key])
-                    dict_stats[key]["labels"].append(y)
                     dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
 
@@ -271,7 +269,8 @@ class ERM(Algorithm):
             if key0 not in dict_stats:
                 continue
             assert key1 in dict_stats
-            targets = torch.cat(batch_classes).cpu().numpy()
+            targets_torch = torch.cat(batch_classes)
+            targets = targets_torch.cpu().numpy()
             preds0 = dict_stats[key0]["preds"].cpu().numpy()
             preds1 = dict_stats[key1]["preds"].cpu().numpy()
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
@@ -282,8 +281,9 @@ class ERM(Algorithm):
 
             # Flatness metrics
             feats0 = dict_stats[key0]["feats"]
-            labels0 = dict_stats[key0]["labels"]
-            eigenvals = flatness_metrics.hessian_diag(feats0, labels0, extend(self.classifier))
+            eigenvals = flatness_metrics.hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
+            # inputs_torch = torch.cat(batch_x)
+            # eigenvals = flatness_metrics.hessian_diag_full(inputs_torch, targets_torch, extend(self.mav.network_mav))
             eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
             results[f"Flatness/{regex}trace"] = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
             i = 1

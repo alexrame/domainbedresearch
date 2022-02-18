@@ -292,6 +292,7 @@ def accuracy(network, loader, weights, device):
 
     return results
 
+
 class Tee:
     def __init__(self, fname, mode="a"):
         self.stdout = sys.stdout
