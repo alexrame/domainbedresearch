@@ -130,6 +130,7 @@ HP=D -- lr=5e-5, dropout=, weight_decay=0, batch_size=32
 export MLFLOW_TRACKING_URI=/home/m.kirchmeyer/sync/domainbedresearch/mlruns
 export ML=$MLFLOW_TRACKING_URI
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef88798914dcc80efb8
+LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/4/5a9864b352554e088ee37813376c6253
 
 python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
 .bashrc
@@ -141,7 +142,11 @@ tb()
 Définir LOGDIR 
 Faire tb 6001
 Expés sur test_env=0 OfficeHome
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hess --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+
+3 -> sans hessienne
+4 -> dernier run avec hessienne
+analyser tensorboard single run
 ```
 
 ## License

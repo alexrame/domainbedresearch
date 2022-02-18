@@ -283,13 +283,13 @@ class ERM(Algorithm):
             # Flatness metrics
             feats0 = dict_stats[key0]["feats"]
             labels0 = dict_stats[key0]["labels"]
-            eigenvals = flatness_metrics.hessian_trace(feats0, labels0, extend(self.classifier))
-            eigenvals_flat = torch.cat([eigenvals["weight"], eigenvals["bias"]])
-            results[f"Flatness/{regex}trace"] = torch.sum(torch.topk(eigenvals_flat, 100).values).cpu().numpy()
+            eigenvals = flatness_metrics.hessian_diag(feats0, labels0, extend(self.classifier))
+            eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
+            results[f"Flatness/{regex}trace"] = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
             i = 1
-            top10 = torch.topk(eigenvals_flat, 10).values
+            top10 = torch.topk(eigenvals_flatten, 10).values
             for eigenval in top10:
-                results[f"Flatness/{regex}topeigenval{i+1}"] = eigenval.cpu().numpy()
+                results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
                 i += 1
         self.train()
         return results
@@ -847,8 +847,7 @@ class Ensembling(Algorithm):
                 ),
                 "classes": all_classes,
                 "nlls_per_member":
-                torch.stack(nlls_per_member,
-                            dim=0).reshape(self.num_members, self.num_domains, bsize),
+                torch.stack(nlls_per_member, dim=0).reshape(self.num_members, self.num_domains, bsize),
                 "classifiers": self.classifiers
             }
             dict_diversity = self.member_diversifier.forward(**kwargs)

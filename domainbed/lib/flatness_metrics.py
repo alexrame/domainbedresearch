@@ -4,7 +4,7 @@ from backpack import backpack, extend
 from torch import nn
 
 
-def hessian_trace(features, labels, classifier):
+def hessian_diag(features, labels, classifier):
     # due to our reliance on backpack and DiagHessian
     logits = classifier(features.detach())
 
