@@ -306,26 +306,29 @@ class Subspace(Algorithm):
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
         self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
         self.network = nn.Sequential(self.featurizer, self.classifier)
-        set_requires_grad(self.network, False)
         self.net = {}
         self.size_code = 5
         self.hypernet = nn.Linear(self.size_code, count_param(self.network))
         self.optimizer = torch.optim.Adam(
             self.hypernet.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
+        set_requires_grad(self.network, False)
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])
 
+        net_copy = copy.deepcopy(self.network)
+        set_requires_grad(net_copy, False)
+
         code = torch.rand(self.size_code).to("cuda")
         param_hyper = self.hypernet(code)
         count_p = 0
-        for pnet in self.network.parameters():
+        for pnet in net_copy.parameters():
             phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
             pnet.copy_(phyper)
             count_p += int(pnet.numel())
         # loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
-        loss = F.cross_entropy(self.network(all_x), all_classes)  # + loss_reg
+        loss = F.cross_entropy(net_copy(all_x), all_classes)  # + loss_reg
 
         self.optimizer.zero_grad()
         loss.backward()
