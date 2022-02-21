@@ -25,8 +25,7 @@ def remove_batch_norm_from_resnet(model):
                 for name2, module2 in bottleneck.named_modules():
                     if name2.startswith("conv"):
                         bn_name = "bn" + name2[-1]
-                        setattr(bottleneck, name2,
-                                fuse(module2, getattr(bottleneck, bn_name)))
+                        setattr(bottleneck, name2, fuse(module2, getattr(bottleneck, bn_name)))
                         setattr(bottleneck, bn_name, nn.Identity())
                 if isinstance(bottleneck.downsample, torch.nn.Sequential):
                     bottleneck.downsample[0] = fuse(bottleneck.downsample[0], bottleneck.downsample[1])

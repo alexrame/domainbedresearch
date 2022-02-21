@@ -70,7 +70,7 @@ python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_pyhessian --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -131,8 +131,9 @@ export MLFLOW_TRACKING_URI=/home/m.kirchmeyer/sync/domainbedresearch/mlruns
 export ML=$MLFLOW_TRACKING_URI
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef88798914dcc80efb8
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/4/5a9864b352554e088ee37813376c6253
-LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_hutch_temp
+LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian
 
+python -m tensorboard.main --port 6001 --logdir_spec /home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian --bind_all
 python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
 .bashrc
 tb()
@@ -143,7 +144,7 @@ tb()
 Définir LOGDIR 
 Faire tb 6001
 Expés sur test_env=0 OfficeHome
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hess --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_10 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
 
 3 -> sans hessienne
 4 -> dernier run avec hessienne
@@ -151,6 +152,16 @@ analyser tensorboard single run
 swa_officehome_0_hess_fixed -> diag hessian mav_classifier
 hutch -> hutch trace for mav_classifier
 swa_officehome_0_hutch_temp -> power iteration hessian
+
+
+swa_officehome_0_pyhessian -> hessian single run
+swa_officehome_0_pyhess -> hessian every step multi run
+swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
+
+
+
+mlflow ui --port 6006
+ssh -L 16006:127.0.0.1:6006 m.kirchmeyer@10.189.23.12 -p 31000 -A -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o LogLevel=ERROR
 ```
 
 ## License

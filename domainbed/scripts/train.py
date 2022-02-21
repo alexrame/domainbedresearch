@@ -241,13 +241,12 @@ def main():
     uda_minibatches_iterator = zip(*uda_loaders)
     checkpoint_vals = collections.defaultdict(lambda: [])
 
+    n_steps = args.steps or dataset.N_STEPS
+    checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
     steps_per_epoch = min([len(env)/hparams['batch_size'] for i, (env, _) in enumerate(in_splits) if i not in args.test_envs])
     # print([len(env)/hparams['batch_size'] for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
-    # print(steps_per_epoch)
-
-    n_steps = args.steps or dataset.N_STEPS
-    checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
+    print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
     def save_checkpoint(filename):
         if args.skip_model_save:
@@ -282,10 +281,11 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        if (step % checkpoint_freq == 0) or (step == n_steps - 1) or (step < 0 and step % 2 ==0):
+        if (step % checkpoint_freq == 0) or (step == n_steps - 1) or (step < 0 and step % 2 == 0):
+            epoch = step / steps_per_epoch
             results = {
                 'step': step,
-                'epoch': step / steps_per_epoch,
+                'epoch': epoch,
             }
             if scheduler is not None:
                 results["lr"] = scheduler.get_lr()
@@ -299,7 +299,7 @@ def main():
                 # tqdm.write("eval "+name)
                 # begin = time.time()
                 if hasattr(algorithm, "accuracy"):
-                    acc = algorithm.accuracy(loader, device)
+                    acc = algorithm.accuracy(loader, device, (step % (3 * checkpoint_freq) == 0) or (step == n_steps - 1))
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
                 # tqdm.write("time:" + str(time.time() - begin))

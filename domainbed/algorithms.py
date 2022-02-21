@@ -6,14 +6,9 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 import pdb
 import random
-
 from pyhessian import hessian
-from torch.utils.data import TensorDataset, DataLoader
-
 from domainbed import networks
-from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav, flatness_metrics
-from domainbed.lib.flatness_metrics import hutchinson_trace_hmp, hessian_diag
-from hessian_eigenthings import compute_hessian_eigenthings
+from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav
 
 try:
     from torchmetrics import Precision, Recall
@@ -220,35 +215,26 @@ class ERM(Algorithm):
         if self.hparams['mav']:
             self.mav.network_mav.train(*args)
 
-    def accuracy(self, loader, device):
+    def accuracy(self, loader, device, compute_hess=False):
         self.eval()
         batch_classes = []
-        # subset_classes = []
-        # batch_x = []
         dict_stats = {}
-        # i = 0
         with torch.no_grad():
             for batch in loader:
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
-                # dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
-                # if i < 10:
-                #     batch_x.append(x)
-                #     subset_classes.append(y)
-                #     i += 1
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}  # , "feats": []}
+                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}
                     logits = dict_logits[key]
                     try:
                         preds = logits.argmax(1)
                     except:
                         pdb.set_trace()
                     dict_stats[key]["preds"].append(preds.cpu())
-                    # dict_stats[key]["feats"].append(dict_feats[key])
                     dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
 
@@ -293,31 +279,18 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # Flatness metrics
-            # dataset = TensorDataset(torch.cat(batch_x), torch.cat(subset_classes))
-            # del batch_x
-            # eigenvals_flatten, _ = compute_hessian_eigenthings(
-            #     self.mav.network_mav, DataLoader(dataset, batch_size=64), nn.CrossEntropyLoss(reduction='sum'),
-            #     num_eigenthings=5)
-            hessian_comp = hessian(self.mav.network_mav, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
-            trace_val = np.mean(hessian_comp.trace())
-            print(trace_val)
-            # inputs_torch = torch.cat(batch_x)
-            # trace_val = hutchinson_trace_hmp(inputs_torch[:100], targets_torch[:100], extend(self.mav.network_mav), device=device)
-            # feats0 = dict_stats[key0]["feats"]
-            # trace_val = hutchinson_trace_hmp(feats0, targets_torch, extend(self.mav.get_classifier()), device=device)
-            # eigenvals = hessian_diag(feats0, targets_torch, extend(self.mav.get_classifier()))
-            # eigenvals_flatten = torch.cat([eigenvals["weight"], eigenvals["bias"]])
-            # trace_val = torch.sum(torch.topk(eigenvals_flatten, 100).values).cpu().numpy()
-            # print(eigenvals_flatten)
-            # trace_val = np.sum(eigenvals_flatten)
-            # trace_val = torch.sum(eigenvals_flatten).cpu().numpy()
-            results[f"Flatness/{regex}trace"] = trace_val
-            # for i in range(len(eigenvals_flatten)):
-            #     results[f"Flatness/{regex}topeigenval{i+1}"] = eigenvals_flatten[i]
-            # top10 = torch.topk(eigenvals_flatten, 10).values
-            # for eigenval in top10:
-            #     results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
-            #     i += 1
+            if compute_hess:
+                hessian_comp = hessian(
+                    self.mav.network_mav, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
+                trace_val = np.mean(hessian_comp.trace())
+                print(trace_val)
+                results[f"Flatness/{regex}trace"] = trace_val
+                # for i in range(len(eigenvals_flatten)):
+                #     results[f"Flatness/{regex}topeigenval{i+1}"] = eigenvals_flatten[i]
+                # top10 = torch.topk(eigenvals_flatten, 10).values
+                # for eigenval in top10:
+                #     results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
+                #     i += 1
         self.train()
         return results
 
@@ -921,5 +894,5 @@ class Ensembling(Algorithm):
 
         return results
 
-    def accuracy(self, loader, device):
-        return ERM.accuracy(self, loader, device)
+    def accuracy(self, loader, device, compute_hess=False):
+        return ERM.accuracy(self, loader, device, compute_hess)

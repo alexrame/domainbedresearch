@@ -75,7 +75,6 @@ class MultipleDomainDataset:
     CLASSES = None
     NO_EVAL = None
 
-
     def __getitem__(self, index):
         return self.datasets[index]
 
@@ -84,7 +83,6 @@ class MultipleDomainDataset:
 
 
 class Debug(MultipleDomainDataset):
-
     def __init__(self, root, test_envs, hparams):
         super().__init__()
         self.input_shape = self.INPUT_SHAPE
