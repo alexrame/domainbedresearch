@@ -287,10 +287,7 @@ def main():
 
         if (step % checkpoint_freq == 0) or (step == n_steps - 1) or (step < 0 and step % 2 == 0):
             epoch = step / steps_per_epoch
-            results = {
-                'step': step,
-                'epoch': epoch,
-            }
+            results = {'step': step, 'epoch': epoch}
             if scheduler is not None:
                 results["lr"] = scheduler.get_lr()
 
@@ -328,8 +325,7 @@ def main():
                 if key in results:
                     train_acc = statistics.mean([
                             results["env" + str(i) + "_out_acc"]
-                            for i, (env, env_weights) in enumerate(in_splits)
-                            if i not in args.test_envs
+                            for i, (env, env_weights) in enumerate(in_splits) if i not in args.test_envs
                         ])
                     if step == 5000:
                         metrics["acc_5000"] = results.get(key, 0.)

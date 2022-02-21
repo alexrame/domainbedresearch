@@ -174,8 +174,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == "VREx":
         _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(-1, 5))
         _hparam(
-            'vrex_penalty_anneal_iters', 500,
-            lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
+            'vrex_penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
         )
 
     elif algorithm == "SD":

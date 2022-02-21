@@ -306,28 +306,26 @@ class Subspace(Algorithm):
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
         self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
         self.network = nn.Sequential(self.featurizer, self.classifier)
+        set_requires_grad(self.network, False)
         self.net = {}
         self.size_code = 5
-        self.hypernet = nn.Linear(self.size_code, count_param(self.featurizer) + count_param(self.classifier))
+        self.hypernet = nn.Linear(self.size_code, count_param(self.network))
         self.optimizer = torch.optim.Adam(
             self.hypernet.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
 
     def update(self, minibatches, unlabeled=None):
-        net_ghost = copy.deepcopy(self.network)
-        set_requires_grad(net_ghost, False)
-        self.net["ghost"] = net_ghost
-
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])
 
         code = torch.rand(self.size_code).to("cuda")
         param_hyper = self.hypernet(code)
         count_p = 0
-        for pnet in self.net["ghost"].parameters():
+        for pnet in self.network.parameters():
             phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
             pnet.copy_(phyper)
             count_p += int(pnet.numel())
-        loss = F.cross_entropy(self.net["ghost"](all_x), all_classes)
+        # loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
+        loss = F.cross_entropy(self.network(all_x), all_classes)  # + loss_reg
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -335,7 +333,7 @@ class Subspace(Algorithm):
         return {"loss": loss.item()}
 
     def predict(self, x):
-        param_hyper = self.hypernet.state_dict()["bias"]
+        param_hyper = self.hypernet.bias
         count_p = 0
         for pnet in self.network.parameters():
             phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)

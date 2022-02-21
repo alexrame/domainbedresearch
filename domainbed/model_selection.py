@@ -73,8 +73,7 @@ class OracleSelectionMethod(SelectionMethod):
 
     @classmethod
     def run_acc(self, run_records):
-        run_records = run_records.filter(lambda r:
-            len(r['args']['test_envs']) == 1)
+        run_records = run_records.filter(lambda r: len(r['args']['test_envs']) == 1)
         if not len(run_records):
             return None
         test_env = run_records[0]['args']['test_envs'][0]

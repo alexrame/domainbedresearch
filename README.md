@@ -71,7 +71,8 @@ Train a model:
 
 ```sh
 python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
-python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/cmnist_subspace --algorithm Subspace --dataset ColoredMNIST --test_env 0 --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -124,7 +125,7 @@ KEYACC=net python3 -m domainbed.scripts.collect_results --input_dir ./output/swa
 KEYACC=mav - moving average
 KEYACC=net - réseau final ERM
 
-HP=D -- lr=5e-5, dropout=, weight_decay=0, batch_size=32
+HP=D -- lr=5e-5, dropout=0, weight_decay=0, batch_size=32
 ```
 
 ```sh
