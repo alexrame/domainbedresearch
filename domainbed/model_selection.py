@@ -4,10 +4,12 @@ import itertools
 import numpy as np
 import os
 
+
 def get_test_records(records):
     """Given records with a common test env, get the test records (i.e. the
     records with *only* that single test env and no other test envs)"""
     return records.filter(lambda r: len(r['args']['test_envs']) == 1)
+
 
 class SelectionMethod:
     """Abstract class whose subclasses implement strategies for model
@@ -61,6 +63,7 @@ class SelectionMethod:
             return _hparams_accs[0][0]['test_acc']
         else:
             return None
+
 
 class OracleSelectionMethod(SelectionMethod):
     """Like Selection method which picks argmax(test_out_acc) across all hparams
@@ -129,6 +132,7 @@ class IIDAccuracySelectionMethod(SelectionMethod):
             return None
         return test_records.map(self._step_acc).argmax('val_acc')
 
+
 class LeaveOneOutSelectionMethod(SelectionMethod):
     """Picks (hparams, step) by leave-one-out cross validation."""
     name = "leave-one-domain-out cross-validation"
@@ -152,7 +156,7 @@ class LeaveOneOutSelectionMethod(SelectionMethod):
             val_env = (set(r['args']['test_envs']) - set([test_env])).pop()
             val_accs[val_env] = r['env{}_in_acc'.format(val_env)]
         val_accs = list(val_accs[:test_env]) + list(val_accs[test_env+1:])
-        if any([v==-1 for v in val_accs]):
+        if any([v == -1 for v in val_accs]):
             return None
         val_acc = np.sum(val_accs) / (n_envs-1)
         return {
@@ -162,9 +166,7 @@ class LeaveOneOutSelectionMethod(SelectionMethod):
 
     @classmethod
     def run_acc(self, records):
-        step_accs = records.group('step').map(lambda step, step_records:
-            self._step_acc(step_records)
-        ).filter_not_none()
+        step_accs = records.group('step').map(lambda step, step_records: self._step_acc(step_records)).filter_not_none()
         if len(step_accs):
             return step_accs.argmax('val_acc')
         else:

@@ -71,6 +71,7 @@ Train a model:
 
 ```sh
 python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -152,13 +153,11 @@ analyser tensorboard single run
 swa_officehome_0_hess_fixed -> diag hessian mav_classifier
 hutch -> hutch trace for mav_classifier
 swa_officehome_0_hutch_temp -> power iteration hessian
-
-
-swa_officehome_0_pyhessian -> hessian single run
-swa_officehome_0_pyhess -> hessian every step multi run
+swa_officehome_0_pyhess and swa_officehome_0_pyhess_vf -> hessian every step multi run
 swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
 
-
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_vf --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_subspace --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
 
 mlflow ui --port 6006
 ssh -L 16006:127.0.0.1:6006 m.kirchmeyer@10.189.23.12 -p 31000 -A -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o LogLevel=ERROR

@@ -225,6 +225,10 @@ def main():
     except:
         pass
     try:
+        algorithm.hypernet.to(device)
+    except:
+        pass
+    try:
         for mav in algorithm.mavs:
             mav.network_mav.to(device)
     except:
@@ -299,7 +303,8 @@ def main():
                 # tqdm.write("eval "+name)
                 # begin = time.time()
                 if hasattr(algorithm, "accuracy"):
-                    acc = algorithm.accuracy(loader, device, (step % (3 * checkpoint_freq) == 0) or (step == n_steps - 1))
+                    compute_hessian = False  # ((step % (3 * checkpoint_freq) == 0) or (step == n_steps - 1))  # True
+                    acc = algorithm.accuracy(loader, device, compute_hessian)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
                 # tqdm.write("time:" + str(time.time() - begin))

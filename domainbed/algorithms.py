@@ -9,7 +9,8 @@ import random
 from pyhessian import hessian
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav
-
+from domainbed.lib.misc import count_param, set_requires_grad
+import copy
 try:
     from torchmetrics import Precision, Recall
 except:
@@ -21,6 +22,7 @@ ALGORITHMS = [
     "ERM",
     "Fish",
     "IRM",
+    "Subspace",
     # "IRMAdv",
     # "GroupDRO",
     # "Mixup",
@@ -293,6 +295,53 @@ class ERM(Algorithm):
                 #     i += 1
         self.train()
         return results
+
+
+class Subspace(Algorithm):
+    """
+    Subspace learning
+    """
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Subspace, self).__init__(input_shape, num_classes, num_domains, hparams)
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
+        self.network = nn.Sequential(self.featurizer, self.classifier)
+        self.net = {}
+        self.size_code = 5
+        self.hypernet = nn.Linear(self.size_code, count_param(self.featurizer) + count_param(self.classifier))
+        self.optimizer = torch.optim.Adam(
+            self.hypernet.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
+
+    def update(self, minibatches, unlabeled=None):
+        net_ghost = copy.deepcopy(self.network)
+        set_requires_grad(net_ghost, False)
+        self.net["ghost"] = net_ghost
+
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        code = torch.rand(self.size_code).to("cuda")
+        param_hyper = self.hypernet(code)
+        count_p = 0
+        for pnet in self.net["ghost"].parameters():
+            phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
+            pnet.copy_(phyper)
+            count_p += int(pnet.numel())
+        loss = F.cross_entropy(self.net["ghost"](all_x), all_classes)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        return {"loss": loss.item()}
+
+    def predict(self, x):
+        param_hyper = self.hypernet.state_dict()["bias"]
+        count_p = 0
+        for pnet in self.network.parameters():
+            phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
+            pnet.copy_(phyper)
+            count_p += int(pnet.numel())
+        return {"net": self.network(x)}
 
 
 class SWA(ERM):

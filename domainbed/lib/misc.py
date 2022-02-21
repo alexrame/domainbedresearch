@@ -398,3 +398,12 @@ def one_hot_embedding(labels, num_classes):
     """
     y = torch.eye(num_classes).to(device=labels.device)
     return y[labels]
+
+
+def count_param(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def set_requires_grad(module, tf=False):
+    module.requires_grad = tf
+    for param in module.parameters():
+        param.requires_grad = tf

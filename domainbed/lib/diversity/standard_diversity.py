@@ -1,5 +1,4 @@
 import torch
-
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -23,6 +22,7 @@ class DiversityLoss(torch.nn.Module):
 
 class GroupDRO(DiversityLoss):
     diversity_type = "sampling"
+
     def __init__(self, hparams, num_domains, **kwargs):
         DiversityLoss.__init__(self, hparams)
         self.num_domains = num_domains
@@ -43,6 +43,7 @@ class GroupDRO(DiversityLoss):
 
 class Bagging(DiversityLoss):
     diversity_type = "sampling"
+
     def __init__(self, hparams, num_domains, **kwargs):
         DiversityLoss.__init__(self, hparams)
         self.num_domains = num_domains
@@ -72,7 +73,6 @@ class BaggingPerDomain(DiversityLoss):
 
 
 class LogitDistance(DiversityLoss):
-
     def forward(self, logits_per_member, **kwargs):
         """Diversity in logits distance
         Args:
