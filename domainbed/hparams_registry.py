@@ -253,10 +253,12 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('phosam', 0.001, lambda r: r.choice([0.001, 0.002, 0.005, 0.01, 0.02, 0.05]))
         _hparam('mavsamcoeff', 1., lambda r: 10**r.uniform(-1, 2))
 
-    if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling"]:
+    if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling", "Subspace"]:
         _hparam('mav', 0, lambda r: r.choice([0]))
     if algorithm in ["SWA"]:
         _hparam('mav', 0, lambda r: r.choice([1]))
+    if algorithm in ["Subspace"]:
+        _hparam('penalty_reg', 10**(-5), lambda r: r.choice([10**(-5), 10**(-6), 10**(-7)]))
 
     if algorithm in ["Ensembling", "SWA"]:
         if os.environ.get("HP") == "D":

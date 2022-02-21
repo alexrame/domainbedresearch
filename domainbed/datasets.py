@@ -254,6 +254,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
 class ColoredMNISTClean(ColoredMNIST):
     proba_flip = 0.0
 
+
 class CustomCMNISTDataset(Dataset):
     def __init__(self, dict):
         super().__init__()
@@ -271,15 +272,14 @@ class CustomCMNISTDataset(Dataset):
     def __len__(self):
         return len(self.dict["x"])
 
+
 class CustomColoredMNIST(MultipleEnvironmentMNIST):
     ENVIRONMENTS = ['+90%', '+80%', '-90%']
     TEST_ENVS = [2]
     CUSTOM_DATASET = True
 
     def __init__(self, root, test_envs, hparams):
-        super(CustomColoredMNIST, self).__init__(root, [0.1, 0.2, 0.9],
-                                         self.color_dataset, (2, 28, 28,), 2)
-
+        super(CustomColoredMNIST, self).__init__(root, [0.1, 0.2, 0.9], self.color_dataset, (2, 28, 28,), 2)
         self.input_shape = (2, 28, 28,)
         self.num_classes = 2
         self.hparams = hparams
@@ -290,17 +290,13 @@ class CustomColoredMNIST(MultipleEnvironmentMNIST):
         # Assign a binary label based on the digit
         true_labels = (labels < 5).float()
         # Flip label with probability 0.25
-        labels = self.torch_xor_(true_labels,
-                                 self.torch_bernoulli_(0.25, len(true_labels)))
+        labels = self.torch_xor_(true_labels, self.torch_bernoulli_(0.25, len(true_labels)))
 
         # Assign a color based on the label; flip the color with probability e
-        colors = self.torch_xor_(labels,
-                                 self.torch_bernoulli_(environment,
-                                                       len(labels)))
+        colors = self.torch_xor_(labels, self.torch_bernoulli_(environment, len(labels)))
         images = torch.stack([images, images], dim=1)
         # Apply the color to the image by zeroing out the other color channel
-        images[torch.tensor(range(len(images))), (
-            1 - colors).long(), :, :] *= 0
+        images[torch.tensor(range(len(images))), (1 - colors).long(), :, :] *= 0
 
         x = images.float().div_(255.0)
         y = labels.view(-1).long()
@@ -320,8 +316,7 @@ class CustomGrayColoredMNIST(MultipleEnvironmentMNIST):
     CUSTOM_DATASET = True
 
     def __init__(self, root, test_envs, hparams):
-        super().__init__(root, [0.1, 0.2, 0.9],
-                                         self.color_dataset, (2, 28, 28,), 2)
+        super().__init__(root, [0.1, 0.2, 0.9], self.color_dataset, (2, 28, 28,), 2)
 
         self.input_shape = (2, 28, 28,)
         self.num_classes = 2
@@ -333,8 +328,7 @@ class CustomGrayColoredMNIST(MultipleEnvironmentMNIST):
         # Assign a binary label based on the digit
         true_labels = (labels < 5).float()
         # Flip label with probability 0.25
-        labels = self.torch_xor_(true_labels,
-                                 self.torch_bernoulli_(0.25, len(true_labels)))
+        labels = self.torch_xor_(true_labels, self.torch_bernoulli_(0.25, len(true_labels)))
 
         # Assign a color based on the label; flip the color with probability e
         colors = torch.zeros_like(labels)  # self.torch_xor_(labels,
@@ -342,8 +336,7 @@ class CustomGrayColoredMNIST(MultipleEnvironmentMNIST):
         #                                  len(labels)))
         images = torch.stack([images, images], dim=1)
         # Apply the color to the image by zeroing out the other color channel
-        images[torch.tensor(range(len(images))), (
-            1 - colors).long(), :, :] *= 0
+        images[torch.tensor(range(len(images))), (1 - colors).long(), :, :] *= 0
 
         x = images.float().div_(255.0)
         y = labels.view(-1).long()
@@ -371,8 +364,8 @@ class RotatedMNIST(MultipleEnvironmentMNIST):
     def rotate_dataset(self, images, labels, angle):
         rotation = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Lambda(lambda x: rotate(x, angle, fill=(0,),
-                interpolation=torchvision.transforms.InterpolationMode.BILINEAR)),
+            transforms.Lambda(
+                lambda x: rotate(x, angle, fill=(0,), interpolation=torchvision.transforms.InterpolationMode.BILINEAR)),
             transforms.ToTensor()])
 
         x = torch.zeros(len(images), 1, 28, 28)

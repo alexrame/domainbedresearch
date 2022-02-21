@@ -297,7 +297,7 @@ class ERM(Algorithm):
         return results
 
 
-class Subspace(Algorithm):
+class Subspace(ERM):
     """
     Subspace learning
     """
@@ -312,6 +312,7 @@ class Subspace(Algorithm):
         self.optimizer = torch.optim.Adam(
             self.hypernet.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
         set_requires_grad(self.network, False)
+        self._init_mav()
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
@@ -327,8 +328,8 @@ class Subspace(Algorithm):
             phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
             pnet.copy_(phyper)
             count_p += int(pnet.numel())
-        # loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
-        loss = F.cross_entropy(net_copy(all_x), all_classes)  # + loss_reg
+        loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
+        loss = F.cross_entropy(net_copy(all_x), all_classes) + self.hparams["penalty_reg"] * loss_reg
 
         self.optimizer.zero_grad()
         loss.backward()

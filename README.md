@@ -135,7 +135,7 @@ LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef8879891
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/4/5a9864b352554e088ee37813376c6253
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian
 
-python -m tensorboard.main --port 6001 --logdir_spec /home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian --bind_all
+python -m tensorboard.main --port 6001 --logdir_spec /home/m.kirchmeyer/domainbedresearch/output/swa_officehome_subspace/1db6d6eb7d08de4d3eabf3995f435e93 --bind_all
 python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
 .bashrc
 tb()
@@ -158,7 +158,7 @@ swa_officehome_0_pyhess and swa_officehome_0_pyhess_vf -> hessian every step mul
 swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
 
 HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_vf --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_subspace --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
+CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/subspace_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
 
 mlflow ui --port 6006
 ssh -L 16006:127.0.0.1:6006 m.kirchmeyer@10.189.23.12 -p 31000 -A -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o LogLevel=ERROR
