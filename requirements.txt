@@ -12,3 +12,4 @@ tensorboard
 wilds
 mlflow
 torchmetrics
+pyhessian

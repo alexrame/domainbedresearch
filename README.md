@@ -70,7 +70,7 @@ python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_hutch_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_pyhessian --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -131,6 +131,7 @@ export MLFLOW_TRACKING_URI=/home/m.kirchmeyer/sync/domainbedresearch/mlruns
 export ML=$MLFLOW_TRACKING_URI
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef88798914dcc80efb8
 LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/4/5a9864b352554e088ee37813376c6253
+LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_hutch_temp
 
 python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
 .bashrc
