@@ -139,6 +139,7 @@ Expés sur test_env=0 OfficeHome
 
 mlflow ui --port 6006
 ssh -L 16006:127.0.0.1:6006 m.kirchmeyer@10.189.23.12 -p 31000 -A -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o LogLevel=ERROR
+http://127.0.0.1:16006
 
 # SWA
 HP=D python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_single --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
@@ -148,6 +149,7 @@ HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output
 HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_10 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
 HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_cmnist --command_launcher multi_gpu --datasets ColoredMNIST --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2
 HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hessian_final --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 --n_hparams 1
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hessian_final_60seeds_mlflow --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
 
 # Subspace
 python3 -m domainbed.scripts.train --output_dir=./output/officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
@@ -155,12 +157,21 @@ python3 -m domainbed.scripts.train --output_dir=./output/cmnist_subspace --algor
 
 CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/subspace_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
 
-swa_officehome_0_pyhess  -> hessian every step multi run 1 
+swa_officehome_0_pyhess -> hessian every step multi run 1 
 swa_officehome_0_pyhess_vf -> hessian every step multi run 2 
 swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
-swa_officehome_0_pyhess_final -> hessian final epoch
 swa_officehome_single single run
 subspace_officehome with L1L2 reg
+
+swa_officehome_0_hessian_final_60seeds -> run 60 seeds final
+swa_officehome_0_hessian_final_60seeds_mlflow -> run 60 seeds final
+swa_officehome_0_hessian_final -> run 3 final
+
+
+CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hessian_final_no_hp_60seeds --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+swa_officehome_0_hessian_final_60seeds_mlflow / hess: network -> 60 seeds net
+swa_officehome_0_hessian_classif_final_60seeds_mlflow / hess_class-> 60 seeds classif
+swa_officehome_0_hessian_final_no_hp_60seeds / hess_full_nohp: network -> 60 seeds net
 ```
 
 ## License

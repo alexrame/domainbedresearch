@@ -10,6 +10,6 @@ gdown
 pyyaml
 tensorboard
 wilds
-mlflow
+mlflow==1.7.0
 torchmetrics
 pyhessian

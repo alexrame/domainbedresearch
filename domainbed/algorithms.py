@@ -198,6 +198,15 @@ class ERM(Algorithm):
             results = {"net": preds_network}
         return results
 
+    def predict_feat(self, x):
+        feats_network = self.featurizer(x)
+        if self.hparams['mav']:
+            feats_mav = self.mav.get_featurizer()(x)
+            results = {"mav": feats_mav, "net": feats_network}
+        else:
+            results = {"net": feats_network}
+        return results
+
     def eval(self):
         Algorithm.eval(self)
         if self.hparams['mav']:
@@ -217,17 +226,19 @@ class ERM(Algorithm):
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
+                # dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}
+                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}  # , "feats": []}
                     logits = dict_logits[key]
                     try:
                         preds = logits.argmax(1)
                     except:
                         pdb.set_trace()
                     dict_stats[key]["preds"].append(preds.cpu())
+                    # dict_stats[key]["feats"].append(dict_feats[key])
                     dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
 
@@ -273,17 +284,19 @@ class ERM(Algorithm):
 
             # Flatness metrics
             if compute_trace:
-                hessian_comp = hessian(
+                # feats0 = dict_stats[key0]["feats"]
+                # hessian_comp_mav = hessian(
+                #     self.mav.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
+                hessian_comp_mav = hessian(
                     self.mav.network_mav, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
-                trace_val = np.mean(hessian_comp.trace())
-                print(trace_val)
-                results[f"Flatness/{regex}trace"] = trace_val
-                # for i in range(len(eigenvals_flatten)):
-                #     results[f"Flatness/{regex}topeigenval{i+1}"] = eigenvals_flatten[i]
-                # top10 = torch.topk(eigenvals_flatten, 10).values
-                # for eigenval in top10:
-                #     results[f"Flatness/{regex}topeigenval{i}"] = eigenval.cpu().numpy()
-                #     i += 1
+                results[f"Flatness/{key0}trace"] = np.mean(hessian_comp_mav.trace())
+
+                # feats1 = dict_stats[key1]["feats"]
+                # hessian_comp_net = hessian(
+                #     self.classifier, nn.CrossEntropyLoss(reduction='sum'), data=(feats1, targets_torch), cuda=True)
+                hessian_comp_net = hessian(
+                    self.network, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
+                results[f"Flatness/{key1}trace"] = np.mean(hessian_comp_net.trace())
         self.train()
         return results
 

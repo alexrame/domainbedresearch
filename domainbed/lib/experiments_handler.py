@@ -21,7 +21,7 @@ def set_experiment_name(args):
     if os.environ.get("USER") in ["rame", "utr15kn", "m.kirchmeyer"]:
         test_env = args["test_envs"][0]
         if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
-            return args["dataset"] + str(test_env) + VERSION
+            return args["dataset"] + str(test_env) + VERSION + "hess_full_nohp"
         elif args["dataset"] == "Spirals":
             return "Spirals"
         elif args["dataset"] == "CelebA_Blond":

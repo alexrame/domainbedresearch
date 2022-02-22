@@ -225,6 +225,7 @@ class ColoredMNIST(MultipleEnvironmentMNIST):
         self.num_classes = 2
 
     proba_flip = 0.25
+
     def color_dataset(self, images, labels, environment):
         # # Subsample 2x for computational convenience
         # images = images.reshape((-1, 28, 28))[:, ::2, ::2]
