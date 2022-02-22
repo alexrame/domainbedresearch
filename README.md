@@ -70,9 +70,7 @@ python3 -m domainbed.scripts.download --data_dir=./domainbed/data/MNIST/
 Train a model:
 
 ```sh
-python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_0_temp --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
-python3 -m domainbed.scripts.train --output_dir=./output/officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
-python3 -m domainbed.scripts.train --output_dir=./output/cmnist_subspace --algorithm Subspace --dataset ColoredMNIST --test_env 0 --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_single --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
 ```
 
 Launch a sweep:
@@ -116,52 +114,53 @@ By default, this only runs tests which don't depend on a dataset directory. To r
 DATA_DIR=/my/datasets/path python -m unittest discover
 ```
 
-
 ```sh
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa --command_launcher multi_gpu --datasets PACS --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
 KEYACC=mav python3 -m domainbed.scripts.collect_results --input_dir ./output/swa
 KEYACC=net python3 -m domainbed.scripts.collect_results --input_dir ./output/swa
 KEYACC=mav - moving average
 KEYACC=net - réseau final ERM
-
 HP=D -- lr=5e-5, dropout=0, weight_decay=0, batch_size=32
 ```
 
 ```sh
 export MLFLOW_TRACKING_URI=/home/m.kirchmeyer/sync/domainbedresearch/mlruns
 export ML=$MLFLOW_TRACKING_URI
-LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/0/000de72b01ba4ef88798914dcc80efb8
-LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/mlruns/4/5a9864b352554e088ee37813376c6253
-LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian
-
-python -m tensorboard.main --port 6001 --logdir_spec /home/m.kirchmeyer/domainbedresearch/output/swa_officehome_subspace/1db6d6eb7d08de4d3eabf3995f435e93 --bind_all
+export LOGDIR=/home/m.kirchmeyer/sync/domainbedresearch/output/swa_officehome_0_pyhessian
+python -m tensorboard.main --port 6001 --logdir_spec ./ --bind_all
 python -m tensorboard.main --port 6001 --logdir_spec $LOGDIR --bind_all
 .bashrc
-tb()
-{
-        echo $LOGDIR
-        export TMPDIR=/tmp/$USER_$1; mkdir -p $TMPDIR; tensorboard --port $1 --logdir_spec $LOGDIR
+tb(){
+    echo $LOGDIR
+    export TMPDIR=/tmp/$USER_$1; mkdir -p $TMPDIR; tensorboard --port $1 --logdir_spec $LOGDIR
 }
 Définir LOGDIR 
 Faire tb 6001
 Expés sur test_env=0 OfficeHome
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_10 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
-
-3 -> sans hessienne
-4 -> dernier run avec hessienne
-analyser tensorboard single run
-swa_officehome_0_hess_fixed -> diag hessian mav_classifier
-hutch -> hutch trace for mav_classifier
-swa_officehome_0_hutch_temp -> power iteration hessian
-swa_officehome_0_pyhess and swa_officehome_0_pyhess_vf -> hessian every step multi run
-swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
-
-HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_vf --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
-CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/subspace_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
 
 mlflow ui --port 6006
 ssh -L 16006:127.0.0.1:6006 m.kirchmeyer@10.189.23.12 -p 31000 -A -oUserKnownHostsFile=/dev/null -oStrictHostKeyChecking=no -o LogLevel=ERROR
+
+# SWA
+HP=D python3 -m domainbed.scripts.train --output_dir=./output/swa_officehome_single --algorithm SWA --dataset OfficeHome --test_env 0 --hp mav 1 --hp diversity_loss none --data_dir=./data/domainbed/
+
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa --command_launcher multi_gpu --datasets PACS --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2 3
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_pyhess_10 --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_cmnist --command_launcher multi_gpu --datasets ColoredMNIST --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 1 2
+HP=D CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_hessian_final --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp mav 1 --hp diversity_loss none --test_envs 0 --n_hparams 1
+
+# Subspace
+python3 -m domainbed.scripts.train --output_dir=./output/officehome_subspace --algorithm Subspace --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
+python3 -m domainbed.scripts.train --output_dir=./output/cmnist_subspace --algorithm Subspace --dataset ColoredMNIST --test_env 0 --data_dir=./data/domainbed/
+
+CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/subspace_officehome --command_launcher multi_gpu --datasets OfficeHome --algorithms Subspace --single_test_envs --test_envs 0 1 2 3
+
+swa_officehome_0_pyhess  -> hessian every step multi run 1 
+swa_officehome_0_pyhess_vf -> hessian every step multi run 2 
+swa_officehome_0_pyhess_10 -> hessian every 10 epoch multi run
+swa_officehome_0_pyhess_final -> hessian final epoch
+swa_officehome_single single run
+subspace_officehome with L1L2 reg
 ```
 
 ## License

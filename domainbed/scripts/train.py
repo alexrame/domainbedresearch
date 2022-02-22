@@ -139,12 +139,12 @@ def main():
     # To allow unsupervised domain adaptation experiments, we split each test
     # env into 'in-split', 'uda-split' and 'out-split'. The 'in-split' is used
     # by collect_results.py to compute classification accuracies.  The
-    # 'out-split' is used by the Oracle model selectino method. The unlabeled
+    # 'out-split' is used by the Oracle model selection method. The unlabeled
     # samples in 'uda-split' are passed to the algorithm at training time if
     # args.task == "domain_adaptation". If we are interested in comparing
     # domain generalization and domain adaptation results, then domain
     # generalization algorithms should create the same 'uda-splits', which will
-    # be discared at training.
+    # be discarded at training.
     in_splits = []
     out_splits = []
     uda_splits = []
@@ -205,8 +205,8 @@ def main():
     eval_loader_names += ['env{}_out'.format(i) for i in range(len(out_splits))]
     eval_loader_names += ['env{}_uda'.format(i) for i in range(len(uda_splits))]
 
-    algorithm: Algorithm = algorithm_class(dataset.input_shape, dataset.num_classes,
-                                           len(dataset) - len(args.test_envs), hparams)
+    algorithm: Algorithm = algorithm_class(
+        dataset.input_shape, dataset.num_classes, len(dataset) - len(args.test_envs), hparams)
 
     if algorithm_dict is not None:
         algorithm.load_state_dict(algorithm_dict)
@@ -276,7 +276,7 @@ def main():
             uda_batch = None
         minibatches_device = [(x.to(device), y.to(device)) for x,y in batches]
         if args.task == "domain_adaptation":
-            uda_device = [x.to(device) for x,_ in uda_batch]
+            uda_device = [x.to(device) for x, _ in uda_batch]
         else:
             uda_device = None
         step_vals = algorithm.update(minibatches_device, uda_device)
@@ -300,8 +300,9 @@ def main():
                 # tqdm.write("eval "+name)
                 # begin = time.time()
                 if hasattr(algorithm, "accuracy"):
-                    compute_hessian = False  # ((step % (3 * checkpoint_freq) == 0) or (step == n_steps - 1))  # True
-                    acc = algorithm.accuracy(loader, device, compute_hessian)
+                    compute_trace = (("env" + str(args.test_envs[0])) in name and (step == n_steps - 1))  # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
+                    print(f"{name}, compute_trace is {compute_trace}")
+                    acc = algorithm.accuracy(loader, device, compute_trace)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
                 # tqdm.write("time:" + str(time.time() - begin))
@@ -354,12 +355,8 @@ def main():
                             return False
                         return True
 
-                    results_dumpable = {
-                        key: value for key, value in results.items() if is_dumpable(value)
-                    }
-                    results_nodumpable = {
-                        key: value for key, value in results.items() if not is_dumpable(value)
-                    }
+                    results_dumpable = {key: value for key, value in results.items() if is_dumpable(value)}
+                    results_nodumpable = {key: value for key, value in results.items() if not is_dumpable(value)}
                     # import pdb; pdb.set_trace()
                     print(e)
                     print(results_nodumpable)

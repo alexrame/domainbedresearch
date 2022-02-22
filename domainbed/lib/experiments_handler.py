@@ -10,6 +10,7 @@ def set_mlflow_experiment(experiment_name):
     TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "mlruns")
     mlflow.set_tracking_uri(TRACKING_URI)
     mlflow.set_experiment(experiment_name)
+    print(f"TRACKING_URI: {TRACKING_URI}")
     assert mlflow.get_tracking_uri() == TRACKING_URI
 
 

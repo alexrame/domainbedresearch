@@ -198,15 +198,6 @@ class ERM(Algorithm):
             results = {"net": preds_network}
         return results
 
-    def predict_feat(self, x):
-        feats_network = self.featurizer(x)
-        if self.hparams['mav']:
-            feats_mav = self.mav.get_featurizer()(x)
-            results = {"mav": feats_mav, "net": feats_network}
-        else:
-            results = {"net": feats_network}
-        return results
-
     def eval(self):
         Algorithm.eval(self)
         if self.hparams['mav']:
@@ -217,7 +208,7 @@ class ERM(Algorithm):
         if self.hparams['mav']:
             self.mav.network_mav.train(*args)
 
-    def accuracy(self, loader, device, compute_hess=False):
+    def accuracy(self, loader, device, compute_trace=False):
         self.eval()
         batch_classes = []
         dict_stats = {}
@@ -281,7 +272,7 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # Flatness metrics
-            if compute_hess:
+            if compute_trace:
                 hessian_comp = hessian(
                     self.mav.network_mav, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
                 trace_val = np.mean(hessian_comp.trace())
@@ -945,5 +936,5 @@ class Ensembling(Algorithm):
 
         return results
 
-    def accuracy(self, loader, device, compute_hess=False):
-        return ERM.accuracy(self, loader, device, compute_hess)
+    def accuracy(self, loader, device, compute_trace=False):
+        return ERM.accuracy(self, loader, device, compute_trace)
