@@ -7,7 +7,7 @@ import torch.autograd as autograd
 import pdb
 import random
 from pyhessian import hessian
-from domainbed import networks
+from domainbed import networks, losses
 from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav
 from domainbed.lib.misc import count_param, set_requires_grad
 import copy
@@ -283,7 +283,7 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # Flatness metrics
-            if compute_trace:
+            if compute_trace and regex == "mavnet":
                 # feats0 = dict_stats[key0]["feats"]
                 # hessian_comp_mav = hessian(
                 #     self.mav.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
@@ -389,7 +389,7 @@ class SWA(ERM):
         self.update_count += 1
 
         if self.hparams["diversity_loss"] == "sampling":
-            assert self.hparams.get("groupdro_eta") != 0
+            assert self.hparams.get("div_eta") != 0
 
         if self.member_diversifier is not None:
             with torch.no_grad():
@@ -424,6 +424,8 @@ class SWA(ERM):
                     objective = all_loss.mean() + dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
                 else:
                     objective = all_loss.mean()
+            if self.hparams["lambda_entropy"]:
+                objective += self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
         else:
             objective = all_loss.mean()
         self.optimizer.zero_grad()

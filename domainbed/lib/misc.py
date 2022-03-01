@@ -23,6 +23,7 @@ except:
     Precision, Recall = None, None
 
 
+
 class MovingAvg:
     def __init__(self, network):
         self.network = network

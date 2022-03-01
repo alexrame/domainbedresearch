@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from einops import rearrange
+from domainbed import losses
 
 class DiversityLoss(torch.nn.Module):
     diversity_type = "regularization"
@@ -20,58 +21,6 @@ class DiversityLoss(torch.nn.Module):
         raise NotImplementedError
 
 
-class GroupDRO(DiversityLoss):
-    diversity_type = "sampling"
-
-    def __init__(self, hparams, num_domains, **kwargs):
-        DiversityLoss.__init__(self, hparams)
-        self.num_domains = num_domains
-        self.q = torch.ones(num_domains)
-
-    def compute_weighted_loss(self, active_loss, sampling_loss):
-        sampling_losses = sampling_loss.reshape(self.num_domains, -1).mean(dim=1)
-        for loss in sampling_losses:
-            self.q *= (self.hparams["div_eta"] * loss.detach()).exp()
-
-        self.q /= self.q.sum()
-
-        active_losses = active_loss.reshape(self.num_domains, -1).mean(dim=1)
-        loss_weighted = torch.dot(active_losses, self.q)
-
-        return loss_weighted
-
-
-class Bagging(DiversityLoss):
-    diversity_type = "sampling"
-
-    def __init__(self, hparams, num_domains, **kwargs):
-        DiversityLoss.__init__(self, hparams)
-        self.num_domains = num_domains
-
-    def compute_weighted_loss(self, active_loss, sampling_loss):
-        q = (self.hparams["div_eta"] * sampling_loss.detach()).exp()
-        q /= q.sum()
-        loss_weighted = torch.dot(active_loss, q)
-
-        return loss_weighted
-
-
-class BaggingPerDomain(DiversityLoss):
-    diversity_type = "sampling"
-
-    def __init__(self, hparams, num_domains, **kwargs):
-        DiversityLoss.__init__(self, hparams)
-        self.num_domains = num_domains
-
-    def compute_weighted_loss(self, active_loss, sampling_loss):
-        q = (self.hparams["div_eta"] * sampling_loss.detach()).exp().reshape(self.num_domains, -1)
-        q_sum_per_domain = q.sum(dim=1, keepdim=True)
-        final_q = (q / (self.num_domains * q_sum_per_domain)).view((-1, ))
-        loss_weighted = torch.dot(active_loss, final_q)
-
-        return loss_weighted
-
-
 class LogitDistance(DiversityLoss):
     def forward(self, logits_per_member, **kwargs):
         """Diversity in logits distance
@@ -88,26 +37,28 @@ class LogitDistance(DiversityLoss):
         return {"loss_div": loss}
 
 
+class KLPreds(DiversityLoss):
+    def forward(self, logits_per_member, **kwargs):
+        num_members = logits_per_member.size(0)
+        num_preds = logits_per_member.size(-1)
+        probs = torch.softmax(
+            logits_per_member.reshape(num_members, -1, num_preds).transpose(0, 1), dim=2)
+        # Probs = predicted probabilites on target batch.
+        B, H, D = probs.shape # B=batch_size, H=heads, D=pred_dim
+        marginal_p = probs.mean(dim=0)
+        # H, D
+        marginal_p = torch.einsum("hd,ge->hgde", marginal_p, marginal_p)
+        # H, H, D, D marginal_p = rearrange(marginal_p, "h g d e -> (h g) (d e)") # H^2, D^2
+        joint_p = torch.einsum("bhd,bge->bhgde", probs, probs).mean(dim=0)
+        # H, H, D, D joint_p = rearrange(joint_p, "h g d e -> (h g) (d e)") # H^2, D^2
+        kl_divs = joint_p * (joint_p.log() - marginal_p.log())
+        kl_grid = rearrange(kl_divs.sum(dim=-1), "(h g) -> h g", h=H)
+        # H, H
+        pairwise_mis = torch.triu(kl_grid, diagonal=1)
+        # Get only off-diagonal KL divergences
+        return pairwise_mis.mean()
 
-class SoftCrossEntropyLoss(nn.modules.loss._Loss):
 
-    def forward(self, input, target):
-        """
-        Cross entropy that accepts soft targets
-        Args:
-            pred: predictions for neural network
-            targets: targets, can be soft
-            size_average: if false, sum is returned instead of mean
-        Examples::
-            input = torch.FloatTensor([[1.1, 2.8, 1.3], [1.1, 2.1, 4.8]])
-            input = torch.autograd.Variable(out, requires_grad=True)
-            target = torch.FloatTensor([[0.05, 0.9, 0.05], [0.05, 0.05, 0.9]])
-            target = torch.autograd.Variable(y1)
-            loss = cross_entropy(input, target)
-            loss.backward()
-        """
-        logsoftmax = torch.nn.LogSoftmax(dim=1)
-        return torch.mean(torch.sum(-target * logsoftmax(input), dim=1))
 
 
 class CEDistance(DiversityLoss):
@@ -123,12 +74,12 @@ class CEDistance(DiversityLoss):
         num_domains = logits_per_member.size(1)
         batch_nll_01 = []
         for domain in range(num_domains):
-            nll_01 = SoftCrossEntropyLoss()(
+            nll_01 = losses.SoftCrossEntropyLoss()(
                 input=logits_per_member[0][domain],
                 target=torch.round(torch.softmax(logits_per_member[1][domain], dim=1))
             )
             batch_nll_01.append(nll_01)
-            nll_10 = SoftCrossEntropyLoss()(
+            nll_10 = losses.SoftCrossEntropyLoss()(
                 input=logits_per_member[1][domain],
                 target=torch.round(torch.softmax(logits_per_member[0][domain], dim=1))
             )

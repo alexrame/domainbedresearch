@@ -6,6 +6,38 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import pdb
 import numpy as np
+
+
+
+class SoftCrossEntropyLoss(nn.modules.loss._Loss):
+
+    def forward(self, input, target):
+        """
+        Cross entropy that accepts soft targets
+        Args:
+            pred: predictions for neural network
+            targets: targets, can be soft
+            size_average: if false, sum is returned instead of mean
+        Examples::
+            input = torch.FloatTensor([[1.1, 2.8, 1.3], [1.1, 2.1, 4.8]])
+            input = torch.autograd.Variable(out, requires_grad=True)
+            target = torch.FloatTensor([[0.05, 0.9, 0.05], [0.05, 0.05, 0.9]])
+            target = torch.autograd.Variable(y1)
+            loss = cross_entropy(input, target)
+            loss.backward()
+        """
+        logsoftmax = torch.nn.LogSoftmax(dim=1)
+        return torch.mean(torch.sum(-target * logsoftmax(input), dim=1))
+
+
+def entropy_regularizer(logits):
+    # Num_domains, bs, num_classes
+    logits = logits.reshape(-1, logits.size(-1))
+    # num_samples, num_classes
+    x = torch.softmax(logits, dim=1)
+    entropy = - x * torch.log(x + 1e-10)  #bs * num_classes
+    return entropy.sum()/entropy.size(0)
+
 class KLLoss(nn.Module):
     def __init__(self):
 

@@ -255,8 +255,10 @@ def _hparams(algorithm, dataset, random_seed):
 
     if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling", "Subspace"]:
         _hparam('mav', 0, lambda r: r.choice([0]))
+
     if algorithm in ["SWA"]:
         _hparam('mav', 0, lambda r: r.choice([1]))
+
     if algorithm in ["Subspace"]:
         _hparam('penalty_reg', 10**(-5), lambda r: r.choice([10**(-5), 10**(-6), 10**(-7)]))
 
@@ -272,22 +274,26 @@ def _hparams(algorithm, dataset, random_seed):
         elif os.environ.get("DIV") == "2":
             _hparam('div_eta', 0., lambda r: 10**r.uniform(-5, 0.))
         else:
-            # for features diversity
-            _hparam("conditional_d", False, lambda r: r.choice([False]))
-            _hparam('clamping_value', 10, lambda r: r.choice([10]))
-            _hparam('hidden_size', 64, lambda r: 64)  # 2**int(r.uniform(5., 7.)))
-            _hparam('num_hidden_layers', 2., lambda r: r.choice([2]))
-            _hparam('ib_space', "features", lambda r: r.choice(["features"]))
-            _hparam('sampling_negative', "", lambda r: r.choice([""])) # "domain"
-
-            _hparam("lambda_diversity_loss", 0.0, lambda r: 10**r.uniform(-3, -1))
-            _hparam('weight_decay_d', 0.0005, lambda r: 0.0005)
-            _hparam('reparameterization_var', 0.1, lambda r: 10**r.uniform(-3, 0))
-
-            if dataset in SMALL_IMAGES:
-                _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -2.5))
+            if os.environ.get("DIV") == "3":
+                _hparam("lambda_diversity_loss", 0.0, lambda r: 10**r.uniform(-3, -1))
+                _hparam("lambda_entropy", 0.0, lambda r: - 10**r.uniform(-3, -1))
             else:
-                _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -3.))
+                # for features diversity
+                _hparam("conditional_d", False, lambda r: r.choice([False]))
+                _hparam('clamping_value', 10, lambda r: r.choice([10]))
+                _hparam('hidden_size', 64, lambda r: 64)  # 2**int(r.uniform(5., 7.)))
+                _hparam('num_hidden_layers', 2., lambda r: r.choice([2]))
+                _hparam('ib_space', "features", lambda r: r.choice(["features"]))
+                _hparam('sampling_negative', "", lambda r: r.choice([""])) # "domain"
+
+                _hparam("lambda_diversity_loss", 0.0, lambda r: 10**r.uniform(-3, -1))
+                _hparam('weight_decay_d', 0.0005, lambda r: 0.0005)
+                _hparam('reparameterization_var', 0.1, lambda r: 10**r.uniform(-3, 0))
+                _hparam("lambda_entropy", 0.0, lambda r: 0)
+                if dataset in SMALL_IMAGES:
+                    _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -2.5))
+                else:
+                    _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -3.))
 
     # Dataset-and-algorithm-specific hparam definitions. Each block of code
     # below corresponds to exactly one hparam. Avoid nested conditionals.
