@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from domainbed import losses
+from domainbed.lib import losses
 
 class DiversityLoss(torch.nn.Module):
     diversity_type = "regularization"
@@ -58,6 +58,33 @@ class KLPreds(DiversityLoss):
         # Get only off-diagonal KL divergences
         return pairwise_mis.mean()
 
+
+log_offset = 1e-10
+det_offset = 1e-6
+
+class ADP(DiversityLoss):
+
+    def forward(self, logits_per_member, classes, **kwargs):
+        num_members = logits_per_member.size(0)
+        num_preds = logits_per_member.size(-1)
+        y_pred = torch.softmax(
+            logits_per_member.reshape(num_members, -1, num_preds), dim=2
+        )
+        if classes is None:
+            classes = torch.argmax(y_pred.mean(dim=1), dim=1).detach()
+        # B, H, D = probs.shape  # B=batch_size, H=heads, D=pred_dim
+        num_model, batch_size, num_class = y_pred.shape
+        mask = torch.tensor(True).repeat(y_pred.shape)
+        mask[:, range(batch_size), classes] = False
+        M = y_pred[mask].view(
+            num_model, batch_size, num_class - 1
+        )  #num_models * batch_size * num_classes-1
+        M = M / (M.norm(2, 2) + log_offset).unsqueeze(-1)  #normalize
+        M = M.permute(1, 2, 0)  #batch_size * num_classes-1 * num_models
+        matrix = torch.matmul(M.transpose(1, 2), M)
+        return torch.logdet(
+            matrix + det_offset * torch.eye(num_model).cuda().repeat(matrix.shape[0], 1, 1)
+        )
 
 
 

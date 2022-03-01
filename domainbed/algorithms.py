@@ -7,8 +7,8 @@ import torch.autograd as autograd
 import pdb
 import random
 from pyhessian import hessian
-from domainbed import networks, losses
-from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav
+from domainbed import networks
+from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav, losses
 from domainbed.lib.misc import count_param, set_requires_grad
 import copy
 try:
@@ -23,6 +23,7 @@ ALGORITHMS = [
     "Fish",
     "IRM",
     "Subspace",
+    "SWA",
     # "IRMAdv",
     # "GroupDRO",
     # "Mixup",
