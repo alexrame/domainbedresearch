@@ -87,7 +87,7 @@ class ADP(DiversityLoss):
         M = M / (M.norm(2, 2) + log_offset).unsqueeze(-1)  #normalize
         M = M.permute(1, 2, 0)  #batch_size * num_classes-1 * num_models
         matrix = torch.matmul(M.transpose(1, 2), M)
-        return torch.logdet(
+        return - torch.logdet(
             matrix + det_offset * torch.eye(num_model).cuda().repeat(matrix.shape[0], 1, 1)
         )
 
