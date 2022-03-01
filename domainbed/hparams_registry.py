@@ -255,9 +255,11 @@ def _hparams(algorithm, dataset, random_seed):
 
     if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling", "Subspace"]:
         _hparam('mav', 0, lambda r: r.choice([0]))
+        _hparam('layerwise', 0, lambda r: r.choice([0]))
 
     if algorithm in ["SWA"]:
-        _hparam('mav', 0, lambda r: r.choice([1]))
+        _hparam('mav', 1, lambda r: r.choice([1]))
+        _hparam('layerwise', 0, lambda r: r.choice([1]))
 
     if algorithm in ["Subspace"]:
         _hparam('penalty_reg', 10**(-5), lambda r: r.choice([10**(-5), 10**(-6), 10**(-7)]))

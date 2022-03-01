@@ -109,7 +109,7 @@ class ERM(Algorithm):
 
     def _init_mav(self):
         if self.hparams['mav']:
-            self.mav = misc.MovingAvg(self.network)
+            self.mav = misc.MovingAvg(self.network, layerwise=self.hparams["layerwise"])
         else:
             self.mav = None
 
@@ -820,11 +820,13 @@ class Ensembling(Algorithm):
     def _init_mav(self):
         if self.hparams['mav']:
             self.mavs = [
-                misc.MovingAvg(nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]))
+                misc.MovingAvg(
+                    nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
+                    layerwise=self.hparams["layerwise"])
                 for num_member in range(self.num_members)
             ]
         else:
-            self.mav = None
+            self.mavs = []
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])

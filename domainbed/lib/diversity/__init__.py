@@ -15,6 +15,7 @@ DICT_NAME_TO_DIVERSIFIER = {
     "KLPreds": standard_diversity.KLPreds,
     "CEDistance": standard_diversity.CEDistance,
     "ADP": standard_diversity.ADP,
+    "agree": standard_diversity.AgreeDiversity,
     # data
     "GroupDRO": sampling_diversity.GroupDRO,
     "Bagging": sampling_diversity.Bagging,

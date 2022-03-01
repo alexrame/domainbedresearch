@@ -25,25 +25,42 @@ except:
 
 
 class MovingAvg:
-    def __init__(self, network):
+    def __init__(self, network, layerwise=False):
         self.network = network
         self.network_mav = copy.deepcopy(network)
         self.network_mav.eval()
         self.mav_start_iter = 100
         self.global_iter = 0
-        self.mav_count = 0
         self._classifier_mav = None
         self._featurizer_mav = None
+        self.layerwise = layerwise
+        if self.layerwise:
+            self.list_layers_count = [0 for _ in self.network.parameters()]
+        else:
+            self.mav_count = 0
 
     def update(self):
         self.global_iter += 1
         if self.global_iter >= self.mav_start_iter:
-            self.mav_count += 1
-            for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
-                param_k.data = (param_k.data * self.mav_count + param_q.data) / (1. + self.mav_count)
+            if self.layerwise:
+                self._update_layerwise()
+            else:
+                self._update_all()
         else:
             for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
                 param_k.data = param_q.data
+
+    def _update_layerwise(self):
+        for i, param_q, param_k in enumerate(zip(self.network.parameters(), self.network_mav.parameters())):
+            Z = np.random.exponential(scale=1.0, size=1)
+            count = self.list_layers_count[i]
+            param_k.data = (param_k.data * count + param_q.data * Z) / (count + Z)
+            self.list_layers_count[i] += Z
+
+    def _update_all(self):
+        self.mav_count += 1
+        for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
+            param_k.data = (param_k.data * self.mav_count + param_q.data) / (1. + self.mav_count)
 
     def get_classifier(self):
         if self._classifier_mav is None:

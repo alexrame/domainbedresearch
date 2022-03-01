@@ -38,6 +38,7 @@ class LogitDistance(DiversityLoss):
 
 
 class KLPreds(DiversityLoss):
+    # Diversify and Disambiguate: Learning From Underspecified Data
     def forward(self, logits_per_member, **kwargs):
         num_members = logits_per_member.size(0)
         num_preds = logits_per_member.size(-1)
@@ -63,7 +64,7 @@ log_offset = 1e-10
 det_offset = 1e-6
 
 class ADP(DiversityLoss):
-
+    # https://github.com/lynfi/ADP/blob/master/ADPFunction.py
     def forward(self, logits_per_member, classes, **kwargs):
         num_members = logits_per_member.size(0)
         num_preds = logits_per_member.size(-1)
@@ -86,6 +87,23 @@ class ADP(DiversityLoss):
             matrix + det_offset * torch.eye(num_model).cuda().repeat(matrix.shape[0], 1, 1)
         )
 
+
+class AgreeDiversity(DiversityLoss):
+    # https://github.com/mpagli/Agree-to-Disagree/blob/main/notebooks/D_BAT_C_MNIST.ipynb
+    def forward(self, logits_per_member, **kwargs):
+        pred_1 = logits_per_member[0].reshape(-1, logits_per_member.size(-1))
+
+        p_1 = torch.softmax(pred_1, dim=1)
+        p_1_1, idx = p_1.max(dim=1)
+        p_1_0 = 1. - p_1_1
+
+        pred_2 = logits_per_member[1].reshape(-1, logits_per_member.size(-1))
+        p_2 = torch.softmax(pred_2, dim=1)
+        p_2_1 = p_2[torch.arange(len(p_2)), idx]
+        p_2_0 = 1. - p_2_1
+
+        adv_loss = (-torch.log(p_1_1 * p_2_0 + p_2_1 * p_1_0 + 1e-7)).mean()
+        return adv_loss
 
 
 class CEDistance(DiversityLoss):
