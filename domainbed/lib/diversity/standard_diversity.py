@@ -4,7 +4,7 @@ import torch.nn.functional as F
 try:
     from einops import rearrange
 except:
-    einops = None
+    rearrange = None
 from domainbed.lib import losses
 
 class DiversityLoss(torch.nn.Module):
@@ -43,7 +43,7 @@ class LogitDistance(DiversityLoss):
 class KLPreds(DiversityLoss):
     # Diversify and Disambiguate: Learning From Underspecified Data
     def forward(self, logits_per_member, **kwargs):
-        assert einops is not None
+        assert rearrange is not None
         num_members = logits_per_member.size(0)
         num_preds = logits_per_member.size(-1)
         probs = torch.softmax(
