@@ -51,8 +51,8 @@ class MovingAvg:
                 param_k.data = param_q.data
 
     def _update_layerwise(self):
-        for i, param_q, param_k in enumerate(zip(self.network.parameters(), self.network_mav.parameters())):
-            Z = np.random.exponential(scale=1.0, size=1)
+        for i, (param_q, param_k) in enumerate(zip(self.network.parameters(), self.network_mav.parameters())):
+            Z = np.random.exponential(scale=1.0, size=1)[0]
             count = self.list_layers_count[i]
             param_k.data = (param_k.data * count + param_q.data * Z) / (count + Z)
             self.list_layers_count[i] += Z

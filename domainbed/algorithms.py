@@ -6,7 +6,10 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 import pdb
 import random
-from pyhessian import hessian
+try:
+    from pyhessian import hessian
+except:
+    hessian is None
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, sammav, losses
 from domainbed.lib.misc import count_param, set_requires_grad
@@ -284,7 +287,7 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # Flatness metrics
-            if compute_trace and regex == "mavnet":
+            if compute_trace and regex == "mavnet" and hessian is not None:
                 # feats0 = dict_stats[key0]["feats"]
                 # hessian_comp_mav = hessian(
                 #     self.mav.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
