@@ -428,7 +428,7 @@ class SWA(ERM):
                     objective = all_loss.mean() + dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
                 else:
                     objective = all_loss.mean()
-            if self.hparams["lambda_entropy"]:
+            if self.hparams["lambda_entropy"] and penalty_active:
                 objective += self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
         else:
             objective = all_loss.mean()
@@ -437,7 +437,11 @@ class SWA(ERM):
         self.optimizer.step()
         if self.hparams['mav']:
             self.mav.update()
-        return {key: value.item() for key, value in output_dict.items()}
+        try:
+            return {key: value.item() for key, value in output_dict.items()}
+        except:
+            print("failed at: ", output_dict)
+            return {key: value.item() for key, value in output_dict.items() if key != "loss_div"}
 
 
 class IRM(ERM):
