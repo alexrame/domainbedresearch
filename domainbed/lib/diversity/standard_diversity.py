@@ -61,7 +61,8 @@ class KLPreds(DiversityLoss):
         # H, H
         pairwise_mis = torch.triu(kl_grid, diagonal=1)
         # Get only off-diagonal KL divergences
-        return pairwise_mis.mean()
+        loss = pairwise_mis.mean()
+        return {"loss_div": loss}
 
 
 log_offset = 1e-10
@@ -87,9 +88,10 @@ class ADP(DiversityLoss):
         M = M / (M.norm(2, 2) + log_offset).unsqueeze(-1)  #normalize
         M = M.permute(1, 2, 0)  #batch_size * num_classes-1 * num_models
         matrix = torch.matmul(M.transpose(1, 2), M)
-        return - torch.logdet(
+        loss = - torch.logdet(
             matrix + det_offset * torch.eye(num_model).cuda().repeat(matrix.shape[0], 1, 1)
         )
+        return {"loss_div": loss}
 
 
 class AgreeDiversity(DiversityLoss):
@@ -107,8 +109,7 @@ class AgreeDiversity(DiversityLoss):
         p_2_0 = 1. - p_2_1
 
         adv_loss = (-torch.log(p_1_1 * p_2_0 + p_2_1 * p_1_0 + 1e-7)).mean()
-        return adv_loss
-
+        return {"loss_div": adv_loss}
 
 class CEDistance(DiversityLoss):
 
