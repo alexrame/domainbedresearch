@@ -237,6 +237,8 @@ class ERM(Algorithm):
                 for key in dict_logits.keys():
                     if key not in dict_stats:
                         dict_stats[key] = {"preds": [], "confs": [], "correct": []}  # , "feats": []}
+                        if os.environ.get("DIVMETRICS"):
+                            dict_stats[key]["probs"] = []
                     logits = dict_logits[key]
                     try:
                         preds = logits.argmax(1)
