@@ -407,43 +407,19 @@ class SWA(ERM):
         if self.hparams["diversity_loss"] == "sampling":
             assert self.hparams.get("div_eta") != 0
 
+        objective = all_loss.mean()
         if self.member_diversifier is not None:
-            with torch.no_grad():
-                mav_features = self.mav.get_featurizer()(all_x)
-                mav_logits = self.mav.get_classifier()(all_features)
-                mav_loss = F.cross_entropy(mav_logits, all_classes, reduction="none")
-
-            if self.member_diversifier.diversity_type == "sampling":
-                loss_weighted = self.member_diversifier.compute_weighted_loss(
-                    active_loss=all_loss, sampling_loss=mav_loss
-                )
-                output_dict["lossw"] = loss_weighted
-                if penalty_active:
-                    objective = loss_weighted
-                else:
-                    objective = all_loss.mean()
+            if self.hparams["div_data"] == "uda":
+                assert unlabeled is not None
+                div_objective, div_dict = self.increase_diversity_unlabeled(unlabeled)
             else:
-                kwargs = {
-                    "features_per_member":
-                    torch.stack([all_features, mav_features], dim=0).reshape(2, self.num_domains, bsize, self.features_size),
-                    "logits_per_member":
-                    torch.stack([all_logits, mav_logits], dim=0).reshape(2, self.num_domains, bsize, self.num_classes),
-                    "classes":
-                    all_classes,
-                    "nlls_per_member":
-                    torch.stack([all_loss, mav_loss], dim=0).reshape(2, self.num_domains, bsize),
-                    # "classifiers": [self.classifier, self.mav.get_classifier()]
-                }
-                dict_diversity = self.member_diversifier.forward(**kwargs)
-                output_dict.update(dict_diversity)
-                if penalty_active:
-                    objective = all_loss.mean() + dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
-                else:
-                    objective = all_loss.mean()
-            if self.hparams["lambda_entropy"] and penalty_active:
-                objective += self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
+                div_objective, div_dict = self.increase_diversity_labeled(all_x, all_features, all_classes, all_loss, all_logits, bsize)
+            if penalty_active:
+                objective = objective + div_objective
+            output_dict.update(div_dict)
         else:
-            objective = all_loss.mean()
+            pass
+
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
@@ -451,6 +427,62 @@ class SWA(ERM):
             self.mav.update()
         return {key: value.item() for key, value in output_dict.items()}
 
+    def increase_diversity_unlabeled(self, unlabeled):
+        bsize = unlabeled[0].size(0)
+        num_domains = len(unlabeled)
+        all_x = torch.cat(unlabeled)
+        all_features = self.featurizer(all_x)
+        all_logits = self.classifier(all_features)
+        with torch.no_grad():
+            mav_features = self.mav.get_featurizer()(all_x)
+            mav_logits = self.mav.get_classifier()(all_features)
+        assert self.member_diversifier.diversity_type != "sampling"
+        kwargs = {
+            "features_per_member":
+            torch.stack([all_features, mav_features], dim=0).reshape(2, num_domains, bsize, self.features_size),
+            "logits_per_member":
+            torch.stack([all_logits, mav_logits], dim=0).reshape(2, num_domains, bsize, self.num_classes),
+            "classes": None,
+            "nlls_per_member": None
+        }
+        dict_diversity = self.member_diversifier.forward(**kwargs)
+
+        objective = dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
+        if self.hparams["lambda_entropy"]:
+            objective = objective + self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
+        return objective, dict_diversity
+
+    def increase_diversity_labeled(self,all_x, all_features, all_classes, all_loss, all_logits, bsize):
+        with torch.no_grad():
+            mav_features = self.mav.get_featurizer()(all_x)
+            mav_logits = self.mav.get_classifier()(all_features)
+            mav_loss = F.cross_entropy(mav_logits, all_classes, reduction="none")
+        output_dict = {}
+        if self.member_diversifier.diversity_type == "sampling":
+            loss_weighted = self.member_diversifier.compute_weighted_loss(
+                active_loss=all_loss, sampling_loss=mav_loss
+            )
+            output_dict["lossw"] = loss_weighted
+            objective = loss_weighted - all_loss.mean()
+        else:
+            kwargs = {
+                "features_per_member":
+                torch.stack([all_features, mav_features], dim=0).reshape(2, self.num_domains, bsize, self.features_size),
+                "logits_per_member":
+                torch.stack([all_logits, mav_logits], dim=0).reshape(2, self.num_domains, bsize, self.num_classes),
+                "classes":
+                all_classes,
+                "nlls_per_member":
+                torch.stack([all_loss, mav_loss], dim=0).reshape(2, self.num_domains, bsize),
+                # "classifiers": [self.classifier, self.mav.get_classifier()]
+            }
+            dict_diversity = self.member_diversifier.forward(**kwargs)
+            output_dict.update(dict_diversity)
+            objective = dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
+
+        if self.hparams["lambda_entropy"]:
+            objective = objective + self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
+        return objective, output_dict
 
 class IRM(ERM):
     """Invariant Risk Minimization"""

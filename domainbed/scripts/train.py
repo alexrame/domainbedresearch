@@ -159,10 +159,10 @@ def main():
         out, in_ = misc.split_dataset(env, int(len(env)*args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
 
         if env_i in args.test_envs:
-            # uda, in_ = misc.split_dataset(in_, int(len(in_)*args.uda_holdout_fraction),
-            #                               misc.seed_hash(args.trial_seed, env_i))
-            uda, out = misc.split_dataset(out, int(len(out)*args.uda_holdout_fraction),
+            uda, in_ = misc.split_dataset(in_, int(len(in_)*args.uda_holdout_fraction),
                                           misc.seed_hash(args.trial_seed, env_i))
+            # uda, out = misc.split_dataset(out, int(len(out)*args.uda_holdout_fraction),
+            #                               misc.seed_hash(args.trial_seed, env_i))
 
         if hparams['class_balanced']:
             in_weights = misc.make_weights_for_balanced_classes(in_)

@@ -270,6 +270,7 @@ def _hparams(algorithm, dataset, random_seed):
         else:
             _hparam('penalty_anneal_iters', 1500, lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000)))
         _hparam("diversity_loss", "none", lambda r: "none")
+        _hparam("div_data", "none", lambda r: "none")
         # for sampling diversity
         if os.environ.get("DIV") == "1":
             _hparam('div_eta', 0, lambda r: 10**r.uniform(-5, -2))
