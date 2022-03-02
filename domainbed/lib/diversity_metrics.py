@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def _process_predictions(y, y_pred1, y_pred2):
     size_y = len(y)
     if size_y != len(y_pred1) or size_y != len(y_pred2):
@@ -118,3 +121,24 @@ def agreement_measure(y, y_pred1, y_pred2):
     N00, _, _, N11 = _process_predictions(y, y_pred1, y_pred2)
     agreement = N00 + N11
     return agreement
+
+
+def normalized_disagreement(y, probs1, probs2):
+    # Loss landscapes perspective for deep ensembles
+    size_y = len(y)
+    if size_y != len(probs1) or size_y != len(probs1):
+        raise ValueError('The vector with class labels must have the same size.')
+    y_pred1 = np.argmax(probs1, axis=1)
+    y_pred2 = np.argmax(probs2, axis=1)
+    num = (y_pred1 != y_pred2).sum()
+    y_pred12 = np.argmax(probs1 + probs2, axis=1)
+    den = (y_pred12 != y).sum()
+    return num/max(den, 1)
+
+
+def l2(probs1, probs2):
+    # Efficient Diversity-Driven Ensemble for Deep Neural Networks
+    if len(probs1) != len(probs2):
+        raise ValueError('The vector with probs must have the same size.')
+    dist = np.linalg.norm(probs1 - probs2, ord=2, axis=1)
+    return dist.mean()

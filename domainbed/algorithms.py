@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
 import pdb
+import os
 import random
 try:
     from pyhessian import hessian
@@ -241,6 +242,9 @@ class ERM(Algorithm):
                         preds = logits.argmax(1)
                     except:
                         pdb.set_trace()
+                    if os.environ.get("DIVMETRICS"):
+                        dict_stats[key]["probs"].append(torch.softmax(logits, dim=1))
+
                     dict_stats[key]["preds"].append(preds.cpu())
                     # dict_stats[key]["feats"].append(dict_feats[key])
                     dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
@@ -285,6 +289,14 @@ class ERM(Algorithm):
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
+
+            if os.environ.get("DIVMETRICS"):
+                probs0 = dict_stats[key0]["probs"].cpu().numpy()
+                probs1 = dict_stats[key1]["probs"].cpu().numpy()
+                results[f"Diversity/{regex}l2"] = diversity_metrics.l2(
+                    probs0, probs1)
+                results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
+                    targets, probs0, probs1)
 
             # Flatness metrics
             if compute_trace and regex == "mavnet" and hessian is not None:
