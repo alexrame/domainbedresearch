@@ -437,11 +437,7 @@ class SWA(ERM):
         self.optimizer.step()
         if self.hparams['mav']:
             self.mav.update()
-        try:
-            return {key: value.item() for key, value in output_dict.items()}
-        except:
-            print("failed at: ", output_dict)
-            return {key: value.item() for key, value in output_dict.items() if key != "loss_div"}
+        return {key: value.item() for key, value in output_dict.items()}
 
 
 class IRM(ERM):

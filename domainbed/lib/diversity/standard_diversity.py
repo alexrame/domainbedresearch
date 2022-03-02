@@ -99,7 +99,7 @@ class ADP(DiversityLoss):
         loss = - torch.logdet(
             matrix + det_offset * torch.eye(num_model).cuda().repeat(matrix.shape[0], 1, 1)
         )
-        return {"loss_div": loss}
+        return {"loss_div": loss.mean()}
 
 
 class AgreeDiversity(DiversityLoss):
