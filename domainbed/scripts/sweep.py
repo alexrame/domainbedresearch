@@ -104,7 +104,7 @@ def all_test_env_combinations(n):
 
 
 def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps, data_dir, task,
-                   holdout_fraction, single_test_envs, hparams, test_envs, hp, sweep_id, seed):
+                   holdout_fraction, uda_holdout_fraction, single_test_envs, hparams, test_envs, hp, sweep_id, seed):
     args_list = []
     for trial_seed in range(n_trials):
         trial_seed += seed
@@ -128,6 +128,7 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                         train_args['algorithm'] = algorithm
                         train_args['test_envs'] = _test_envs
                         train_args['holdout_fraction'] = holdout_fraction
+                        train_args['uda_holdout_fraction'] = uda_holdout_fraction
                         train_args['hparams_seed'] = hparams_seed
                         train_args['data_dir'] = data_dir
                         train_args['task'] = task
@@ -172,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument('--hparams', type=str, default=None)
     parser.add_argument("--hp", nargs=2, action="append")
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
+    parser.add_argument('--uda_holdout_fraction', type=float, default=0.)
     parser.add_argument('--single_test_envs', action='store_true')
     parser.add_argument('--skip_confirmation', action='store_true')
     parser.add_argument("--test_envs", default=None, nargs="+")
@@ -191,6 +193,7 @@ if __name__ == "__main__":
         data_dir=args.data_dir,
         task=args.task,
         holdout_fraction=args.holdout_fraction,
+        uda_holdout_fraction=args.uda_holdout_fraction,
         single_test_envs=args.single_test_envs,
         hparams=args.hparams,
         test_envs=args.test_envs,
