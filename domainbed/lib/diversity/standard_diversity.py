@@ -85,7 +85,7 @@ class ADP(DiversityLoss):
             logits_per_member.reshape(num_members, -1, num_preds), dim=2
         )
         if classes is None:
-            classes = torch.argmax(y_pred.mean(dim=1), dim=1).detach()
+            classes = torch.argmax(y_pred.mean(dim=0), dim=1).detach()
         # B, H, D = probs.shape  # B=batch_size, H=heads, D=pred_dim
         num_model, batch_size, num_class = y_pred.shape
         mask = torch.tensor(True).repeat(y_pred.shape)
