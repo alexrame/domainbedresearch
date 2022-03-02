@@ -113,7 +113,7 @@ class ERM(Algorithm):
 
     def _init_mav(self):
         if self.hparams['mav']:
-            self.mav = misc.MovingAvg(self.network, layerwise=self.hparams["layerwise"])
+            self.mav = misc.MovingAvg(self.network, hparams=self.hparams)
         else:
             self.mav = None
 
@@ -871,7 +871,7 @@ class Ensembling(Algorithm):
             self.mavs = [
                 misc.MovingAvg(
                     nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
-                    layerwise=self.hparams["layerwise"])
+                    hparams=self.hparams)
                 for num_member in range(self.num_members)
             ]
         else:

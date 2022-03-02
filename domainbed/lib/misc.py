@@ -18,6 +18,7 @@ from torch.utils.data.dataset import Dataset
 from collections import Counter
 import socket
 import copy
+import random
 try:
     from torchmetrics import Precision, Recall
 except:
@@ -33,7 +34,8 @@ def is_dumpable(value):
 
 
 class MovingAvg:
-    def __init__(self, network, layerwise=False):
+
+    def __init__(self, network, hparams):
         self.network = network
         self.network_mav = copy.deepcopy(network)
         self.network_mav.eval()
@@ -41,7 +43,8 @@ class MovingAvg:
         self.global_iter = 0
         self._classifier_mav = None
         self._featurizer_mav = None
-        self.layerwise = layerwise
+        self.layerwise = hparams["layerwise"]
+        self.hparams = hparams
         if self.layerwise:
             self.list_layers_count = [0 for _ in self.network.parameters()]
         else:
@@ -59,8 +62,15 @@ class MovingAvg:
                 param_k.data = param_q.data
 
     def _update_layerwise(self):
+        layerwise_split = self.layerwise.split("-") if isinstance(self.layerwise, str) else []
         for i, (param_q, param_k) in enumerate(zip(self.network.parameters(), self.network_mav.parameters())):
-            Z = np.random.exponential(scale=1.0, size=1)[0]
+            if "bin" in layerwise_split:
+                if random.random() < self.hparams["swa_bin"]:
+                    continue
+            if "exp" in layerwise_split:
+                Z = np.random.exponential(scale=self.hparams["swa_exp"], size=1)[0]
+            else:
+                Z = 1
             count = self.list_layers_count[i]
             param_k.data = (param_k.data * count + param_q.data * Z) / (count + Z)
             self.list_layers_count[i] += Z
