@@ -42,6 +42,7 @@ class LogitDistance(DiversityLoss):
 
 class KLPreds(DiversityLoss):
     # Diversify and Disambiguate: Learning From Underspecified Data
+    # Taken from Appendix A
     def forward(self, logits_per_member, **kwargs):
         assert rearrange is not None
         num_members = logits_per_member.size(0)
@@ -50,15 +51,22 @@ class KLPreds(DiversityLoss):
             logits_per_member.reshape(num_members, -1, num_preds).transpose(0, 1), dim=2)
         # Probs = predicted probabilites on target batch.
         B, H, D = probs.shape # B=batch_size, H=heads, D=pred_dim
+
         marginal_p = probs.mean(dim=0)
         # H, D
         marginal_p = torch.einsum("hd,ge->hgde", marginal_p, marginal_p)
-        # H, H, D, D marginal_p = rearrange(marginal_p, "h g d e -> (h g) (d e)") # H^2, D^2
+        # H, H, D, D
+        marginal_p = rearrange(marginal_p, "h g d e -> (h g) (d e)")
+        # H^2, D^2
+
         joint_p = torch.einsum("bhd,bge->bhgde", probs, probs).mean(dim=0)
-        # H, H, D, D joint_p = rearrange(joint_p, "h g d e -> (h g) (d e)") # H^2, D^2
+        # H, H, D, D
+        joint_p = rearrange(joint_p, "h g d e -> (h g) (d e)")
+        # H^2, D^2
         kl_divs = joint_p * (joint_p.log() - marginal_p.log())
         kl_grid = rearrange(kl_divs.sum(dim=-1), "(h g) -> h g", h=H)
         # H, H
+
         pairwise_mis = torch.triu(kl_grid, diagonal=1)
         # Get only off-diagonal KL divergences
         loss = pairwise_mis.mean()
