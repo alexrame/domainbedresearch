@@ -159,7 +159,9 @@ def main():
         out, in_ = misc.split_dataset(env, int(len(env)*args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
 
         if env_i in args.test_envs:
-            uda, in_ = misc.split_dataset(in_, int(len(in_)*args.uda_holdout_fraction),
+            # uda, in_ = misc.split_dataset(in_, int(len(in_)*args.uda_holdout_fraction),
+            #                               misc.seed_hash(args.trial_seed, env_i))
+            uda, out = misc.split_dataset(out, int(len(out)*args.uda_holdout_fraction),
                                           misc.seed_hash(args.trial_seed, env_i))
 
         if hparams['class_balanced']:
@@ -267,6 +269,7 @@ def main():
 
     last_results_keys = None
     metrics = {}
+    metrics_end = {}
     for step in tqdm(range(start_step, n_steps)):
         step_start_time = time.time()
         batches = [b for b in next(train_minibatches_iterator)]
@@ -285,7 +288,7 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        if (step % checkpoint_freq == 0) or (step == n_steps - 1) or (step < 0 and step % 2 == 0):
+        if (step % checkpoint_freq == 0) or (step > n_steps - 10):
             epoch = step / steps_per_epoch
             results = {'step': step, 'epoch': epoch}
             if scheduler is not None:
@@ -297,15 +300,12 @@ def main():
 
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
-                # tqdm.write("eval "+name)
-                # begin = time.time()
                 if hasattr(algorithm, "accuracy"):
                     compute_trace = (("env" + str(args.test_envs[0])) in name and (step == n_steps - 1))  # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
                     print(f"{name}, compute_trace is {compute_trace}")
                     acc = algorithm.accuracy(loader, device, compute_trace)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
-                # tqdm.write("time:" + str(time.time() - begin))
                 for key in acc:
                     results[name + f'_{key}'] = acc[key]
                     if "/" not in key:
@@ -321,25 +321,13 @@ def main():
                 last_results_keys = results_keys
             misc.print_row([results[key] for key in printed_keys], colwidth=12)
 
-            if len(args.test_envs) == 1:
-                key = "env" + str(args.test_envs[0]) + "_in_acc"
-                if key in results:
-                    train_acc = statistics.mean([
-                            results["env" + str(i) + "_out_acc"]
-                            for i, (env, env_weights) in enumerate(in_splits) if i not in args.test_envs
-                        ])
-                    if step == 5000:
-                        metrics["acc_5000"] = results.get(key, 0.)
-                        metrics["trainacc_5000"] = train_acc
-
-                    if results.get(key, 0.) > metrics.get("best_acc", 0.) and step / n_steps > 0.66:
-                        metrics["best_acc"] = results.get(key, 0.)
-                    key_val = "env" + str(args.test_envs[0]) + "_out_acc"
-
-                    if results.get(key_val, 0.) > metrics.get("best_acc_val", 0.) and step / n_steps > 0.66:
-                        metrics["best_acc_val"] = results.get(key_val, 0.)
-                        metrics["acc_wrt_bestval"] = results.get(key, 0.)
-                        metrics["trainacc_wrt_bestval"] = train_acc
+            if 0<= n_steps - step < 10:
+                if len(metrics_end) != 0:
+                    if len(metrics_end) != len(metrics):
+                        print(metrics_end)
+                        print(metrics)
+                for key in metrics:
+                    metrics_end = metrics_end.get(key, 0.) + results[key]/10.
 
             results.update({'hparams': hparams, 'args': vars(args)})
 
@@ -348,20 +336,10 @@ def main():
                 try:
                     f.write(json.dumps(results, sort_keys=True) + "\n")
                 except Exception as e:
-                    def is_dumpable(value):
-                        try:
-                            json.dumps(value)
-                        except:
-                            return False
-                        return True
-
-                    results_dumpable = {key: value for key, value in results.items() if is_dumpable(value)}
-                    results_nodumpable = {key: value for key, value in results.items() if not is_dumpable(value)}
-                    # import pdb; pdb.set_trace()
-                    print(e)
-                    print(results_nodumpable)
+                    results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
+                    results_nodumpable = {key: value for key, value in results.items() if not misc.is_dumpable(value)}
+                    print("fail to dump:", results_nodumpable)
                     f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
-                    # f.write(json.dumps({key: results[key] for key in results_keys}, sort_keys=True) + "\n")
             algorithm_dict = algorithm.state_dict()
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
@@ -384,6 +362,7 @@ def main():
         f.write('done')
 
     metrics.update({k: v for k, v in results.items() if k not in ["hparams", "args"]})
+    metrics.update({"end" + str(k): v for k, v in metrics_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
     experiments_handler.main_mlflow(run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams)
 
 

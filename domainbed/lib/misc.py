@@ -11,6 +11,7 @@ from numbers import Number
 import operator
 import numpy as np
 import torch
+import json
 import torch.nn as nn
 from torch.utils.data import dataset
 from torch.utils.data.dataset import Dataset
@@ -22,6 +23,13 @@ try:
 except:
     Precision, Recall = None, None
 
+
+def is_dumpable(value):
+    try:
+        json.dumps(value)
+    except:
+        return False
+    return True
 
 
 class MovingAvg:
