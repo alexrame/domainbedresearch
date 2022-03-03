@@ -422,9 +422,23 @@ class SWA(ERM):
         else:
             pass
 
-        self.optimizer.zero_grad()
-        objective.backward()
-        self.optimizer.step()
+        if self.hparams.get('sam'):
+            self.optimizer.zero_grad()
+            # first forward-backward pass
+            objective.backward()
+            self.optimizer.first_step(zero_grad=True)
+            # second forward-backward pass
+            objective2 = F.cross_entropy(
+                self.classifier(self.featurizer(all_x)),
+                all_classes, reduction="mean")
+            # make sure to do a full forward pass
+            objective2.backward()
+            self.optimizer.second_step()
+            output_dict["objective2"] = objective2
+        else:
+            self.optimizer.zero_grad()
+            objective.backward()
+            self.optimizer.step()
         if self.hparams['mav']:
             self.mav.update()
         return {key: value.item() for key, value in output_dict.items()}

@@ -246,7 +246,7 @@ def _hparams(algorithm, dataset, random_seed):
     #     _hparam("center_gradients", "none", lambda r: "none")  # none, all, classes
     #     _hparam("kernel_loss", "cos", lambda r: "cos")  # none, all, classes
 
-    if algorithm in ['Fishr', 'ERM']:
+    if algorithm in ['Fishr', 'ERM', "SWA"]:
         _hparam('sam', 0, lambda r: r.choice([0]))
         _hparam('samadapt', 0, lambda r: r.choice([0]))
         # _hparam('phosam', 0.05, lambda r: r.choice([0.005, 0.01, 0.02, 0.05, 0.1]))
