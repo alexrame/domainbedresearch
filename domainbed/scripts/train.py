@@ -288,7 +288,7 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        if (step % checkpoint_freq == 0) or (step > n_steps - 10):
+        if (step % checkpoint_freq == 0) or (step >= n_steps - 10):
             epoch = step / steps_per_epoch
             results = {'step': step, 'epoch': epoch}
             if scheduler is not None:
@@ -301,8 +301,13 @@ def main():
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
-                    compute_trace = (("env" + str(args.test_envs[0])) in name and (step == n_steps - 1))  # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
-                    print(f"{name}, compute_trace is {compute_trace}")
+                    if step == n_steps - 1:
+                        compute_trace = ("env" + str(args.test_envs[0])
+                                        ) in name or ("env" + str(args.test_envs[0] + 1)) in name
+                        # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
+                    else:
+                        compute_trace = False
+                    # print(f"{name}, compute_trace is {compute_trace}")
                     acc = algorithm.accuracy(loader, device, compute_trace)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
@@ -321,13 +326,15 @@ def main():
                 last_results_keys = results_keys
             misc.print_row([results[key] for key in printed_keys], colwidth=12)
 
-            if 0<= n_steps - step < 10:
+            if 0 < n_steps - step <= 10:
+                print(f"Update metrics_end at step {step}")
                 if len(metrics_end) != 0:
                     if len(metrics_end) != len(metrics):
                         print(metrics_end)
                         print(metrics)
                 for key in metrics:
-                    metrics_end = metrics_end.get(key, 0.) + results[key]/10.
+                    metrics_end[key] = metrics_end.get(key, 0.) + results[key]/10.
+                misc.print_row([metrics_end[key] for key in printed_keys], colwidth=12)
 
             results.update({'hparams': hparams, 'args': vars(args)})
 
