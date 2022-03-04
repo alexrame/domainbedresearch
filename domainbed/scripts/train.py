@@ -269,7 +269,7 @@ def main():
 
     last_results_keys = None
     metrics = {}
-    metrics_end = {}
+    results_end = {}
     for step in tqdm(range(start_step, n_steps)):
         step_start_time = time.time()
         batches = [b for b in next(train_minibatches_iterator)]
@@ -327,14 +327,14 @@ def main():
             misc.print_row([results[key] for key in printed_keys], colwidth=12)
 
             if 0 < n_steps - step <= 10:
-                print(f"Update metrics_end at step {step}")
-                if len(metrics_end) != 0:
-                    if len(metrics_end) != len(metrics):
-                        print(metrics_end)
-                        print(metrics)
-                for key in metrics:
-                    metrics_end[key] = metrics_end.get(key, 0.) + results[key]/10.
-                misc.print_row([metrics_end[key] for key in printed_keys], colwidth=12)
+                print(f"Update results_end at step {step}")
+                if len(results_end) != 0:
+                    if len(results_end) != len(results):
+                        print(results_end)
+                        print(results)
+                for key in results:
+                    results_end[key] = results_end.get(key, 0.) + results[key]/10.
+                misc.print_row([results_end[key] for key in printed_keys], colwidth=12)
 
             results.update({'hparams': hparams, 'args': vars(args)})
 
@@ -369,7 +369,7 @@ def main():
         f.write('done')
 
     metrics.update({k: v for k, v in results.items() if k not in ["hparams", "args"]})
-    metrics.update({"end" + str(k): v for k, v in metrics_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
+    metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
     experiments_handler.main_mlflow(run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams)
 
 
