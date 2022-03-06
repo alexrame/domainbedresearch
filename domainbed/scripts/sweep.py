@@ -215,6 +215,8 @@ if __name__ == "__main__":
 
     if args.command == 'launch':
         to_launch = [j for j in jobs if j.state in [Job.NOT_LAUNCHED, Job.INCOMPLETE]]
+        if os.environ.get("REVERSE"):
+            to_launch = to_launch[::-1]
         print(f'About to launch {len(to_launch)} jobs.')
         if False and not args.skip_confirmation:
             ask_for_confirmation()
