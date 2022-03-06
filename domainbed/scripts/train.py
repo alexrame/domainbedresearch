@@ -301,7 +301,7 @@ def main():
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
-                    if step == n_steps - 1:
+                    if step == n_steps - 1 and os.environ.get("HESSIAN") != "none":
                         compute_trace = ("env" + str(args.test_envs[0])
                                         ) in name or ("env" + str(args.test_envs[0] + 1)) in name
                         # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
