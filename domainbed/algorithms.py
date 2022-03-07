@@ -409,14 +409,19 @@ class SWA(ERM):
 
         objective = all_loss.mean()
         if self.member_diversifier is not None:
-            if self.hparams["div_data"] == "uda":
+            if self.hparams["div_data"] in ["uda", "udaandiid"]:
                 assert unlabeled is not None
                 div_objective, div_dict = self.increase_diversity_unlabeled(unlabeled)
-            else:
+                if self.hparams["div_data"] in ["udaandiid"]:
+                    output_dict.update({key+ "uda": value for key, value in div_dict.items()})
+                else:
+                    output_dict.update(div_dict)
+            if self.hparams["div_data"] in ["", "none", "udaandiid"]:
                 div_objective, div_dict = self.increase_diversity_labeled(all_x, all_features, all_classes, all_loss, all_logits, bsize)
+                output_dict.update(div_dict)
             if penalty_active:
                 objective = objective + div_objective
-            output_dict.update(div_dict)
+
         else:
             pass
 
