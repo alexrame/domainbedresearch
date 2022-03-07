@@ -41,10 +41,12 @@ def positive_couples(batch_ib, batch_classes):
     for i, j in combinations(range(batch_ib.size(1)), 2):
         input_0.append(batch_ib[:, i].reshape(-1, batch_ib.size(-1)))
         input_1.append(batch_ib[:, j].reshape(-1, batch_ib.size(-1)))
-    return format_inputs(input_0, input_1), batch_classes.view(-1,)
+    if batch_classes is not None:
+        return format_inputs(input_0, input_1), batch_classes.view(-1,)
+    return format_inputs(input_0, input_1), None
 
 
-def negative_couples(batch_ib, batch_classes=None):
+def negative_couples(batch_ib):
     # batch_ib is num_domains, num_members, bsize, size
     input_0 = []
     input_1 = []
@@ -53,10 +55,10 @@ def negative_couples(batch_ib, batch_classes=None):
         input_0.append(batch_ib[:, i].reshape(-1, batch_ib.size(-1)))
         input_1.append(permute_tensor(batch_ib[:, j].reshape(-1, batch_ib.size(-1))))
 
-    return format_inputs(input_0, input_1), batch_classes.view(-1,)
+    return format_inputs(input_0, input_1)
 
 
-def negative_couples_per_domain(batch_ib, batch_classes=None):
+def negative_couples_per_domain(batch_ib):
     # batch_ib is num_domains, num_members, bsize, size
     input_0 = []
     input_1 = []
@@ -65,7 +67,7 @@ def negative_couples_per_domain(batch_ib, batch_classes=None):
         input_0.append(batch_ib[:, i].reshape(-1, batch_ib.size(-1)))
         input_1.append(permute_tensor(batch_ib[:, j], dim=1).reshape(-1, batch_ib.size(-1)))
 
-    return format_inputs(input_0, input_1), batch_classes.view(-1,)
+    return format_inputs(input_0, input_1)
 
 
 def negative_couples_conditional(batch_ib, batch_classes, num_classes=None, embedding_layers=None):

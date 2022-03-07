@@ -91,24 +91,26 @@ class IBDiversity(DiversityLoss):
                     num_classes=self.num_classes,
                     embedding_layers=self.embedding_layers
                 )
+                assert pos_classes is not None
+                full_classes = torch.cat((pos_classes, neg_classes), dim=0)
             elif "perdomain" in self.sampling_negative:
-                neg_input_d, neg_classes = ib_utils.negative_couples_per_domain(
-                    batch_ib, batch_classes=classes
+                neg_input_d = ib_utils.negative_couples_per_domain(
+                    batch_ib
                 )
             else:
                 assert self.sampling_negative == ""
-                neg_input_d, neg_classes = ib_utils.negative_couples(
-                    batch_ib, batch_classes=classes
+                neg_input_d = ib_utils.negative_couples(
+                    batch_ib
                 )
             input_d = torch.cat((pos_input_d, neg_input_d), dim=0)
             neg_label_d = torch.zeros((neg_input_d.shape[0], 1)).to("cuda")
 
             label_d = torch.cat((pos_label_d, neg_label_d), dim=0)
-            classes = torch.cat((pos_classes, neg_classes), dim=0)
+
         else:
             input_d = pos_input_d
             label_d = pos_label_d
-            classes = pos_classes
+            full_classes = pos_classes
 
         if self.reparameterization_var:
             input_d = ib_utils.reparameterization_trick(
@@ -116,7 +118,7 @@ class IBDiversity(DiversityLoss):
             )
 
         if self.conditional:
-            out_d = self.discriminator(input_d, classes)
+            out_d = self.discriminator(input_d, full_classes)
         else:
             out_d = self.discriminator(input_d)
         return out_d, label_d
