@@ -302,8 +302,8 @@ def main():
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
                     if step == n_steps - 1 and os.environ.get("HESSIAN") != "none":
-                        compute_trace = ("env" + str(args.test_envs[0])
-                                        ) in name or ("env" + str(args.test_envs[0] + 1)) in name
+                        traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
+                        compute_trace = any([("env" + env) in name for env in traced_envs])
                         # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
                     else:
                         compute_trace = False

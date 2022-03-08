@@ -443,8 +443,10 @@ class SWA(ERM):
             objective.backward()
             self.optimizer.step()
         if self.hparams['mav']:
-            self.mav.update()
-        return {key: value.item() for key, value in output_dict.items()}
+            mav_dict = self.mav.update()
+            output_dict.update(mav_dict)
+
+        return {key: value.detach().item() for key, value in output_dict.items()}
 
     def increase_diversity_unlabeled(self, unlabeled):
         bsize = unlabeled[0].size(0)

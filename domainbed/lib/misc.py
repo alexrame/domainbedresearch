@@ -60,6 +60,18 @@ class MovingAvg:
         else:
             for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
                 param_k.data = param_q.data
+        return self.compute_distance_nets()
+
+    def compute_distance_nets(self):
+        dist_l2 = 0
+        cos = 0
+        count_params = 0
+        for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
+            dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
+            num_params = int(param_q.numel())
+            count_params += num_params
+            cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
+        return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
 
     def _update_layerwise(self):
         layerwise_split = self.layerwise.split("-") if isinstance(self.layerwise, str) else []
