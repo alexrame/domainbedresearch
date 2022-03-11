@@ -363,29 +363,30 @@ class ERM(Algorithm):
         assert self.ts.temperature.requires_grad
         assert self.ts_swa.temperature.requires_grad
         if update_temperature:
-            for key in ["net", "mav"]:
-                if key not in dict_stats:
-                    continue
-                logits = dict_stats[key]["logits"].to(device)
-                if key == "net":
-                    loss_T = F.cross_entropy(
-                        misc.apply_temperature_on_logits(logits, self.ts.temperature), targets_torch
-                    )
-                    self.ts.optimizer.zero_grad()
-                    loss_T.backward()
-                    self.ts.optimizer.step()
-                    print("t", self.ts.temperature)
-                elif key == "mav":
-                    temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
-                    loss_T = F.cross_entropy(temp_logits, targets_torch)
-                    self.ts_swa.optimizer.zero_grad()
-                    import pdb
-                    pdb.set_trace()
-                    loss_T.backward()
-                    self.ts_swa.optimizer.step()
-                    print("tswa", self.ts_swa.temperature)
-                else:
-                    pass
+            for _ in range(100):
+                for key in ["net", "mav"]:
+                    if key not in dict_stats:
+                        continue
+                    logits = dict_stats[key]["logits"].to(device)
+                    if key == "net":
+                        loss_T = F.cross_entropy(
+                            misc.apply_temperature_on_logits(logits, self.ts.temperature), targets_torch
+                        )
+                        self.ts.optimizer.zero_grad()
+                        loss_T.backward()
+                        self.ts.optimizer.step()
+                        print("t", self.ts.temperature)
+                    elif key == "mav":
+                        temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
+                        loss_T = F.cross_entropy(temp_logits, targets_torch)
+                        self.ts_swa.optimizer.zero_grad()
+                        import pdb
+                        pdb.set_trace()
+                        loss_T.backward()
+                        self.ts_swa.optimizer.step()
+                        print("tswa", self.ts_swa.temperature)
+                    else:
+                        pass
         return results
 
 
