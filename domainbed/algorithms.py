@@ -244,6 +244,7 @@ class ERM(Algorithm):
                 for key in dict_logits.keys():
                     if key not in dict_stats:
                         dict_stats[key] = {
+                            "logits": [],
                             "preds": [],
                             "confs": [],
                             "correct": [],
