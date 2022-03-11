@@ -363,7 +363,7 @@ class ERM(Algorithm):
         assert self.temperature.requires_grad
         assert self.swa_temperature.requires_grad
         if update_temperature:
-            for _ in range(10):
+            for _ in range(50):
                 for key in ["net", "mav"]:
                     if key not in dict_stats:
                         continue
