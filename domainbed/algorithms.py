@@ -470,13 +470,13 @@ class SWA(ERM):
                 )
 
     def _init_temperature(self):
-        self.temperature = nn.Parameter(torch.ones(1.), requires_grad=True)
+        self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
         self.t_optimizer = torch.optim.Adam(
             [self.temperature],
             lr=self.hparams["lr"],
             weight_decay=self.hparams["weight_decay"],
         )
-        self.swa_temperature = nn.Parameter(torch.ones(1.), requires_grad=True)
+        self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
         self.t_swa_optimizer = torch.optim.Adam(
             [self.swa_temperature],
             lr=self.hparams["lr"],
