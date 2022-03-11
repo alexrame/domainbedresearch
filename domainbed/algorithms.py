@@ -276,8 +276,6 @@ class ERM(Algorithm):
             for key1 in dict_stats[key0]:
                 dict_stats[key0][key1] = torch.cat(dict_stats[key0][key1])
 
-
-
         results = {}
         for key in dict_stats:
             results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()) / \
@@ -358,8 +356,6 @@ class ERM(Algorithm):
                 )
                 results[f"Flatness/{key1}trace"] = np.mean(hessian_comp_net.trace())
 
-        self.train()
-
         assert self.ts.temperature.requires_grad
         assert self.ts_swa.temperature.requires_grad
         if update_temperature:
@@ -380,12 +376,14 @@ class ERM(Algorithm):
                         loss_T = F.cross_entropy(temp_logits, targets_torch)
                         self.ts_swa.optimizer.zero_grad()
                         loss_T.backward()
+                        import pdb; pdb.set_trace()
                         self.ts_swa.optimizer.step()
                     else:
                         pass
             results["temp/net"] = self.ts.temperature.item()
             results["temp/swa"] = self.ts_swa.temperature.item()
 
+        self.train()
         return results
 
 
