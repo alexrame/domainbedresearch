@@ -106,7 +106,9 @@ class ERM(Algorithm):
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(ERM, self).__init__(input_shape, num_classes, num_domains, hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
-        self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
+        self.classifier = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
+        )
         self.network = nn.Sequential(self.featurizer, self.classifier)
         self._init_mav()
         self._init_optimizer()
@@ -123,10 +125,10 @@ class ERM(Algorithm):
 
     def _init_optimizer(self):
         if self.hparams.get('sam'):
-            phosam = 10 * self.hparams["phosam"] if self.hparams["samadapt"] else self.hparams[
-                "phosam"]
+            phosam = 10 * self.hparams["phosam"] if self.hparams["samadapt"
+                                                                ] else self.hparams["phosam"]
             if self.hparams.get('sam') == "inv":
-                phosam = - phosam
+                phosam = -phosam
             if self.hparams.get('sam') == "onlymav":
                 self.optimizer = sammav.SAMMAV(
                     self.network.parameters(),
@@ -228,11 +230,8 @@ class ERM(Algorithm):
 
     def accuracy(self, loader, device, compute_trace=False, update_temperature=False):
         self.eval()
-        try:
-            self.ts.temperature.requires_grad = True
-            self.ts_swa.temperature.requires_grad = True
-        except:
-            pass
+        assert self.ts.temperature.requires_grad
+        assert self.ts_swa.temperature.requires_grad
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
@@ -245,19 +244,38 @@ class ERM(Algorithm):
                 batch_classes.append(y)
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": [], "probs": []}
+                        dict_stats[key] = {
+                            "preds": [],
+                            "confs": [],
+                            "correct": [],
+                            "probs": [],
+                            "confstemp": []
+                        }
                     logits = dict_logits[key]
 
                     if update_temperature:
+                        logits_grad = logits.detach()
+                        logits_grad.requires_grad = True
                         if key == "net":
-                            loss_T = F.cross_entropy(misc.apply_temperature_on_logits(logits.detach(), self.ts.temperature), y)
+                            loss_T = F.cross_entropy(
+                                misc.apply_temperature_on_logits(logits_grad, self.ts.temperature),
+                                y
+                            )
                             self.ts.optimizer.zero_grad()
                             loss_T.backward()
+
                             self.ts.optimizer.step()
                             print("t", self.ts.temperature)
                         elif key == "mav":
-                            loss_T = F.cross_entropy(misc.apply_temperature_on_logits(logits.detach(), self.ts_swa.temperature), y)
+                            temp_logits = misc.apply_temperature_on_logits(
+                                    logits_grad, self.ts_swa.temperature
+                                )
+                            loss_T = F.cross_entropy(
+                                temp_logits, y
+                            )
                             self.ts_swa.optimizer.zero_grad()
+                            import pdb
+                            pdb.set_trace()
                             loss_T.backward()
                             self.ts_swa.optimizer.step()
                             print("tswa", self.ts_swa.temperature)
@@ -272,11 +290,21 @@ class ERM(Algorithm):
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
 
                     if key in ["net", "mav"]:
-                        temperature = (self.ts.temperature if key == "net" else self.ts_swa.temperature)
-                        probstemp = torch.softmax(
-                            misc.apply_temperature_on_logits(logits.detach(), temperature), dim=1
+                        temperature = (
+                            self.ts.temperature if key == "net" else self.ts_swa.temperature
                         )
-                        dict_stats[key]["conftemp"].append(probstemp.max(dim=1)[0].cpu())
+                        temperature = temperature.to(device)
+
+                        try:
+                            probstemp = torch.softmax(
+                                misc.apply_temperature_on_logits(logits.detach(), temperature),
+                                dim=1
+                            )
+                        except Exception as exc:
+                            print(exc)
+                            import pdb
+                            pdb.set_trace()
+                        dict_stats[key]["confstemp"].append(probstemp.max(dim=1)[0].cpu())
 
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
@@ -287,10 +315,12 @@ class ERM(Algorithm):
             results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()) / \
                                                len(dict_stats[key]["correct"].numpy())
             results[f"Calibration/ece_{key}"] = misc.get_ece(
-                dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy())
+                dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
+            )
             if key in ["net", "mav"]:
                 results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
-                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy())
+                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+                )
 
         for regex in ["mavnet", "mavnet0", "mav01", "net01"]:
             if regex == "mavnet":
@@ -315,19 +345,25 @@ class ERM(Algorithm):
             targets = targets_torch.cpu().numpy()
             preds0 = dict_stats[key0]["preds"].numpy()
             preds1 = dict_stats[key1]["preds"].numpy()
-            results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
-            results[f"Diversity/{regex}agre"] = diversity_metrics.agreement_measure(targets, preds0, preds1)
+            results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
+                targets, preds0, preds1
+            )
+            results[f"Diversity/{regex}agre"] = diversity_metrics.agreement_measure(
+                targets, preds0, preds1
+            )
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
-            results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
+            results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
+                targets, preds0, preds1
+            )
 
             # new div metrics
             probs0 = dict_stats[key0]["probs"].numpy()
             probs1 = dict_stats[key1]["probs"].numpy()
-            results[f"Diversity/{regex}l2"] = diversity_metrics.l2(
-                probs0, probs1)
+            results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
             results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
-                targets, probs0, probs1)
+                targets, probs0, probs1
+            )
 
             # Flatness metrics
             if compute_trace and regex == "mavnet" and hessian is not None:
@@ -335,14 +371,22 @@ class ERM(Algorithm):
                 # hessian_comp_mav = hessian(
                 #     self.mav.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
                 hessian_comp_mav = hessian(
-                    self.mav.network_mav, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
+                    self.mav.network_mav,
+                    nn.CrossEntropyLoss(reduction='sum'),
+                    dataloader=loader,
+                    cuda=True
+                )
                 results[f"Flatness/{key0}trace"] = np.mean(hessian_comp_mav.trace())
 
                 # feats1 = dict_stats[key1]["feats"]
                 # hessian_comp_net = hessian(
                 #     self.classifier, nn.CrossEntropyLoss(reduction='sum'), data=(feats1, targets_torch), cuda=True)
                 hessian_comp_net = hessian(
-                    self.network, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True)
+                    self.network,
+                    nn.CrossEntropyLoss(reduction='sum'),
+                    dataloader=loader,
+                    cuda=True
+                )
                 results[f"Flatness/{key1}trace"] = np.mean(hessian_comp_net.trace())
         self.train()
         return results
@@ -352,16 +396,22 @@ class Subspace(ERM):
     """
     Subspace learning
     """
+
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(Subspace, self).__init__(input_shape, num_classes, num_domains, hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
-        self.classifier = networks.Classifier(self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier'])
+        self.classifier = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
+        )
         self.network = nn.Sequential(self.featurizer, self.classifier)
         self.net = {}
         self.size_code = 5
         self.hypernet = nn.Linear(self.size_code, count_param(self.network))
         self.optimizer = torch.optim.Adam(
-            self.hypernet.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
+            self.hypernet.parameters(),
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"]
+        )
         set_requires_grad(self.network, False)
         self._init_mav()
 
@@ -376,11 +426,12 @@ class Subspace(ERM):
         param_hyper = self.hypernet(code)
         count_p = 0
         for pnet in net_copy.parameters():
-            phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
+            phyper = param_hyper[count_p:count_p + int(pnet.numel())].reshape(*pnet.shape)
             pnet.copy_(phyper)
             count_p += int(pnet.numel())
         loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
-        loss = F.cross_entropy(net_copy(all_x), all_classes) + self.hparams["penalty_reg"] * loss_reg
+        loss = F.cross_entropy(net_copy(all_x),
+                               all_classes) + self.hparams["penalty_reg"] * loss_reg
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -391,13 +442,14 @@ class Subspace(ERM):
         param_hyper = self.hypernet.bias
         count_p = 0
         for pnet in self.network.parameters():
-            phyper = param_hyper[count_p: count_p + int(pnet.numel())].reshape(*pnet.shape)
+            phyper = param_hyper[count_p:count_p + int(pnet.numel())].reshape(*pnet.shape)
             pnet.copy_(phyper)
             count_p += int(pnet.numel())
         return {"net": self.network(x)}
 
 
 class SWA(ERM):
+
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         ERM.__init__(self, input_shape, num_classes, num_domains, hparams)
         # diversifier
@@ -448,11 +500,13 @@ class SWA(ERM):
                 assert unlabeled is not None
                 div_objective, div_dict = self.increase_diversity_unlabeled(unlabeled)
                 if self.hparams["div_data"] in ["udaandiid"]:
-                    output_dict.update({key+ "uda": value for key, value in div_dict.items()})
+                    output_dict.update({key + "uda": value for key, value in div_dict.items()})
                 else:
                     output_dict.update(div_dict)
             if self.hparams["div_data"] in ["", "none", "udaandiid"]:
-                div_objective, div_dict = self.increase_diversity_labeled(all_x, all_features, all_classes, all_loss, all_logits, bsize)
+                div_objective, div_dict = self.increase_diversity_labeled(
+                    all_x, all_features, all_classes, all_loss, all_logits, bsize
+                )
                 output_dict.update(div_dict)
             if penalty_active:
                 objective = objective + div_objective
@@ -467,8 +521,8 @@ class SWA(ERM):
             self.optimizer.first_step(zero_grad=True)
             # second forward-backward pass
             objective2 = F.cross_entropy(
-                self.classifier(self.featurizer(all_x)),
-                all_classes, reduction="mean")
+                self.classifier(self.featurizer(all_x)), all_classes, reduction="mean"
+            )
             # make sure to do a full forward pass
             objective2.backward()
             self.optimizer.second_step()
@@ -495,20 +549,27 @@ class SWA(ERM):
         assert self.member_diversifier.diversity_type != "sampling"
         kwargs = {
             "features_per_member":
-            torch.stack([all_features, mav_features], dim=0).reshape(2, num_domains, bsize, self.features_size),
+            torch.stack([all_features, mav_features],
+                        dim=0).reshape(2, num_domains, bsize, self.features_size),
             "logits_per_member":
-            torch.stack([all_logits, mav_logits], dim=0).reshape(2, num_domains, bsize, self.num_classes),
-            "classes": None,
-            "nlls_per_member": None
+            torch.stack([all_logits, mav_logits],
+                        dim=0).reshape(2, num_domains, bsize, self.num_classes),
+            "classes":
+            None,
+            "nlls_per_member":
+            None
         }
         dict_diversity = self.member_diversifier.forward(**kwargs)
 
         objective = dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
         if self.hparams["lambda_entropy"]:
-            objective = objective + self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
+            objective = objective + self.hparams["lambda_entropy"
+                                                ] * losses.entropy_regularizer(all_logits)
         return objective, dict_diversity
 
-    def increase_diversity_labeled(self,all_x, all_features, all_classes, all_loss, all_logits, bsize):
+    def increase_diversity_labeled(
+        self, all_x, all_features, all_classes, all_loss, all_logits, bsize
+    ):
         with torch.no_grad():
             mav_features = self.mav.get_featurizer()(all_x)
             mav_logits = self.mav.get_classifier()(all_features)
@@ -523,9 +584,11 @@ class SWA(ERM):
         else:
             kwargs = {
                 "features_per_member":
-                torch.stack([all_features, mav_features], dim=0).reshape(2, self.num_domains, bsize, self.features_size),
+                torch.stack([all_features, mav_features],
+                            dim=0).reshape(2, self.num_domains, bsize, self.features_size),
                 "logits_per_member":
-                torch.stack([all_logits, mav_logits], dim=0).reshape(2, self.num_domains, bsize, self.num_classes),
+                torch.stack([all_logits, mav_logits],
+                            dim=0).reshape(2, self.num_domains, bsize, self.num_classes),
                 "classes":
                 all_classes,
                 "nlls_per_member":
@@ -537,8 +600,10 @@ class SWA(ERM):
             objective = dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
 
         if self.hparams["lambda_entropy"]:
-            objective = objective + self.hparams["lambda_entropy"] * losses.entropy_regularizer(all_logits)
+            objective = objective + self.hparams["lambda_entropy"
+                                                ] * losses.entropy_regularizer(all_logits)
         return objective, output_dict
+
 
 class IRM(ERM):
     """Invariant Risk Minimization"""
@@ -596,9 +661,8 @@ class IRM(ERM):
         return {"loss": loss.item(), "nll": nll.item(), "penalty": penalty.item()}
 
 
-
-
 class FishrDomainMatcher():
+
     def __init__(self, hparams, optimizer, num_domains):
         self.hparams = hparams
         self.optimizer = optimizer
@@ -637,7 +701,9 @@ class FishrDomainMatcher():
             "penalty_var": self._compute_distance(grads_var_per_domain)
         }
 
-    def compute_fishr_penalty_mav(self, all_logits, all_classes, classifier, all_logits_mav, classifier_mav):
+    def compute_fishr_penalty_mav(
+        self, all_logits, all_classes, classifier, all_logits_mav, classifier_mav
+    ):
         grads = self._compute_grads(all_logits, all_classes, classifier)
         grads_mean_per_domain, grads_var_per_domain = self._compute_grads_mean_var(
             grads, self.ema_per_domain_mean, self.ema_per_domain_var
@@ -662,7 +728,9 @@ class FishrDomainMatcher():
         loss = self.loss_extended(logits, y)
         # calling first-order derivatives in the classifier while maintaining the per-sample gradients for all domains simultaneously
         with backpack(BatchGrad()):
-            loss.backward(inputs=list(classifier.parameters()), retain_graph=True, create_graph=create_graph)
+            loss.backward(
+                inputs=list(classifier.parameters()), retain_graph=True, create_graph=create_graph
+            )
         dict_grads = {
             name: weights.grad_batch.clone().view(bsize, -1)
             for name, weights in classifier.named_parameters()
@@ -813,6 +881,7 @@ class Fishr(ERM):
 
 
 class Ensembling(Algorithm):
+
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         """
         """
@@ -824,14 +893,15 @@ class Ensembling(Algorithm):
         )
         self.features_size = self.featurizers[0].n_outputs
         self.classifiers = nn.ModuleList(
-            [extend(
-                networks.Classifier(
-                    self.features_size,
-                    num_classes,
-                    self.hparams["nonlinear_classifier"],
-                    hparams=self.hparams,
-                )
-            ) for _ in range(self.num_members)
+            [
+                extend(
+                    networks.Classifier(
+                        self.features_size,
+                        num_classes,
+                        self.hparams["nonlinear_classifier"],
+                        hparams=self.hparams,
+                    )
+                ) for _ in range(self.num_members)
             ]
         )
         print(self.classifiers)
@@ -842,11 +912,8 @@ class Ensembling(Algorithm):
         # member diversifier
         if self.hparams["diversity_loss"] in diversity.DICT_NAME_TO_DIVERSIFIER:
             self.member_diversifier = diversity.DICT_NAME_TO_DIVERSIFIER[
-                self.hparams["diversity_loss"]](
-                    hparams=self.hparams,
-                    features_size=self.features_size,
-                    num_classes=self.num_classes
-                )
+                self.hparams["diversity_loss"]
+            ](hparams=self.hparams, features_size=self.features_size, num_classes=self.num_classes)
         else:
             self.member_diversifier = None
 
@@ -861,7 +928,8 @@ class Ensembling(Algorithm):
             self.domain_matchers = None
         elif self.hparams["similarity_loss"] == "fishr":
             self.domain_matchers = [
-                FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains) for _ in range(self.num_members)
+                FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains)
+                for _ in range(self.num_members)
             ]
         else:
             raise ValueError(self.hparams["similarity_loss"])
@@ -878,8 +946,8 @@ class Ensembling(Algorithm):
             self.mavs = [
                 misc.MovingAvg(
                     nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
-                    hparams=self.hparams)
-                for num_member in range(self.num_members)
+                    hparams=self.hparams
+                ) for num_member in range(self.num_members)
             ]
         else:
             self.mavs = []
@@ -939,34 +1007,39 @@ class Ensembling(Algorithm):
         )
         loss_ib_firstorder = 0
         for member in range(self.num_members):
-            ibstats_per_member_domain = ibstats_per_member[member].reshape(self.num_domains, bsize, -1)
+            ibstats_per_member_domain = ibstats_per_member[member].reshape(
+                self.num_domains, bsize, -1
+            )
             for domain in range(self.num_domains):
                 loss_ib_firstorder += ibstats_per_member_domain[domain].var(dim=0).mean()
         if penalty_active:
             objective = objective + (
-                loss_ib_firstorder * self.hparams["lambda_ib_firstorder"] / (self.num_members * self.num_domains)
+                loss_ib_firstorder * self.hparams["lambda_ib_firstorder"] /
+                (self.num_members * self.num_domains)
             )
 
         # diversity across members
         if self.member_diversifier is not None and self.num_members > 1:
             kwargs = {
                 "features_per_member":
-                torch.stack(features_per_member, dim=0).reshape(
-                    self.num_members, self.num_domains, bsize, self.features_size
-                ),
+                torch.stack(features_per_member, dim=0
+                           ).reshape(self.num_members, self.num_domains, bsize, self.features_size),
                 "logits_per_member":
-                torch.stack(logits_per_member, dim=0).reshape(
-                    self.num_members, self.num_domains, bsize, self.num_classes
-                ),
-                "classes": all_classes,
+                torch.stack(logits_per_member, dim=0
+                           ).reshape(self.num_members, self.num_domains, bsize, self.num_classes),
+                "classes":
+                all_classes,
                 "nlls_per_member":
-                torch.stack(nlls_per_member, dim=0).reshape(self.num_members, self.num_domains, bsize),
-                "classifiers": self.classifiers
+                torch.stack(nlls_per_member,
+                            dim=0).reshape(self.num_members, self.num_domains, bsize),
+                "classifiers":
+                self.classifiers
             }
             dict_diversity = self.member_diversifier.forward(**kwargs)
             out.update({key: value.item() for key, value in dict_diversity.items()})
             if penalty_active:
-                objective = objective + dict_diversity["loss_div"] * self.hparams["lambda_diversity_loss"]
+                objective = objective + dict_diversity["loss_div"
+                                                      ] * self.hparams["lambda_diversity_loss"]
 
         # optim steps
         self.optimizer.zero_grad()

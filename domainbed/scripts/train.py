@@ -219,7 +219,7 @@ def main():
     except:
         pass
     try:
-        algorithm.member_diversifier.q = algorithm.member_diversifier.q.to(device)
+        algorithm.member_diversifier.q.to(device)
     except:
         pass
     try:
@@ -236,11 +236,10 @@ def main():
     except:
         pass
     try:
-        algorithm.ts.temperature.to(device)
-        algorithm.ts_swa.temperature.to(device)
+        algorithm.ts.temperature = algorithm.ts.temperature.to(device)
+        algorithm.ts_swa.temperature = algorithm.ts_swa.temperature.to(device)
     except:
-        import pdb
-        pdb.set_trace()
+        pass
 
     if hparams.get("lrdecay"):
         scheduler = ExponentialLR(
