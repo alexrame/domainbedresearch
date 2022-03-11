@@ -239,7 +239,8 @@ def main():
         algorithm.ts.temperature.to(device)
         algorithm.ts_swa.temperature.to(device)
     except:
-        pass
+        import pdb
+        pdb.set_trace()
 
     if hparams.get("lrdecay"):
         scheduler = ExponentialLR(
