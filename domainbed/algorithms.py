@@ -380,8 +380,6 @@ class ERM(Algorithm):
                         temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
                         loss_T = F.cross_entropy(temp_logits, targets_torch)
                         self.ts_swa.optimizer.zero_grad()
-                        import pdb
-                        pdb.set_trace()
                         loss_T.backward()
                         self.ts_swa.optimizer.step()
                         print("tswa", self.ts_swa.temperature)
