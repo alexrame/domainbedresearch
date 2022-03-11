@@ -158,16 +158,6 @@ def l2_between_dicts(dict_1, dict_2):
     ).pow(2).mean()
 
 
-class TempScaler:
-    def __init__(self, hparams):
-        self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-        self.optimizer = torch.optim.Adam(
-            [self.temperature],
-            lr=hparams["lr"],
-            weight_decay=hparams["weight_decay"],
-        )
-
-
 class MovingAverage:
     def __init__(self, ema, oneminusema_correction=True):
         self.ema = ema

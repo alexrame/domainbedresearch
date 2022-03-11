@@ -115,8 +115,12 @@ class ERM(Algorithm):
         self._init_temperature()
 
     def _init_temperature(self):
-        self.ts = misc.TempScaler(self.hparams)
-
+        self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+        self.optimizer = torch.optim.Adam(
+            [self.temperature],
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"],
+        )
     def _init_mav(self):
         if self.hparams['mav']:
             self.mav = misc.MovingAvg(self.network, hparams=self.hparams)
@@ -263,7 +267,7 @@ class ERM(Algorithm):
 
                     if key in ["net", "mav"]:
                         temperature = (
-                            self.ts.temperature if key == "net" else self.ts_swa.temperature
+                            self.temperature if key == "net" else self.swa_temperature
                         )
                         temperature = temperature.to(device)
                         probstemp = torch.softmax(
@@ -356,8 +360,8 @@ class ERM(Algorithm):
                 )
                 results[f"Flatness/{key1}trace"] = np.mean(hessian_comp_net.trace())
 
-        assert self.ts.temperature.requires_grad
-        assert self.ts_swa.temperature.requires_grad
+        assert self.temperature.requires_grad
+        assert self.swa_temperature.requires_grad
         if update_temperature:
             for _ in range(100):
                 for key in ["net", "mav"]:
@@ -366,22 +370,22 @@ class ERM(Algorithm):
                     logits = dict_stats[key]["logits"].to(device)
                     if key == "net":
                         loss_T = F.cross_entropy(
-                            misc.apply_temperature_on_logits(logits, self.ts.temperature), targets_torch
+                            misc.apply_temperature_on_logits(logits, self.temperature), targets_torch
                         )
-                        self.ts.optimizer.zero_grad()
+                        self.t_optimizer.zero_grad()
                         loss_T.backward()
-                        self.ts.optimizer.step()
+                        self.t_optimizer.step()
                     elif key == "mav":
-                        temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
+                        temp_logits = misc.apply_temperature_on_logits(logits, self.swa_temperature)
                         loss_T = F.cross_entropy(temp_logits, targets_torch)
-                        self.ts_swa.optimizer.zero_grad()
+                        self.t_swa_optimizer.zero_grad()
                         loss_T.backward()
                         import pdb; pdb.set_trace()
-                        self.ts_swa.optimizer.step()
+                        self.t_swa_optimizer.step()
                     else:
                         pass
-            results["temp/net"] = self.ts.temperature.item()
-            results["temp/swa"] = self.ts_swa.temperature.item()
+            results["temp/net"] = self.temperature.item()
+            results["temp/swa"] = self.swa_temperature.item()
 
         self.train()
         return results
@@ -466,8 +470,18 @@ class SWA(ERM):
                 )
 
     def _init_temperature(self):
-        self.ts = misc.TempScaler(self.hparams)
-        self.ts_swa = misc.TempScaler(self.hparams)
+        self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+        self.t_optimizer = torch.optim.Adam(
+            [self.temperature],
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"],
+        )
+        self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+        self.t_swa_optimizer = torch.optim.Adam(
+            [self.swa_temperature],
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"],
+        )
 
     def update(self, minibatches, unlabeled=None):
         bsize = minibatches[0][0].size(0)
