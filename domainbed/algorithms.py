@@ -230,8 +230,7 @@ class ERM(Algorithm):
 
     def accuracy(self, loader, device, compute_trace=False, update_temperature=False):
         self.eval()
-        assert self.ts.temperature.requires_grad
-        assert self.ts_swa.temperature.requires_grad
+
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
@@ -253,37 +252,9 @@ class ERM(Algorithm):
                         }
                     logits = dict_logits[key]
 
-                    if update_temperature:
-                        logits_grad = logits.detach()
-                        logits_grad.requires_grad = True
-                        if key == "net":
-                            loss_T = F.cross_entropy(
-                                misc.apply_temperature_on_logits(logits_grad, self.ts.temperature),
-                                y
-                            )
-                            self.ts.optimizer.zero_grad()
-                            loss_T.backward()
-
-                            self.ts.optimizer.step()
-                            print("t", self.ts.temperature)
-                        elif key == "mav":
-                            temp_logits = misc.apply_temperature_on_logits(
-                                    logits_grad, self.ts_swa.temperature
-                                )
-                            loss_T = F.cross_entropy(
-                                temp_logits, y
-                            )
-                            self.ts_swa.optimizer.zero_grad()
-                            import pdb
-                            pdb.set_trace()
-                            loss_T.backward()
-                            self.ts_swa.optimizer.step()
-                            print("tswa", self.ts_swa.temperature)
-                        else:
-                            pass
-
                     preds = logits.argmax(1)
                     probs = torch.softmax(logits, dim=1)
+                    dict_stats[key]["logits"].append(logits.cpu())
                     dict_stats[key]["probs"].append(probs.cpu())
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
@@ -294,21 +265,17 @@ class ERM(Algorithm):
                             self.ts.temperature if key == "net" else self.ts_swa.temperature
                         )
                         temperature = temperature.to(device)
-
-                        try:
-                            probstemp = torch.softmax(
-                                misc.apply_temperature_on_logits(logits.detach(), temperature),
-                                dim=1
-                            )
-                        except Exception as exc:
-                            print(exc)
-                            import pdb
-                            pdb.set_trace()
+                        probstemp = torch.softmax(
+                            misc.apply_temperature_on_logits(logits.detach(), temperature),
+                            dim=1
+                        )
                         dict_stats[key]["confstemp"].append(probstemp.max(dim=1)[0].cpu())
 
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
                 dict_stats[key0][key1] = torch.cat(dict_stats[key0][key1])
+
+
 
         results = {}
         for key in dict_stats:
@@ -388,7 +355,35 @@ class ERM(Algorithm):
                     cuda=True
                 )
                 results[f"Flatness/{key1}trace"] = np.mean(hessian_comp_net.trace())
+
         self.train()
+
+        assert self.ts.temperature.requires_grad
+        assert self.ts_swa.temperature.requires_grad
+        if update_temperature:
+            for key in ["net", "mav"]:
+                if key not in dict_stats:
+                    continue
+                logits = dict_stats[key]["logits"].to(device)
+                if key == "net":
+                    loss_T = F.cross_entropy(
+                        misc.apply_temperature_on_logits(logits, self.ts.temperature), y
+                    )
+                    self.ts.optimizer.zero_grad()
+                    loss_T.backward()
+                    self.ts.optimizer.step()
+                    print("t", self.ts.temperature)
+                elif key == "mav":
+                    temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
+                    loss_T = F.cross_entropy(temp_logits, y)
+                    self.ts_swa.optimizer.zero_grad()
+                    import pdb
+                    pdb.set_trace()
+                    loss_T.backward()
+                    self.ts_swa.optimizer.step()
+                    print("tswa", self.ts_swa.temperature)
+                else:
+                    pass
         return results
 
 
