@@ -139,8 +139,14 @@ def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
             avg_confs_in_bins.append(None)
             acc_in_bin_list.append(None)
 
-    return ece
+    return ece*100
 
+def apply_temperature_on_logits(logits, temperature):
+    """
+    Apply temperature relaxation on logits
+    """
+    reshaped_temperature = temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
+    return logits / reshaped_temperature
 
 def l2_between_dicts(dict_1, dict_2):
     assert len(dict_1) == len(dict_2)
@@ -150,6 +156,16 @@ def l2_between_dicts(dict_1, dict_2):
         torch.cat(tuple([t.view(-1) for t in dict_1_values])) -
         torch.cat(tuple([t.view(-1) for t in dict_2_values]))
     ).pow(2).mean()
+
+
+class TempScaler:
+    def __init__(self, hparams):
+        self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+        self.optimizer = torch.optim.Adam(
+            [self.temperature],
+            lr=hparams["lr"],
+            weight_decay=hparams["weight_decay"],
+        )
 
 
 class MovingAverage:

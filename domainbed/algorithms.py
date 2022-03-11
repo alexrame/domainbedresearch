@@ -24,7 +24,7 @@ from backpack.extensions import BatchGrad
 
 ALGORITHMS = [
     "ERM",
-    "Fish",
+    # "Fish",
     "IRM",
     "Subspace",
     "SWA",
@@ -110,6 +110,10 @@ class ERM(Algorithm):
         self.network = nn.Sequential(self.featurizer, self.classifier)
         self._init_mav()
         self._init_optimizer()
+        self._init_temperature()
+
+    def _init_temperature(self):
+        self.ts = misc.TempScaler(self.hparams)
 
     def _init_mav(self):
         if self.hparams['mav']:
@@ -222,8 +226,13 @@ class ERM(Algorithm):
         if self.hparams['mav']:
             self.mav.network_mav.train(*args)
 
-    def accuracy(self, loader, device, compute_trace=False):
+    def accuracy(self, loader, device, compute_trace=False, update_temperature=False):
         self.eval()
+        try:
+            self.ts.temperature.requires_grad = True
+            self.ts_swa.temperature.requires_grad = True
+        except:
+            pass
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
@@ -236,19 +245,38 @@ class ERM(Algorithm):
                 batch_classes.append(y)
                 for key in dict_logits.keys():
                     if key not in dict_stats:
-                        dict_stats[key] = {"preds": [], "confs": [], "correct": []}  # , "feats": []}
-                        dict_stats[key]["probs"] = []
+                        dict_stats[key] = {"preds": [], "confs": [], "correct": [], "probs": []}
                     logits = dict_logits[key]
-                    try:
-                        preds = logits.argmax(1)
-                    except:
-                        pdb.set_trace()
-                    dict_stats[key]["probs"].append(torch.softmax(logits, dim=1))
 
+                    if update_temperature:
+                        if key == "net":
+                            loss_T = F.cross_entropy(misc.apply_temperature_on_logits(logits.detach(), self.ts.temperature), y)
+                            self.ts.optimizer.zero_grad()
+                            loss_T.backward()
+                            self.ts.optimizer.step()
+                            print("t", self.ts.temperature)
+                        elif key == "mav":
+                            loss_T = F.cross_entropy(misc.apply_temperature_on_logits(logits.detach(), self.ts_swa.temperature), y)
+                            self.ts_swa.optimizer.zero_grad()
+                            loss_T.backward()
+                            self.ts_swa.optimizer.step()
+                            print("tswa", self.ts_swa.temperature)
+                        else:
+                            pass
+
+                    preds = logits.argmax(1)
+                    probs = torch.softmax(logits, dim=1)
+                    dict_stats[key]["probs"].append(probs.cpu())
                     dict_stats[key]["preds"].append(preds.cpu())
-                    # dict_stats[key]["feats"].append(dict_feats[key])
-                    dict_stats[key]["confs"].append(logits.max(1)[0].cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
+                    dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
+
+                    if key in ["net", "mav"]:
+                        temperature = (self.ts.temperature if key == "net" else self.ts_swa.temperature)
+                        probstemp = torch.softmax(
+                            misc.apply_temperature_on_logits(logits.detach(), temperature), dim=1
+                        )
+                        dict_stats[key]["conftemp"].append(probstemp.max(dim=1)[0].cpu())
 
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
@@ -260,6 +288,9 @@ class ERM(Algorithm):
                                                len(dict_stats[key]["correct"].numpy())
             results[f"Calibration/ece_{key}"] = misc.get_ece(
                 dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy())
+            if key in ["net", "mav"]:
+                results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
+                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy())
 
         for regex in ["mavnet", "mavnet0", "mav01", "net01"]:
             if regex == "mavnet":
@@ -282,8 +313,8 @@ class ERM(Algorithm):
             assert key1 in dict_stats
             targets_torch = torch.cat(batch_classes)
             targets = targets_torch.cpu().numpy()
-            preds0 = dict_stats[key0]["preds"].cpu().numpy()
-            preds1 = dict_stats[key1]["preds"].cpu().numpy()
+            preds0 = dict_stats[key0]["preds"].numpy()
+            preds1 = dict_stats[key1]["preds"].numpy()
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
             results[f"Diversity/{regex}agre"] = diversity_metrics.agreement_measure(targets, preds0, preds1)
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
@@ -291,8 +322,8 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # new div metrics
-            probs0 = dict_stats[key0]["probs"].cpu().numpy()
-            probs1 = dict_stats[key1]["probs"].cpu().numpy()
+            probs0 = dict_stats[key0]["probs"].numpy()
+            probs1 = dict_stats[key1]["probs"].numpy()
             results[f"Diversity/{regex}l2"] = diversity_metrics.l2(
                 probs0, probs1)
             results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
@@ -386,6 +417,10 @@ class SWA(ERM):
                     num_classes=self.num_classes,
                     num_domains=num_domains
                 )
+
+    def _init_temperature(self):
+        self.ts = misc.TempScaler(self.hparams)
+        self.ts_swa = misc.TempScaler(self.hparams)
 
     def update(self, minibatches, unlabeled=None):
         bsize = minibatches[0][0].size(0)
@@ -561,53 +596,6 @@ class IRM(ERM):
         return {"loss": loss.item(), "nll": nll.item(), "penalty": penalty.item()}
 
 
-class Fish(ERM):
-    """
-    Implementation of Fish, as seen in Gradient Matching for Domain
-    Generalization, Shi et al. 2021.
-    """
-
-    def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(Fish, self).__init__(input_shape, num_classes, num_domains, hparams)
-
-        Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
-        self.network = networks.WholeFish(input_shape, num_classes, hparams)
-        self._init_optimizer()
-        self.optimizer_inner_state = None
-        self._init_mav()
-
-    def create_clone(self, device):
-        self.network_inner = networks.WholeFish(
-            self.input_shape, self.num_classes, self.hparams, weights=self.network.state_dict()).to(device)
-        self.optimizer_inner = torch.optim.Adam(
-            self.network_inner.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
-        if self.optimizer_inner_state is not None:
-            self.optimizer_inner.load_state_dict(self.optimizer_inner_state)
-
-    def fish(self, meta_weights, inner_weights, lr_meta):
-        meta_weights = misc.ParamDict(meta_weights)
-        inner_weights = misc.ParamDict(inner_weights)
-        meta_weights += lr_meta * (inner_weights - meta_weights)
-        return meta_weights
-
-    def update(self, minibatches, unlabeled=None):
-        self.create_clone(minibatches[0][0].device)
-        for x, y in minibatches:
-            loss = F.cross_entropy(self.network_inner(x), y)
-            self.optimizer_inner.zero_grad()
-            loss.backward()
-            self.optimizer_inner.step()
-
-        self.optimizer_inner_state = self.optimizer_inner.state_dict()
-        meta_weights = self.fish(
-            meta_weights=self.network.state_dict(),
-            inner_weights=self.network_inner.state_dict(),
-            lr_meta=self.hparams["meta_lr"],
-        )
-        self.network.reset_weights(meta_weights)
-        if self.hparams['mav']:
-            self.mav.update()
-        return {"loss": loss.item()}
 
 
 class FishrDomainMatcher():
@@ -1022,5 +1010,5 @@ class Ensembling(Algorithm):
 
         return results
 
-    def accuracy(self, loader, device, compute_trace=False):
-        return ERM.accuracy(self, loader, device, compute_trace)
+    def accuracy(self, *args, **kwargs):
+        return ERM.accuracy(self, *args, **kwargs)

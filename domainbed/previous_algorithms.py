@@ -42,6 +42,55 @@ class AbstractMMD(ERM):
         return {"loss": objective.item(), "penalty": penalty}
 
 
+class Fish(ERM):
+    """
+    Implementation of Fish, as seen in Gradient Matching for Domain
+    Generalization, Shi et al. 2021.
+    """
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Fish, self).__init__(input_shape, num_classes, num_domains, hparams)
+
+        Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
+        self.network = networks.WholeFish(input_shape, num_classes, hparams)
+        self._init_optimizer()
+        self.optimizer_inner_state = None
+        self._init_mav()
+
+    def create_clone(self, device):
+        self.network_inner = networks.WholeFish(
+            self.input_shape, self.num_classes, self.hparams, weights=self.network.state_dict()).to(device)
+        self.optimizer_inner = torch.optim.Adam(
+            self.network_inner.parameters(), lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
+        if self.optimizer_inner_state is not None:
+            self.optimizer_inner.load_state_dict(self.optimizer_inner_state)
+
+    def fish(self, meta_weights, inner_weights, lr_meta):
+        meta_weights = misc.ParamDict(meta_weights)
+        inner_weights = misc.ParamDict(inner_weights)
+        meta_weights += lr_meta * (inner_weights - meta_weights)
+        return meta_weights
+
+    def update(self, minibatches, unlabeled=None):
+        self.create_clone(minibatches[0][0].device)
+        for x, y in minibatches:
+            loss = F.cross_entropy(self.network_inner(x), y)
+            self.optimizer_inner.zero_grad()
+            loss.backward()
+            self.optimizer_inner.step()
+
+        self.optimizer_inner_state = self.optimizer_inner.state_dict()
+        meta_weights = self.fish(
+            meta_weights=self.network.state_dict(),
+            inner_weights=self.network_inner.state_dict(),
+            lr_meta=self.hparams["meta_lr"],
+        )
+        self.network.reset_weights(meta_weights)
+        if self.hparams['mav']:
+            self.mav.update()
+        return {"loss": loss.item()}
+
+
 class CORAL(AbstractMMD):
     """
     MMD using mean and covariance difference

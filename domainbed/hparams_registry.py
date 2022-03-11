@@ -299,7 +299,7 @@ def _hparams(algorithm, dataset, random_seed):
                     _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -2.5))
                 else:
                     _hparam('lr_d', 0.0005, lambda r: 10**r.uniform(-4.5, -3.))
-
+                    # _hparam('lr_d', 0.0002, lambda r: 10**r.uniform(-4.5, -3.))
     # Dataset-and-algorithm-specific hparam definitions. Each block of code
     # below corresponds to exactly one hparam. Avoid nested conditionals.
 

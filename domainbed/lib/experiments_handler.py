@@ -14,13 +14,10 @@ def set_mlflow_experiment(experiment_name):
     assert mlflow.get_tracking_uri() == TRACKING_URI
 
 
-VERSION = "v11" if os.environ.get("HP") != "D" else "v10"
-
-
 
 def set_experiment_name(args):
     if os.environ.get("USER") in ["rame", "utr15kn"]:
-        VERSION = "v11" if os.environ.get("HP") != "D" else "v10"
+        VERSION = "v12" if os.environ.get("HP") != "D" else "v12hpd"
         test_env = args["test_envs"][0]
         if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
             return args["dataset"] + str(test_env) + VERSION

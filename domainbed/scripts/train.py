@@ -235,6 +235,11 @@ def main():
             mav.network_mav.to(device)
     except:
         pass
+    try:
+        algorithm.ts.temperature.to(device)
+        algorithm.ts_swa.temperature.to(device)
+    except:
+        pass
 
     if hparams.get("lrdecay"):
         scheduler = ExponentialLR(
@@ -303,12 +308,12 @@ def main():
                 if hasattr(algorithm, "accuracy"):
                     if step == n_steps - 1 and os.environ.get("HESSIAN") != "none":
                         traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
-                        compute_trace = any([("env" + env) in name for env in traced_envs])
+                        compute_trace = any([("env" + str(env)) in name for env in traced_envs])
                         # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
                     else:
                         compute_trace = False
-                    # print(f"{name}, compute_trace is {compute_trace}")
-                    acc = algorithm.accuracy(loader, device, compute_trace)
+                    update_temperature = name in ['env{}_out'.format(i) for i in range(len(out_splits)) if i not in args.test_envs]
+                    acc = algorithm.accuracy(loader, device, compute_trace, update_temperature=update_temperature)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
                 for key in acc:
