@@ -375,16 +375,17 @@ class ERM(Algorithm):
                         self.ts.optimizer.zero_grad()
                         loss_T.backward()
                         self.ts.optimizer.step()
-                        print("t", self.ts.temperature)
                     elif key == "mav":
                         temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
                         loss_T = F.cross_entropy(temp_logits, targets_torch)
                         self.ts_swa.optimizer.zero_grad()
                         loss_T.backward()
                         self.ts_swa.optimizer.step()
-                        print("tswa", self.ts_swa.temperature)
                     else:
                         pass
+            results["temp/net"] = self.ts.temperature.item()
+            results["temp/swa"] = self.ts_swa.temperature.item()
+
         return results
 
 
