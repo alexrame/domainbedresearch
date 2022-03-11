@@ -290,6 +290,7 @@ class ERM(Algorithm):
                     dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
                 )
 
+        targets_torch = torch.cat(batch_classes)
         for regex in ["mavnet", "mavnet0", "mav01", "net01"]:
             if regex == "mavnet":
                 key0 = "mav"
@@ -309,7 +310,7 @@ class ERM(Algorithm):
             if key0 not in dict_stats:
                 continue
             assert key1 in dict_stats
-            targets_torch = torch.cat(batch_classes)
+
             targets = targets_torch.cpu().numpy()
             preds0 = dict_stats[key0]["preds"].numpy()
             preds1 = dict_stats[key1]["preds"].numpy()
@@ -368,7 +369,7 @@ class ERM(Algorithm):
                 logits = dict_stats[key]["logits"].to(device)
                 if key == "net":
                     loss_T = F.cross_entropy(
-                        misc.apply_temperature_on_logits(logits, self.ts.temperature), y
+                        misc.apply_temperature_on_logits(logits, self.ts.temperature), targets_torch
                     )
                     self.ts.optimizer.zero_grad()
                     loss_T.backward()
@@ -376,7 +377,7 @@ class ERM(Algorithm):
                     print("t", self.ts.temperature)
                 elif key == "mav":
                     temp_logits = misc.apply_temperature_on_logits(logits, self.ts_swa.temperature)
-                    loss_T = F.cross_entropy(temp_logits, y)
+                    loss_T = F.cross_entropy(temp_logits, targets_torch)
                     self.ts_swa.optimizer.zero_grad()
                     import pdb
                     pdb.set_trace()
