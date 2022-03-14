@@ -442,6 +442,7 @@ class ERM(Algorithm):
                         continue
                     logits = dict_stats[key]["logits"].to(device)
                     temperature, optimizer = self.get_temperature(key, return_optim=True)
+                    temperature = temperature.to(device)
                     assert temperature.requires_grad
 
                     loss_T = F.cross_entropy(
