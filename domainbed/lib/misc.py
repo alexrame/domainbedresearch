@@ -66,7 +66,7 @@ class SWA:
                 self._update_layerwise()
             else:
                 self._update_all()
-        else:
+        elif self.swa_end_iter > self.global_iter:
             for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
                 param_k.data = param_q.data
         return self.compute_distance_nets()
