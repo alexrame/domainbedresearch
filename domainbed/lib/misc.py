@@ -46,7 +46,7 @@ class SWA:
         self.hparams = hparams
         self.num = num
         if self.hparams.get("split_swa"):
-            assert num
+            assert num is not None
             self.swa_start_iter = {0: 100, 1: 2500}[num]
             self.swa_end_iter = {0: 2500, 1: float("inf")}[num]
         else:
