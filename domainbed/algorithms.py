@@ -377,7 +377,8 @@ class ERM(Algorithm):
 
             if key0 not in dict_stats:
                 continue
-            assert key1 in dict_stats
+            if key1 not in dict_stats:
+                continue
 
             targets = targets_torch.cpu().numpy()
             preds0 = dict_stats[key0]["preds"].numpy()
