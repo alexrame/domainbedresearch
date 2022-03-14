@@ -251,7 +251,7 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('samadapt', 0, lambda r: r.choice([0]))
         # _hparam('phosam', 0.05, lambda r: r.choice([0.005, 0.01, 0.02, 0.05, 0.1]))
         _hparam('phosam', 0.001, lambda r: r.choice([0.001, 0.002, 0.005, 0.01, 0.02, 0.05]))
-        _hparam('mavsamcoeff', 1., lambda r: 10**r.uniform(-1, 2))
+        _hparam('swasamcoeff', 1., lambda r: 10**r.uniform(-1, 2))
 
     if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling", "Subspace"]:
         _hparam('swa', 0, lambda r: r.choice([0]))
@@ -259,6 +259,7 @@ def _hparams(algorithm, dataset, random_seed):
 
     if algorithm in ["SWA"]:
         _hparam('swa', 1, lambda r: r.choice([1]))
+        _hparam('split_swa', "", lambda r: r.choice([""]))
         _hparam('layerwise', "", lambda r: r.choice([""]))
         _hparam('swa_bin', 0.5, lambda r: r.uniform(0., 0.5))
         _hparam('swa_exp', 1, lambda r: r.choice([1]))

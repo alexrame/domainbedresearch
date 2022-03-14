@@ -34,24 +34,31 @@ def is_dumpable(value):
 
 
 class SWA:
-    def __init__(self, network, hparams):
+    def __init__(self, network, hparams, num=None):
         self.network = network
         self.network_swa = copy.deepcopy(network)
         self.network_swa.eval()
-        self.mav_start_iter = 100
+
         self.global_iter = 0
         self._classifier_mav = None
         self._featurizer_mav = None
         self.layerwise = hparams["layerwise"]
         self.hparams = hparams
+        if self.hparams.get("split_swa"):
+            assert num
+            self.swa_start_iter = {0: 1000, 1: 3000}[num]
+            self.swa_end_iter = {0: 3000, 1: float("inf")}[num]
+        else:
+            self.swa_start_iter = 100
+            self.swa_end_iter = float("inf")
         if self.layerwise:
             self.list_layers_count = [0 for _ in self.network.parameters()]
         else:
-            self.mav_count = 0
+            self.swa_count = 0
 
     def update(self):
         self.global_iter += 1
-        if self.global_iter >= self.mav_start_iter:
+        if self.global_iter >= self.swa_start_iter:
             if self.layerwise:
                 self._update_layerwise()
             else:
@@ -87,9 +94,9 @@ class SWA:
             self.list_layers_count[i] += Z
 
     def _update_all(self):
-        self.mav_count += 1
+        self.swa_count += 1
         for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
-            param_k.data = (param_k.data * self.mav_count + param_q.data) / (1. + self.mav_count)
+            param_k.data = (param_k.data * self.swa_count + param_q.data) / (1. + self.swa_count)
 
     def get_classifier(self):
         if self._classifier_mav is None:

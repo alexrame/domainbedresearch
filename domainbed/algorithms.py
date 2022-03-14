@@ -167,8 +167,8 @@ class ERM(Algorithm):
                 self.swa = misc.SWA(self.network, hparams=self.hparams)
             else:
                 self.swas = [
-                    misc.SWA(self.network, hparams=self.hparams)
-                    for _ in range(self.hparams['swa'])
+                    misc.SWA(self.network, hparams=self.hparams, num=i)
+                    for i in range(self.hparams['swa'])
                 ]
         else:
             self.swa = None
