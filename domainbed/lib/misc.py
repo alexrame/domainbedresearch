@@ -44,10 +44,11 @@ class SWA:
         self._featurizer_mav = None
         self.layerwise = hparams["layerwise"]
         self.hparams = hparams
+        self.num = num
         if self.hparams.get("split_swa"):
             assert num
-            self.swa_start_iter = {0: 1000, 1: 3000}[num]
-            self.swa_end_iter = {0: 3000, 1: float("inf")}[num]
+            self.swa_start_iter = {0: 100, 1: 2500}[num]
+            self.swa_end_iter = {0: 2500, 1: float("inf")}[num]
         else:
             self.swa_start_iter = 100
             self.swa_end_iter = float("inf")
@@ -58,7 +59,9 @@ class SWA:
 
     def update(self):
         self.global_iter += 1
-        if self.global_iter >= self.swa_start_iter:
+        if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
+            if self.global_iter == self.swa_start_iter:
+                print(f"Begin swa for num: {self.num}")
             if self.layerwise:
                 self._update_layerwise()
             else:
@@ -249,6 +252,7 @@ def print_row(row, colwidth=10, latex=False):
         sep = " & "
         end_ = "\\\\"
     else:
+        return
         sep = "  "
         end_ = ""
 
