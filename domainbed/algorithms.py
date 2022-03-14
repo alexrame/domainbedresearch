@@ -314,7 +314,7 @@ class ERM(Algorithm):
                             "confs": [],
                             "correct": [],
                             "probs": [],
-                            "confstemp": []
+                            # "confstemp": []
                         }
                     logits = dict_logits[key]
 
@@ -326,7 +326,7 @@ class ERM(Algorithm):
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
 
-                    if key in ["net", "swa", "swa1", "swa2"]:
+                    if key in ["net", "swa", "swa0", "swa1"]:
                         temperature = self.get_temperature(key)
                         if temperature is None:
                             continue
@@ -335,6 +335,8 @@ class ERM(Algorithm):
                             misc.apply_temperature_on_logits(logits.detach(), temperature),
                             dim=1
                         )
+                        if "confstemp" not in dict_stats[key]:
+                            dict_stats[key]["confstemp"] = []
                         dict_stats[key]["confstemp"].append(probstemp.max(dim=1)[0].cpu())
 
         for key0 in dict_stats:
@@ -348,7 +350,7 @@ class ERM(Algorithm):
             results[f"Calibration/ece_{key}"] = misc.get_ece(
                 dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
             )
-            if key in ["net", "swa"]:
+            if "confstemp" in dict_stats[key]:
                 results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
                     dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
                 )
