@@ -254,11 +254,11 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('mavsamcoeff', 1., lambda r: 10**r.uniform(-1, 2))
 
     if algorithm in ['Fishr', 'ERM', "Fish", "Ensembling", "Subspace"]:
-        _hparam('mav', 0, lambda r: r.choice([0]))
+        _hparam('swa', 0, lambda r: r.choice([0]))
         _hparam('layerwise', "", lambda r: r.choice([""]))
 
     if algorithm in ["SWA"]:
-        _hparam('mav', 1, lambda r: r.choice([1]))
+        _hparam('swa', 1, lambda r: r.choice([1]))
         _hparam('layerwise', "", lambda r: r.choice([""]))
         _hparam('swa_bin', 0.5, lambda r: r.uniform(0., 0.5))
         _hparam('swa_exp', 1, lambda r: r.choice([1]))

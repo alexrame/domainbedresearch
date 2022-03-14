@@ -2,6 +2,339 @@ from domainbed.algorithms import *
 from domainbed.lib import torchutils
 
 
+
+class Subspace(ERM):
+    """
+    Subspace learning
+    """
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Subspace, self).__init__(input_shape, num_classes, num_domains, hparams)
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        self.classifier = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
+        )
+        self.network = nn.Sequential(self.featurizer, self.classifier)
+        self.net = {}
+        self.size_code = 5
+        self.hypernet = nn.Linear(self.size_code, count_param(self.network))
+        self.optimizer = torch.optim.Adam(
+            self.hypernet.parameters(),
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"]
+        )
+        set_requires_grad(self.network, False)
+        self._init_swa()
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        net_copy = copy.deepcopy(self.network)
+        set_requires_grad(net_copy, False)
+
+        code = torch.rand(self.size_code).to("cuda")
+        param_hyper = self.hypernet(code)
+        count_p = 0
+        for pnet in net_copy.parameters():
+            phyper = param_hyper[count_p:count_p + int(pnet.numel())].reshape(*pnet.shape)
+            pnet.copy_(phyper)
+            count_p += int(pnet.numel())
+        loss_reg = (torch.norm(self.hypernet.weight, dim=1)).sum()
+        loss = F.cross_entropy(net_copy(all_x),
+                               all_classes) + self.hparams["penalty_reg"] * loss_reg
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        return {"loss": loss.item()}
+
+    def predict(self, x):
+        param_hyper = self.hypernet.bias
+        count_p = 0
+        for pnet in self.network.parameters():
+            phyper = param_hyper[count_p:count_p + int(pnet.numel())].reshape(*pnet.shape)
+            pnet.copy_(phyper)
+            count_p += int(pnet.numel())
+        return {"net": self.network(x)}
+
+
+
+class IRM(ERM):
+    """Invariant Risk Minimization"""
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(IRM, self).__init__(input_shape, num_classes, num_domains, hparams)
+        self.register_buffer("update_count", torch.tensor([0]))
+
+    @staticmethod
+    def _irm_penalty(logits, y):
+        device = "cuda" if logits[0][0].is_cuda else "cpu"
+        scale = torch.tensor(1.0).to(device).requires_grad_()
+        loss_1 = F.cross_entropy(logits[::2] * scale, y[::2])
+        loss_2 = F.cross_entropy(logits[1::2] * scale, y[1::2])
+        grad_1 = autograd.grad(loss_1, [scale], create_graph=True)[0]
+        grad_2 = autograd.grad(loss_2, [scale], create_graph=True)[0]
+        result = torch.sum(grad_1 * grad_2)
+        return result
+
+    def update(self, minibatches, unlabeled=None):
+        device = "cuda" if minibatches[0][0].is_cuda else "cpu"
+        penalty_weight = (
+            self.hparams["irm_lambda"]
+            if self.update_count >= self.hparams["irm_penalty_anneal_iters"] else 1.0
+        )
+        nll = 0.0
+        penalty = 0.0
+
+        all_x = torch.cat([x for x, y in minibatches])
+        all_logits = self.network(all_x)
+        all_logits_idx = 0
+        for i, (x, y) in enumerate(minibatches):
+            logits = all_logits[all_logits_idx:all_logits_idx + x.shape[0]]
+            all_logits_idx += x.shape[0]
+            nll += F.cross_entropy(logits, y)
+            penalty += self._irm_penalty(logits, y)
+        nll /= len(minibatches)
+        penalty /= len(minibatches)
+        loss = nll + (penalty_weight * penalty)
+
+        if self.update_count == self.hparams["irm_penalty_anneal_iters"]:
+            # Reset Adam, because it doesn't like the sharp jump in gradient
+            # magnitudes that happens at this step.
+            self.optimizer = torch.optim.Adam(
+                self.network.parameters(),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams["weight_decay"],
+            )
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        self.update_count += 1
+        return {"loss": loss.item(), "nll": nll.item(), "penalty": penalty.item()}
+
+
+class FishrDomainMatcher():
+
+    def __init__(self, hparams, optimizer, num_domains):
+        self.hparams = hparams
+        self.optimizer = optimizer
+        self.num_domains = num_domains
+
+        self.loss_extended = extend(nn.CrossEntropyLoss(reduction='sum'))
+        self.ema_per_domain_mean = [
+            misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
+            for _ in range(self.num_domains)
+        ]
+        self.ema_per_domain_var = [
+            misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
+            for _ in range(self.num_domains)
+        ]
+
+        if self.hparams.get('swa') == "gradvar":
+            raise NotImplementedError
+            self.ema_per_domain_mean_swa = [
+                misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
+                for _ in range(self.num_domains)
+            ]
+            self.ema_per_domain_var_swa = [
+                misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
+                for _ in range(self.num_domains)
+            ]
+
+        self.list_methods = hparams["method"].split("_")
+
+    def compute_fishr_penalty(self, all_logits, all_classes, classifier):
+        grads = self._compute_grads(all_logits, all_classes, classifier)
+        grads_mean_per_domain, grads_var_per_domain = self._compute_grads_mean_var(
+            grads, self.ema_per_domain_mean, self.ema_per_domain_var
+        )
+        return {
+            "penalty_mean": self._compute_distance(grads_mean_per_domain),
+            "penalty_var": self._compute_distance(grads_var_per_domain)
+        }
+
+    def compute_fishr_penalty_swa(
+        self, all_logits, all_classes, classifier, all_logits_swa, classifier_swa
+    ):
+        grads = self._compute_grads(all_logits, all_classes, classifier)
+        grads_mean_per_domain, grads_var_per_domain = self._compute_grads_mean_var(
+            grads, self.ema_per_domain_mean, self.ema_per_domain_var
+        )
+
+        grads_swa = self._compute_grads(
+            all_logits_swa, all_classes, classifier_swa, create_graph=False
+        )
+        grads_mean_per_domain_swa, grads_var_per_domain_swa = self._compute_grads_mean_var(
+            grads_swa.detach(), self.ema_per_domain_mean_swa, self.ema_per_domain_var_swa
+        )
+        return {
+            "penalty_mean":
+            self._compute_distance_swa(grads_mean_per_domain, grads_mean_per_domain_swa),
+            "penalty_var":
+            self._compute_distance_swa(grads_var_per_domain, grads_var_per_domain_swa)
+        }
+
+    def _compute_grads(self, logits, y, classifier, create_graph=True):
+        bsize = logits.size(0)
+        self.optimizer.zero_grad()
+        loss = self.loss_extended(logits, y)
+        # calling first-order derivatives in the classifier while maintaining the per-sample gradients for all domains simultaneously
+        with backpack(BatchGrad()):
+            loss.backward(
+                inputs=list(classifier.parameters()), retain_graph=True, create_graph=create_graph
+            )
+        dict_grads = {
+            name: weights.grad_batch.clone().view(bsize, -1)
+            for name, weights in classifier.named_parameters()
+        }
+        grads = torch.cat([dict_grads[key] for key in sorted(dict_grads.keys())], dim=1)
+        return grads
+
+    def _compute_grads_mean_var(self, grads, ema_per_domain_mean, ema_per_domain_var):
+        # gradient variances per domain
+        grads_mean_per_domain = []
+        grads_var_per_domain = []
+
+        bsize = grads.size(0) // self.num_domains
+        for domain_id in range(self.num_domains):
+            domain_grads = grads[domain_id * bsize:(domain_id + 1) * bsize]
+            domain_mean = domain_grads.mean(dim=0, keepdim=True)
+            grads_mean_per_domain.append(domain_mean)
+            if "notcentered" in self.list_methods:
+                domain_grads_centered = domain_grads
+            else:
+                domain_grads_centered = domain_grads - domain_mean
+            grads_var_per_domain.append((domain_grads_centered).pow(2).mean(dim=0))
+
+        # moving average
+        for domain_id in range(self.num_domains):
+            grads_mean_per_domain[domain_id] = ema_per_domain_mean[domain_id].update_value(
+                grads_mean_per_domain[domain_id]
+            )
+            grads_var_per_domain[domain_id] = ema_per_domain_var[domain_id].update_value(
+                grads_var_per_domain[domain_id]
+            )
+
+        return grads_mean_per_domain, grads_var_per_domain
+
+    def _compute_distance(self, grads_per_domain):
+        # compute gradient variances averaged across domains
+        grads_mean = torch.stack(grads_per_domain, dim=0).mean(dim=0)
+        if "zerohessian" in self.list_methods:
+            grads_mean = torch.zeros_like(grads_mean)
+
+        penalty = 0
+        for domain_id in range(self.num_domains):
+            penalty += (grads_per_domain[domain_id] - grads_mean).pow(2).mean()
+        return penalty / self.num_domains
+
+    def _compute_distance_swa(self, grads_per_domain, grads_per_domain_swa):
+        # compute gradient variances averaged across domains
+        grads_mean = torch.stack(grads_per_domain_swa, dim=0).mean(dim=0).detach()
+        penalty = 0
+        for domain_id in range(self.num_domains):
+            penalty += (grads_per_domain[domain_id] - grads_mean).pow(2).mean()
+        return penalty / self.num_domains
+
+
+class Fishr(ERM):
+    "Invariant Gradient Variances for Out-of-distribution Generalization"
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        assert backpack is not None, "Install backpack with: 'pip install backpack-for-pytorch==1.3.0'"
+        Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
+
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        self.classifier = extend(
+            networks.Classifier(
+                self.featurizer.n_outputs,
+                num_classes,
+                self.hparams['nonlinear_classifier'],
+            )
+        )
+        self.network = nn.Sequential(self.featurizer, self.classifier)
+
+        self._init_optimizer()
+        self.register_buffer("update_count", torch.tensor([0]))
+        self.domain_matcher = FishrDomainMatcher(hparams, self.optimizer, num_domains)
+        self._init_swa()
+
+    def update(self, minibatches, unlabeled=False):
+        assert len(minibatches) == self.num_domains
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        output_dict = self.get_loss(all_x, all_classes)
+
+        if self.hparams['sam']:
+            raise NotImplementedError
+            self.optimizer.zero_grad()
+            # first forward-backward pass
+            if self.hparams['sam'] == "nll":
+                output_dict["nll"].backward()
+            else:
+                output_dict["objective"].backward()
+            self.optimizer.first_step()
+            self.optimizer.zero_grad()
+            # second forward-backward pass
+            output_dict_second = self.get_loss(all_x, all_classes)
+            # make sure to do a full forward pass
+            output_dict_second["objective"].backward()
+            self.optimizer.second_step()
+            output_dict.update(
+                {key + "_secondstep": value for key, value in output_dict_second.items()}
+            )
+        else:
+            self.optimizer.zero_grad()
+            output_dict["objective"].backward()
+            self.optimizer.step()
+        if self.hparams['swa']:
+            self.swa.update()
+
+        return {key: value.item() for key, value in output_dict.items()}
+
+    def get_loss(self, all_x, all_classes):
+        all_z = self.featurizer(all_x)
+        all_logits = self.classifier(all_z)
+
+        if self.hparams['swa'] == "gradvar":
+            raise NotImplementedError
+            all_logits_swa = self.swa.network_swa(all_x)
+            dict_penalty = self.domain_matcher.compute_fishr_penalty_swa(
+                all_logits,
+                all_classes,
+                classifier=self.classifier,
+                all_logits_swa=all_logits_swa,
+                classifier_swa=self.swa.get_classifier()
+            )
+        else:
+            dict_penalty = self.domain_matcher.compute_fishr_penalty(
+                all_logits, all_classes, classifier=self.classifier
+            )
+        all_nll = F.cross_entropy(all_logits, all_classes)
+
+        penalty_active = float(self.update_count >= self.hparams["penalty_anneal_iters"])
+        if self.update_count == self.hparams["penalty_anneal_iters"] != 0:
+            # Reset Adam as in IRM or V-REx, because it may not like the sharp jump in
+            # gradient magnitudes that happens at this step.
+            if self.hparams["lambda"] + self.hparams["lambdamean"] != 0:
+                self._init_optimizer()
+
+        self.update_count += 1
+
+        penalty = (
+            self.hparams["lambda"] * dict_penalty["penalty_var"] +
+            self.hparams["lambdamean"] * dict_penalty["penalty_mean"]
+        )
+        objective = all_nll + penalty_active * penalty
+        output_dict = {'objective': objective, 'nll': all_nll, "penalty": penalty}
+        output_dict.update({key: value for key, value in dict_penalty.items()})
+        return output_dict
+
+
 class AbstractMMD(ERM):
     """
     Perform ERM while matching the pair-wise domain feature distributions

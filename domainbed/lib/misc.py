@@ -33,12 +33,11 @@ def is_dumpable(value):
     return True
 
 
-class MovingAvg:
-
+class SWA:
     def __init__(self, network, hparams):
         self.network = network
-        self.network_mav = copy.deepcopy(network)
-        self.network_mav.eval()
+        self.network_swa = copy.deepcopy(network)
+        self.network_swa.eval()
         self.mav_start_iter = 100
         self.global_iter = 0
         self._classifier_mav = None
@@ -58,7 +57,7 @@ class MovingAvg:
             else:
                 self._update_all()
         else:
-            for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
+            for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
                 param_k.data = param_q.data
         return self.compute_distance_nets()
 
@@ -66,7 +65,7 @@ class MovingAvg:
         dist_l2 = 0
         cos = 0
         count_params = 0
-        for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
+        for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
             dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
             num_params = int(param_q.numel())
             count_params += num_params
@@ -75,7 +74,7 @@ class MovingAvg:
 
     def _update_layerwise(self):
         layerwise_split = self.layerwise.split("-") if isinstance(self.layerwise, str) else []
-        for i, (param_q, param_k) in enumerate(zip(self.network.parameters(), self.network_mav.parameters())):
+        for i, (param_q, param_k) in enumerate(zip(self.network.parameters(), self.network_swa.parameters())):
             if "bin" in layerwise_split:
                 if random.random() < self.hparams["swa_bin"]:
                     continue
@@ -89,17 +88,17 @@ class MovingAvg:
 
     def _update_all(self):
         self.mav_count += 1
-        for param_q, param_k in zip(self.network.parameters(), self.network_mav.parameters()):
+        for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
             param_k.data = (param_k.data * self.mav_count + param_q.data) / (1. + self.mav_count)
 
     def get_classifier(self):
         if self._classifier_mav is None:
-            self._classifier_mav = list(self.network_mav.children())[-1]
+            self._classifier_mav = list(self.network_swa.children())[-1]
         return self._classifier_mav
 
     def get_featurizer(self):
         if self._featurizer_mav is None:
-            self._featurizer_mav = nn.Sequential(*list(self.network_mav.children())[:-1])
+            self._featurizer_mav = nn.Sequential(*list(self.network_swa.children())[:-1])
         return self._featurizer_mav
 
 
