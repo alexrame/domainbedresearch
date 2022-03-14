@@ -133,10 +133,12 @@ class ERM(Algorithm):
                 self.t_swa_optimizers = []
                 for _ in range(self.hparams['swa']):
                     self.swa_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
-                    self.t_swa_optimizers = torch.optim.Adam(
-                        [self.swa_temperatures[-1]],
-                        lr=self.hparams["lr"],
-                        weight_decay=self.hparams["weight_decay"],
+                    self.t_swa_optimizers.append(
+                        torch.optim.Adam(
+                            [self.swa_temperatures[-1]],
+                            lr=self.hparams["lr"],
+                            weight_decay=self.hparams["weight_decay"],
+                        )
                     )
 
     def get_temperature(self, key, return_optim=False):
@@ -164,7 +166,10 @@ class ERM(Algorithm):
             if self.hparams['swa'] == 1:
                 self.swa = misc.SWA(self.network, hparams=self.hparams)
             else:
-                self.swas = [misc.SWA(self.network, hparams=self.hparams) for _ in range(self.hparams['swa'])]
+                self.swas = [
+                    misc.SWA(self.network, hparams=self.hparams)
+                    for _ in range(self.hparams['swa'])
+                ]
         else:
             self.swa = None
 
@@ -332,8 +337,7 @@ class ERM(Algorithm):
                             continue
                         temperature = temperature.to(device)
                         probstemp = torch.softmax(
-                            misc.apply_temperature_on_logits(logits.detach(), temperature),
-                            dim=1
+                            misc.apply_temperature_on_logits(logits.detach(), temperature), dim=1
                         )
                         if "confstemp" not in dict_stats[key]:
                             dict_stats[key]["confstemp"] = []
@@ -426,10 +430,7 @@ class ERM(Algorithm):
                 results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
 
             hessian_comp_net = hessian(
-                self.network,
-                nn.CrossEntropyLoss(reduction='sum'),
-                dataloader=loader,
-                cuda=True
+                self.network, nn.CrossEntropyLoss(reduction='sum'), dataloader=loader, cuda=True
             )
             results[f"Flatness/nettrace"] = np.mean(hessian_comp_net.trace())
 
@@ -440,8 +441,7 @@ class ERM(Algorithm):
                     if key not in dict_stats:
                         continue
                     logits = dict_stats[key]["logits"].to(device)
-                    temperature, optimizer = self.get_temperature(
-                        key, return_optim=True)
+                    temperature, optimizer = self.get_temperature(key, return_optim=True)
                     assert temperature.requires_grad
 
                     loss_T = F.cross_entropy(
@@ -544,7 +544,7 @@ class SWA(ERM):
             else:
                 for i, swa in enumerate(self.swas):
                     swa_dict = swa.update()
-                    output_dict.update({key+str(i): value for key, value in swa_dict.items()})
+                    output_dict.update({key + str(i): value for key, value in swa_dict.items()})
 
         return {key: value.detach().item() for key, value in output_dict.items()}
 
@@ -614,8 +614,6 @@ class SWA(ERM):
             objective = objective + self.hparams["lambda_entropy"
                                                 ] * losses.entropy_regularizer(all_logits)
         return objective, output_dict
-
-
 
 
 class Ensembling(Algorithm):
