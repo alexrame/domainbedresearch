@@ -533,9 +533,15 @@ class SWA(ERM):
             self.optimizer.zero_grad()
             objective.backward()
             self.optimizer.step()
+
         if self.hparams['swa']:
-            swa_dict = self.swa.update()
-            output_dict.update(swa_dict)
+            if self.hparams['swa'] == 1:
+                swa_dict = self.swa.update()
+                output_dict.update(swa_dict)
+            else:
+                for i, swa in enumerate(self.swas):
+                    swa_dict = swa.update()
+                    output_dict.update({key+str(i): value for key, value in swa_dict.items()})
 
         return {key: value.detach().item() for key, value in output_dict.items()}
 
@@ -673,6 +679,7 @@ class Ensembling(Algorithm):
 
     def _init_swa(self):
         if self.hparams['swa']:
+            assert self.hparams['swa'] == 1
             self.swas = [
                 misc.SWA(
                     nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
