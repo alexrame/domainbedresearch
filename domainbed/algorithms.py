@@ -734,7 +734,7 @@ class Ensembling(Algorithm):
         assert self.num_members % len(minibatches) == 0
         num_domains_per_member = self.num_members // len(minibatches)
         index_per_member = [
-            [2*i + j for j in range(num_domains_per_member)]
+            [num_domains_per_member*i + j for j in range(num_domains_per_member)]
             for i in range(self.num_members)
         ]
         x_per_member = [torch.cat([minibatches[index][0] for index in index_per_member[i]])
