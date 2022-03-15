@@ -707,7 +707,7 @@ class Ensembling(Algorithm):
                 out.update({key + str(i): value for key, value in swa_dict.items()})
         return {key: value.item() for key, value in out.items()}
 
-    def _update_smart(self, minibatches):
+    def _update_full(self, minibatches):
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])
         nlls_per_member = []  # (num_classifiers, num_minibatches)
