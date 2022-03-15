@@ -54,17 +54,6 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('mlp_dropout', 0., lambda r: r.choice([0., 0.1, 0.5]))
         _hparam('weight_decay_d', 0., lambda r: 10**r.uniform(-6, -2))
 
-    elif algorithm == "Ensembling":
-        _hparam("num_members", 2, lambda r: 2)
-        _hparam("lambda_ib_firstorder", 0, lambda r: 0)
-
-        # for domain matching
-        _hparam('lambda_domain_matcher', 0, lambda r: 10**r.uniform(1, 4))
-        _hparam("similarity_loss", "none", lambda r: "none")
-        # for fishr
-        _hparam('ema', 0.95, lambda r: r.uniform(0.9, 0.99))
-        _hparam('method', "weight", lambda r: r.choice([""]))
-
     elif algorithm in ["Fishr", "COREL"]:
         if os.environ.get("LAMBDA") == "v15":
             print("Lambda v15")
@@ -258,8 +247,20 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('layerwise', "", lambda r: r.choice([""]))
 
     if algorithm in ["Ensembling", "Ensemblingv2"]:
+        _hparam("num_members", 2, lambda r: 2)
         _hparam('shared_init', 0, lambda r: r.choice([0]))
         _hparam('specialized', 0, lambda r: r.choice([0]))
+
+    if algorithm == "Ensemblingv2":
+
+        _hparam("lambda_ib_firstorder", 0, lambda r: 0)
+
+        # for domain matching
+        _hparam('lambda_domain_matcher', 0, lambda r: 10**r.uniform(1, 4))
+        _hparam("similarity_loss", "none", lambda r: "none")
+        # for fishr
+        _hparam('ema', 0.95, lambda r: r.uniform(0.9, 0.99))
+        _hparam('method', "weight", lambda r: r.choice([""]))
 
     if algorithm in ["SWA"]:
         _hparam('swa', 1, lambda r: r.choice([1]))

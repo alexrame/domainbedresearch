@@ -717,7 +717,7 @@ class Ensembling(Algorithm):
             nll_member = F.cross_entropy(logits_member, all_classes, reduction="mean")
             self.optimizers[member].zero_grad()
             nll_member.backward()
-            self.optimizers[member].optimizer.step()
+            self.optimizers[member].step()
             nlls_per_member.append(nll_member)
 
         objective = torch.stack(nlls_per_member, dim=0).mean()
@@ -755,7 +755,7 @@ class Ensembling(Algorithm):
             nlls_per_member.append(nll_member)
             self.optimizers[member].zero_grad()
             nll_member.backward()
-            self.optimizers[member].optimizer.step()
+            self.optimizers[member].step()
 
         objective = torch.stack(nlls_per_member, dim=0).mean()
         out = {"nll": (objective)}
