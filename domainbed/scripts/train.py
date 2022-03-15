@@ -316,10 +316,10 @@ def main():
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
-                    if step == n_steps - 1 and os.environ.get("HESSIAN") != "none":
+                    if step == n_steps - 1:
                         traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
                         compute_trace = any([("env" + str(env)) in name for env in traced_envs])
-                        # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
+                    # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
                     else:
                         compute_trace = False
                     update_temperature = name in ['env{}_out'.format(i) for i in range(len(out_splits)) if i not in args.test_envs]

@@ -313,7 +313,8 @@ class ERM(Algorithm):
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
-                dict_feats = self.predict_feat(x)
+                if compute_trace:
+                    dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
                 for key in dict_logits.keys():
@@ -336,8 +337,10 @@ class ERM(Algorithm):
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
-                    dict_stats[key]["feats"].append(dict_feats[key])
-
+                    if compute_trace:
+                        dict_stats[key]["feats"].append(dict_feats[key])
+                    else:
+                        dict_stats[key]["feats"].append(logits)
                     if key in ["net", "swa", "swa0", "swa1"]:
                         temperature = self.get_temperature(key)
                         if temperature is None:
@@ -397,7 +400,29 @@ class ERM(Algorithm):
             if key1 not in dict_stats:
                 continue
 
+            assert self.swa_temperature.requires_grad
+            if update_temperature:
+                for _ in range(50):
+                    for key in ["net", "swa", "swa0", "swa1"]:
+                        if key not in dict_stats:
+                            continue
+                        logits = dict_stats[key]["logits"].to(device)
+                        temperature, optimizer = self.get_temperature(key, return_optim=True)
+                        if temperature is None:
+                            continue
+                        temperature = temperature.to(device)
+                        assert temperature.requires_grad
+
+                        loss_T = F.cross_entropy(
+                            misc.apply_temperature_on_logits(logits, temperature), targets_torch
+                        )
+                        optimizer.zero_grad()
+                        loss_T.backward()
+                        optimizer.step()
+                    results["temp/" + key] = temperature.item()
+
             targets = targets_torch.cpu().numpy()
+            del targets_torch
             preds0 = dict_stats[key0]["preds"].numpy()
             preds1 = dict_stats[key1]["preds"].numpy()
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
@@ -409,21 +434,22 @@ class ERM(Algorithm):
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
+            del preds0, preds1
 
             # new div metrics
-            feats0 = dict_stats[key0]["feats"]
-            feats1 = dict_stats[key1]["feats"]
-            results[f"Diversity/{regex}CKAC"] = 1 - CudaCKA(device).linear_CKA(feats0, feats1)
+            if compute_trace:
+                feats0 = dict_stats[key0]["feats"]
+                feats1 = dict_stats[key1]["feats"]
+                results[f"Diversity/{regex}CKAC"] = 1 - CudaCKA(device).linear_CKA(feats0, feats1)
+                del feats0, feats1
             probs0 = dict_stats[key0]["probs"].numpy()
             probs1 = dict_stats[key1]["probs"].numpy()
             results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
             results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
+            del probs0, probs1, targets, dict_stats[key0], dict_stats[key1]
 
         # Flatness metrics
-        if compute_trace and hessian is not None:
-            # feats0 = dict_stats[key0]["feats"]
-            # hessian_comp_swa = hessian(
-            #     self.swa.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
+        if compute_trace:
             if self.hparams['swa'] == 1:
                 hessian_comp_swa = hessian(
                     self.swa.network_swa,
@@ -432,6 +458,7 @@ class ERM(Algorithm):
                     cuda=True
                 )
                 results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
+                del hessian_comp_swa
             else:
                 hessian_comp_swa = hessian(
                     self.swas[0].network_swa,
@@ -440,39 +467,20 @@ class ERM(Algorithm):
                     cuda=True
                 )
                 results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
+                del hessian_comp_swa
 
             if not self.hparams.get("num_members"):
                 hessian_comp_net = hessian(
                     self.network, nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
                 )
                 results[f"Flatness/nettrace"] = np.mean(hessian_comp_net.trace())
+                del hessian_comp_net
             else:
                 hessian_comp_net = hessian(
                     self.networks[0], nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
                 )
                 results[f"Flatness/net0trace"] = np.mean(hessian_comp_net.trace())
-
-        assert self.swa_temperature.requires_grad
-        if update_temperature:
-            for _ in range(50):
-                for key in ["net", "swa", "swa0", "swa1"]:
-                    if key not in dict_stats:
-                        continue
-                    logits = dict_stats[key]["logits"].to(device)
-                    temperature, optimizer = self.get_temperature(key, return_optim=True)
-                    if temperature is None:
-                        continue
-                    temperature = temperature.to(device)
-                    assert temperature.requires_grad
-
-                    loss_T = F.cross_entropy(
-                        misc.apply_temperature_on_logits(logits, temperature), targets_torch
-                    )
-                    optimizer.zero_grad()
-                    loss_T.backward()
-                    optimizer.step()
-
-                results["temp/" + key] = temperature.item()
+                del hessian_comp_net
 
         self.train()
         return results
