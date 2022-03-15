@@ -635,19 +635,31 @@ class Ensembling(Algorithm):
         super().__init__(input_shape, num_classes, num_domains, hparams)
         self.hparams = hparams
         self.num_members = self.hparams["num_members"]
-        self.featurizers = nn.ModuleList(
-            [networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)]
+        featurizers = [
+            networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)
+        ]
+        classifiers = [
+            networks.Classifier(
+                featurizers[0].n_outputs,
+                self.num_classes,
+                self.hparams["nonlinear_classifier"],
+                hparams=self.hparams,
+            ) for _ in range(self.num_members)
+        ]
+        self.networks = nn.ModuleList(
+            [
+                nn.Sequential(featurizers[member], classifiers[member])
+                for member in range(self.num_members)
+            ]
         )
+
         if self.hparams["shared_init"]:
-            network_0 = self.featurizers[0]
+            network_0 = self.networks[0]
             for i in range(1, self.num_members):
-                network_i = self.featurizers[i]
+                network_i = self.networks[i]
                 for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
                     param_i.data = param_0.data
 
-        self.features_size = self.featurizers[0].n_outputs
-
-        self._init_classifiers()
         self.loss = nn.CrossEntropyLoss(reduction="mean")
         self.num_classes = num_classes
 
@@ -656,62 +668,32 @@ class Ensembling(Algorithm):
         self._init_swa()
         self._init_temperature()
 
-    def _init_classifiers(self):
-        self.classifiers = nn.ModuleList(
-            [
-                networks.Classifier(
-                    self.features_size,
-                    self.num_classes,
-                    self.hparams["nonlinear_classifier"],
-                    hparams=self.hparams,
-                ) for _ in range(self.num_members)
-            ]
-        )
-        if self.hparams["shared_init"]:
-            network_0 = self.classifiers[0]
-            for i in range(1, self.num_members):
-                network_i = self.classifiers[i]
-                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
-                    param_i.data = param_0.data
-
-        print(self.classifiers)
-
     def _init_optimizer(self):
-        self.optimizer = torch.optim.Adam(
-            list(self.featurizers.parameters()) + list(self.classifiers.parameters()),
-            lr=self.hparams["lr"],
-            weight_decay=self.hparams["weight_decay"],
-        )
+        self.optimizers = [
+            torch.optim.Adam(
+                list(self.networks[member].parameters()),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams["weight_decay"],
+            ) for member in range(self.num_members)
+        ]
 
     def _init_swa(self):
         if self.hparams['swa']:
             assert self.hparams['swa'] == 1
-            self.swa = misc.SWAEns(
-                networks=[
-                    nn.Sequential(self.featurizers[num_member], self.classifiers[num_member])
-                    for num_member in range(self.num_members)
-                ],
-                hparams=self.hparams
-            )
+            self.swa = misc.SWAEns(networks=self.networks, hparams=self.hparams)
             self.swas = [
-                misc.SWA(
-                    nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
-                    hparams=self.hparams
-                ) for num_member in range(self.num_members)
+                misc.SWA(self.networks[member], hparams=self.hparams)
+                for member in range(self.num_members)
             ]
         else:
             self.swas = []
 
     def update(self, minibatches, unlabeled=None):
         if not self.hparams['specialized']:
-            out, objective = self._update_full(minibatches)
+            out = self._update_full(minibatches)
         else:
-            out, objective = self._update_specialized(minibatches)
+            out = self._update_specialized(minibatches)
 
-        # optim steps
-        self.optimizer.zero_grad()
-        objective.backward()
-        self.optimizer.step()
         if self.hparams['swa']:
             out.update(self.swa.update())
             for i, swa in enumerate(self.swas):
@@ -719,28 +701,24 @@ class Ensembling(Algorithm):
                 out.update({key + str(i): value for key, value in swa_dict.items()})
         return {key: value.item() for key, value in out.items()}
 
-    def _update_full(self, minibatches):
+    def _update_smart(self, minibatches):
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])
-
-        features_per_member = []  # (num_classifiers, num_minibatches, bsize, n_outputs_featurizer)
-        logits_per_member = []  # (num_classifiers, num_minibatches, bsize, num_classes)
         nlls_per_member = []  # (num_classifiers, num_minibatches)
 
         for member in range(self.num_members):
-            features_member = self.featurizers[member](all_x)
-            logits_member = self.classifiers[member](features_member)
-
-            features_per_member.append(features_member)
-            logits_per_member.append(logits_member)
+            logits_member = self.networks[member](all_x)
             nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            self.optimizers[member].zero_grad()
+            nll_member.backward()
+            self.optimizers[member].optimizer.step()
             nlls_per_member.append(nll_member)
 
         objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
-        out = {"nll": (objective)}
+        out = {"nll": objective}
         for key in range(self.num_members):
             out[f"nll_{key}"] = nlls_per_member[key].mean()
-        return out, objective
+        return out
 
     def _update_specialized(self, minibatches):
         assert self.num_members % len(minibatches) == 0
@@ -750,22 +728,28 @@ class Ensembling(Algorithm):
              for j in range(num_domains_per_member)]
             for i in range(self.num_members)
         ]
-        x_per_member = [torch.cat([minibatches[index][0] for index in index_per_member[i]])
-                        for i in range(self.num_members)]
-        classes_per_member = [torch.cat([minibatches[index][1] for index in index_per_member[i]])
-                        for i in range(self.num_members)]
+        x_per_member = [
+            torch.cat([minibatches[index][0]
+                       for index in index_per_member[i]])
+            for i in range(self.num_members)
+        ]
+        classes_per_member = [
+            torch.cat([minibatches[index][1]
+                       for index in index_per_member[i]])
+            for i in range(self.num_members)
+        ]
 
-        features_per_member = []  # (num_classifiers, num_domains_per_member, bsize, n_outputs_featurizer)
-        logits_per_member = []  # (num_classifiers, num_domains_per_member, bsize, num_classes)
         nlls_per_member = []  # (num_classifiers, num_domains_per_member)
 
         for member in range(self.num_members):
-            features_member = self.featurizers[member](x_per_member[member])
-            logits_member = self.classifiers[member](features_member)
-            features_per_member.append(features_member)
-            logits_per_member.append(logits_member)
-            nll_member = F.cross_entropy(logits_member, classes_per_member[member], reduction="none")
+            logits_member = self.networks[member](x_per_member[member])
+            nll_member = F.cross_entropy(
+                logits_member, classes_per_member[member], reduction="none"
+            )
             nlls_per_member.append(nll_member)
+            self.optimizers[member].zero_grad()
+            nll_member.backward()
+            self.optimizers[member].optimizer.step()
 
         objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
         out = {"nll": (objective)}
@@ -793,7 +777,7 @@ class Ensembling(Algorithm):
         batch_logits_swa = []
 
         for num_member in range(self.num_members):
-            logits = self.classifiers[num_member](self.featurizers[num_member](x))
+            logits = self.networks[num_member](x)
             batch_logits.append(logits)
             results["net" + str(num_member)] = logits
             if self.hparams['swa']:
@@ -813,8 +797,11 @@ class Ensembling(Algorithm):
 
     def _init_temperature(self):
         return ERM._init_temperature(self)
+
     def get_temperature(self, *args, **kwargs):
         return ERM.get_temperature(self, *args, **kwargs)
+
+
 class Ensemblingv2(Ensembling):
 
     def __init__(self):
@@ -901,6 +888,29 @@ class Ensemblingv2(Ensembling):
             for swa in self.swas:
                 swa.update()
         return out
+
+    def _update_full(self, minibatches):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        features_per_member = []  # (num_classifiers, num_minibatches, bsize, n_outputs_featurizer)
+        logits_per_member = []  # (num_classifiers, num_minibatches, bsize, num_classes)
+        nlls_per_member = []  # (num_classifiers, num_minibatches)
+
+        for member in range(self.num_members):
+            features_member = self.featurizers[member](all_x)
+            logits_member = self.classifiers[member](features_member)
+
+            features_per_member.append(features_member)
+            logits_per_member.append(logits_member)
+            nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            nlls_per_member.append(nll_member)
+
+        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        out = {"nll": (objective)}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key].mean()
+        return out, objective
 
     def diversity_labeled(self):
         # firstorder information bottleneck
