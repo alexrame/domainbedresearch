@@ -153,6 +153,17 @@ class ERM(Algorithm):
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
+            self.net_temperatures = []
+            self.t_net_optimizers = []
+            for _ in range(self.hparams.get('num_members', 1)):
+                self.net_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
+                self.t_net_optimizers.append(
+                    torch.optim.Adam(
+                        [self.net_temperatures[-1]],
+                        lr=self.hparams["lr"],
+                        weight_decay=self.hparams["weight_decay"],
+                    )
+                )
 
     def get_temperature(self, key, return_optim=False):
         if key == "net":
@@ -176,13 +187,17 @@ class ERM(Algorithm):
             if return_optim:
                 return self.soupswa_temperature, self.t_soupswa_optimizer
             return self.soupswa_temperature
-        if not key.startswith("swa"):
-            raise ValueError()
         i = int(key[-1])
-        if return_optim:
-            return self.swa_temperatures[i], self.t_swa_optimizers[i]
-        return self.swa_temperatures[i]
+        if key == "swa" + str(i):
+            if return_optim:
+                return self.swa_temperatures[i], self.t_swa_optimizers[i]
+            return self.swa_temperatures[i]
+        if key == "net" + str(i):
+            if return_optim:
+                return self.net_temperatures[i], self.t_net_optimizers[i]
+            return self.net_temperatures[i]
 
+        raise ValueError(key)
     def _init_swa(self):
         if self.hparams['swa']:
             self.swa = misc.SWA(self.network, hparams=self.hparams)
@@ -776,8 +791,6 @@ class Ensembling(Algorithm):
             self.soupswa.network_soup.to(device)
             for swa in self.swas:
                 swa.network_swa.to(device)
-            for i in range(self.hparams['num_members']):
-                self.swa_temperatures[i] = self.swa_temperatures[i].to(device)
 
     def eval(self):
         Algorithm.eval(self)
