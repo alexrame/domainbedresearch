@@ -692,7 +692,7 @@ class Ensembling(Algorithm):
             self.swas = []
 
     def update(self, minibatches, unlabeled=None):
-        if self.hparams['specialized']:
+        if not self.hparams['specialized']:
             out, objective = self._update_full(minibatches)
         else:
             out, objective = self._update_specialized(minibatches)
