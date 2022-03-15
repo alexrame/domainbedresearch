@@ -770,7 +770,7 @@ class Ensembling(Algorithm):
         out = {"nll": (objective)}
         for key in range(self.num_members):
             out[f"nll_{key}"] = nlls_per_member[key]
-        return out, objective
+        return out
 
     def eval(self):
         Algorithm.eval(self)
