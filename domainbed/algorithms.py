@@ -703,6 +703,8 @@ class Ensembling(Algorithm):
         if self.hparams['specialized'] == 1:
             out = self._update_specialized(minibatches)
         elif self.hparams['specialized'] == "r":
+            raise ValueError()
+            # todo create diversity randomly per batch
             out = self._update_random(minibatches)
         else:
             out = self._update_full(minibatches)
