@@ -128,10 +128,11 @@ class ERM(Algorithm):
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
-            if self.hparams['swa'] != 1:
+            if self.hparams['swa'] != 1 or self.hparams.get("num_members"):
                 self.swa_temperatures = []
                 self.t_swa_optimizers = []
-                for _ in range(self.hparams['swa']):
+                num_swa = max(self.hparams['swa'], self.hparams.get("num_members", 1))
+                for _ in range(num_swa):
                     self.swa_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
                     self.t_swa_optimizers.append(
                         torch.optim.Adam(
@@ -150,7 +151,7 @@ class ERM(Algorithm):
             if return_optim:
                 return self.swa_temperature, self.t_swa_optimizer
             return self.swa_temperature
-        if self.hparams['swa'] == 1:
+        if self.hparams['swa'] == 1 and not self.hparams.get("num_members"):
             if return_optim:
                 return None, None
             return None
@@ -449,6 +450,8 @@ class ERM(Algorithm):
                         continue
                     logits = dict_stats[key]["logits"].to(device)
                     temperature, optimizer = self.get_temperature(key, return_optim=True)
+                    if temperature is None:
+                        continue
                     temperature = temperature.to(device)
                     assert temperature.requires_grad
 
