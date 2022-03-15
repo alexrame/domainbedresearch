@@ -355,7 +355,7 @@ def _hparams(algorithm, dataset, random_seed):
 
     # batch size
     if os.environ.get("HP") in ["1", "D"]:
-        _hparam('batch_size', 32, lambda r: 32)
+        _hparam('batch_size', int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * 32)
     elif dataset == "Spirals":
         _hparam('batch_size', 512, lambda r: int(2**r.uniform(3, 9)))
     elif dataset == "ColoredMNISTLFF":
@@ -375,7 +375,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif dataset == "TwoDirections2D":
         _hparam('batch_size', 512, lambda r: 256)
     else:
-        _hparam('batch_size', 32, lambda r: int(2**r.uniform(3, 5.5)))
+        _hparam('batch_size', int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * int(2**r.uniform(3, 5.5)))
 
     # if dataset == "Spirals":
     #     _hparam('mlp_width', 256, lambda r: int(2**r.uniform(6, 10)))
