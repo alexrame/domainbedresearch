@@ -7,6 +7,9 @@ import torch.autograd as autograd
 import pdb
 import os
 import random
+
+from domainbed.lib.diversity_metrics import CudaCKA
+
 try:
     from pyhessian import hessian
 except:
@@ -273,14 +276,14 @@ class ERM(Algorithm):
                 results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
         return results
 
-    # def predict_feat(self, x):
-    #     feats_network = self.featurizer(x)
-    #     if self.hparams['swa']:
-    #         feats_swa = self.swa.get_featurizer()(x)
-    #         results = {"swa": feats_swa, "net": feats_network}
-    #     else:
-    #         results = {"net": feats_network}
-    #     return results
+    def predict_feat(self, x):
+        feats_network = self.featurizer(x)
+        if self.hparams['swa']:
+            feats_swa = self.swa.get_featurizer()(x)
+            results = {"swa": feats_swa, "net": feats_network}
+        else:
+            results = {"net": feats_network}
+        return results
 
     def eval(self):
         Algorithm.eval(self)
@@ -310,7 +313,7 @@ class ERM(Algorithm):
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
-                # dict_feats = self.predict_feat(x)
+                dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
                 for key in dict_logits.keys():
@@ -321,6 +324,7 @@ class ERM(Algorithm):
                             "confs": [],
                             "correct": [],
                             "probs": [],
+                            "feats": []
                             # "confstemp": []
                         }
                     logits = dict_logits[key]
@@ -332,6 +336,7 @@ class ERM(Algorithm):
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
+                    dict_stats[key]["feats"].append(dict_feats[key])
 
                     if key in ["net", "swa", "swa0", "swa1"]:
                         temperature = self.get_temperature(key)
@@ -403,17 +408,16 @@ class ERM(Algorithm):
             )
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
-            results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
-                targets, preds0, preds1
-            )
+            results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
 
             # new div metrics
+            feats0 = dict_stats[key0]["feats"]
+            feats1 = dict_stats[key1]["feats"]
+            results[f"Diversity/{regex}CKAC"] = 1 - CudaCKA(device).linear_CKA(feats0, feats1)
             probs0 = dict_stats[key0]["probs"].numpy()
             probs1 = dict_stats[key1]["probs"].numpy()
             results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
-            results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
-                targets, probs0, probs1
-            )
+            results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
 
         # Flatness metrics
         if compute_trace and hessian is not None:
