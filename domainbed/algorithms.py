@@ -714,16 +714,16 @@ class Ensembling(Algorithm):
 
         for member in range(self.num_members):
             logits_member = self.networks[member](all_x)
-            nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            nll_member = F.cross_entropy(logits_member, all_classes, reduction="mean")
             self.optimizers[member].zero_grad()
             nll_member.backward()
             self.optimizers[member].optimizer.step()
             nlls_per_member.append(nll_member)
 
-        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        objective = torch.stack(nlls_per_member, dim=0).mean()
         out = {"nll": objective}
         for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key].mean()
+            out[f"nll_{key}"] = nlls_per_member[key]
         return out
 
     def _update_specialized(self, minibatches):
@@ -750,17 +750,17 @@ class Ensembling(Algorithm):
         for member in range(self.num_members):
             logits_member = self.networks[member](x_per_member[member])
             nll_member = F.cross_entropy(
-                logits_member, classes_per_member[member], reduction="none"
+                logits_member, classes_per_member[member], reduction="mean"
             )
             nlls_per_member.append(nll_member)
             self.optimizers[member].zero_grad()
             nll_member.backward()
             self.optimizers[member].optimizer.step()
 
-        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        objective = torch.stack(nlls_per_member, dim=0).mean()
         out = {"nll": (objective)}
         for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key].mean()
+            out[f"nll_{key}"] = nlls_per_member[key]
         return out, objective
 
     def eval(self):
