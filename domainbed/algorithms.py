@@ -154,6 +154,7 @@ class ERM(Algorithm):
             if return_optim:
                 return None, None
             return None
+
         if not key.startswith("swa"):
             raise ValueError()
         i = int(key[-1])
@@ -360,7 +361,7 @@ class ERM(Algorithm):
                 )
 
         targets_torch = torch.cat(batch_classes)
-        for regex in ["swanet", "swa0net0", "swa0net", "swa01", "net01"]:
+        for regex in ["swanet", "swa0net0", "swa0net", "swa01", "net01", "soupswa", "soupswa0"]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
@@ -376,6 +377,12 @@ class ERM(Algorithm):
             elif regex == "net01":
                 key0 = "net0"
                 key1 = "net1"
+            elif regex == "soupswa":
+                key0 = "soup"
+                key1 = "swa"
+            elif regex == "soupswa0":
+                key0 = "soup"
+                key1 = "swa0"
             else:
                 raise ValueError(regex)
 
@@ -629,48 +636,34 @@ class Ensembling(Algorithm):
             [networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)]
         )
         self.features_size = self.featurizers[0].n_outputs
-        self.classifiers = nn.ModuleList(
-            [
-                extend(
-                    networks.Classifier(
-                        self.features_size,
-                        num_classes,
-                        self.hparams["nonlinear_classifier"],
-                        hparams=self.hparams,
-                    )
-                ) for _ in range(self.num_members)
-            ]
-        )
-        print(self.classifiers)
 
+        self._init_classifiers()
         self.loss = nn.CrossEntropyLoss(reduction="mean")
         self.num_classes = num_classes
 
-        # member diversifier
-        if self.hparams["diversity_loss"] in diversity.DICT_NAME_TO_DIVERSIFIER:
-            self.member_diversifier = diversity.DICT_NAME_TO_DIVERSIFIER[
-                self.hparams["diversity_loss"]
-            ](hparams=self.hparams, features_size=self.features_size, num_classes=self.num_classes)
-        else:
-            self.member_diversifier = None
-
         # domain matcher
         self._init_optimizer()
-        self.register_buffer("update_count", torch.tensor([0]))
-        self.init_domain_matcher()
         self._init_swa()
 
-    def init_domain_matcher(self):
-        if self.hparams["similarity_loss"] == "none":
-            self.domain_matchers = None
-        elif self.hparams["similarity_loss"] == "fishr":
-            raise ValueError()
-            # self.domain_matchers = [
-            #     FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains)
-            #     for _ in range(self.num_members)
-            # ]
-        else:
-            raise ValueError(self.hparams["similarity_loss"])
+    def _init_classifiers(self):
+        self.classifiers = nn.ModuleList(
+            [
+                networks.Classifier(
+                    self.features_size,
+                    self.num_classes,
+                    self.hparams["nonlinear_classifier"],
+                    hparams=self.hparams,
+                ) for _ in range(self.num_members)
+            ]
+        )
+        if self.hparams["shared_init"]:
+            network_0 = self.classifiers[0]
+            for i in range(1, self.num_members):
+                network_i = self.classifiers[i]
+                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
+                    param_i.data = param_0.data
+
+        print(self.classifiers)
 
     def _init_optimizer(self):
         self.optimizer = torch.optim.Adam(
@@ -682,6 +675,13 @@ class Ensembling(Algorithm):
     def _init_swa(self):
         if self.hparams['swa']:
             assert self.hparams['swa'] == 1
+            self.swa = misc.SWAEns(
+                networks=[
+                    nn.Sequential(self.featurizers[num_member], self.classifiers[num_member])
+                    for num_member in range(self.num_members)
+                ],
+                hparams=self.hparams
+            )
             self.swas = [
                 misc.SWA(
                     nn.Sequential(self.featurizers[num_member], self.classifiers[num_member]),
@@ -690,6 +690,144 @@ class Ensembling(Algorithm):
             ]
         else:
             self.swas = []
+
+    def update(self, minibatches, unlabeled=None):
+        if self.hparams['specialized']:
+            out, objective = self._update_full(minibatches)
+        else:
+            out, objective = self._update_specialized(minibatches)
+
+        # optim steps
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        if self.hparams['swa']:
+            for i, swa in enumerate(self.swas):
+                swa_dict = swa.update()
+                out.update({key + str(i): value for key, value in swa_dict.items()})
+        return out
+
+    def _update_full(self, minibatches):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        features_per_member = []  # (num_classifiers, num_minibatches, bsize, n_outputs_featurizer)
+        logits_per_member = []  # (num_classifiers, num_minibatches, bsize, num_classes)
+        nlls_per_member = []  # (num_classifiers, num_minibatches)
+
+        for member in range(self.num_members):
+            features_member = self.featurizers[member](all_x)
+            logits_member = self.classifiers[member](features_member)
+
+            features_per_member.append(features_member)
+            logits_per_member.append(logits_member)
+            nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            nlls_per_member.append(nll_member)
+
+        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        out = {"nll": (objective).item()}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key].mean().item()
+        return out, objective
+
+    def _update_specialized(self, minibatches):
+        assert self.num_members % len(minibatches) == 0
+        num_domains_per_member = self.num_members // len(minibatches)
+        index_per_member = [
+            [2*i + j for j in range(num_domains_per_member)]
+            for i in range(self.num_members)
+        ]
+        x_per_member = [torch.cat([minibatches[index][0] for index in index_per_member[i]])
+                        for i in range(self.num_members)]
+        classes_per_member = [torch.cat([minibatches[index][1] for index in index_per_member[i]])
+                        for i in range(self.num_members)]
+
+        features_per_member = []  # (num_classifiers, num_domains_per_member, bsize, n_outputs_featurizer)
+        logits_per_member = []  # (num_classifiers, num_domains_per_member, bsize, num_classes)
+        nlls_per_member = []  # (num_classifiers, num_domains_per_member)
+
+        for member in range(self.num_members):
+            features_member = self.featurizers[member](x_per_member[member])
+            logits_member = self.classifiers[member](features_member)
+
+            features_per_member.append(features_member)
+            logits_per_member.append(logits_member)
+            nll_member = F.cross_entropy(logits_member, classes_per_member[member], reduction="none")
+            nlls_per_member.append(nll_member)
+
+        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        out = {"nll": (objective).item()}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key].mean().item()
+        return out, objective
+
+    def eval(self):
+        Algorithm.eval(self)
+        if self.hparams['swa']:
+            self.swa.network_swa.eval()
+            for swa in self.swas:
+                swa.network_swa.eval()
+
+    def train(self, *args):
+        Algorithm.train(self, *args)
+        if self.hparams['swa']:
+            self.swa.network_swa.train(*args)
+            for swa in self.swas:
+                swa.network_swa.train(*args)
+
+    def predict(self, x):
+        results = {}
+        batch_logits = []
+        batch_logits_swa = []
+
+        for num_member in range(self.num_members):
+            logits = self.classifiers[num_member](self.featurizers[num_member](x))
+            batch_logits.append(logits)
+            results["net" + str(num_member)] = logits
+            if self.hparams['swa']:
+                logits_swa = self.swas[num_member].network_swa(x)
+                batch_logits_swa.append(logits_swa)
+                results["swa" + str(num_member)] = logits_swa
+            results["soup"] = self.swa.network_swa(x)
+
+        results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
+        if self.hparams['swa']:
+            results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
+
+        return results
+
+    def accuracy(self, *args, **kwargs):
+        return ERM.accuracy(self, *args, **kwargs)
+
+
+class Ensemblingv2(Ensembling):
+
+    def __init__(self):
+        Ensembling.__init__(self)
+        self.register_buffer("update_count", torch.tensor([0]))
+        self._init_domain_matcher()
+        self._init_diversifier()
+
+    def _init_domain_matcher(self):
+        # member diversifier
+        if self.hparams["diversity_loss"] in diversity.DICT_NAME_TO_DIVERSIFIER:
+            self.member_diversifier = diversity.DICT_NAME_TO_DIVERSIFIER[
+                self.hparams["diversity_loss"]
+            ](hparams=self.hparams, features_size=self.features_size, num_classes=self.num_classes)
+        else:
+            self.member_diversifier = None
+
+    def _init_diversifier(self):
+        if self.hparams["similarity_loss"] == "none":
+            self.domain_matchers = None
+        elif self.hparams["similarity_loss"] == "fishr":
+            raise ValueError()
+            # self.domain_matchers = [
+            #     FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains)
+            #     for _ in range(self.num_members)
+            # ]
+        else:
+            raise ValueError(self.hparams["similarity_loss"])
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
@@ -722,7 +860,6 @@ class Ensembling(Algorithm):
             self._init_optimizer()
         self.update_count += 1
 
-        # domain matching
         if self.domain_matchers is not None:
             if self.hparams["similarity_loss"] == "fishr":
                 for member in range(self.num_members):
@@ -740,6 +877,17 @@ class Ensembling(Algorithm):
             else:
                 raise ValueError(self.domain_matcher)
 
+        self.diversity_labeled()
+        # optim steps
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        if self.hparams['swa']:
+            for swa in self.swas:
+                swa.update()
+        return out
+
+    def diversity_labeled(self):
         # firstorder information bottleneck
         ibstats_per_member = (
             logits_per_member if self.hparams["ib_space"] == "logits" else features_per_member
@@ -779,48 +927,3 @@ class Ensembling(Algorithm):
             if penalty_active:
                 objective = objective + dict_diversity["loss_div"
                                                       ] * self.hparams["lambda_diversity_loss"]
-
-        # optim steps
-        self.optimizer.zero_grad()
-        objective.backward()
-        self.optimizer.step()
-        if self.hparams['swa']:
-            for swa in self.swas:
-                swa.update()
-        return out
-
-    def eval(self):
-        Algorithm.eval(self)
-        if self.hparams['swa']:
-            for swa in self.swas:
-                swa.network_swa.eval()
-
-    def train(self, *args):
-        Algorithm.train(self, *args)
-        if self.hparams['swa']:
-            for swa in self.swas:
-                swa.network_swa.train(*args)
-
-    def predict(self, x):
-        results = {}
-        batch_logits = []
-        batch_logits_swa = []
-
-        for num_member in range(self.num_members):
-            features = self.featurizers[num_member](x)
-            logits = self.classifiers[num_member](features)
-            batch_logits.append(logits)
-            results["net" + str(num_member)] = logits
-            if self.hparams['swa']:
-                logits_swa = self.swas[num_member].network_swa(x)
-                batch_logits_swa.append(logits_swa)
-                results["swa" + str(num_member)] = logits_swa
-
-        results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
-        if self.hparams['swa']:
-            results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
-
-        return results
-
-    def accuracy(self, *args, **kwargs):
-        return ERM.accuracy(self, *args, **kwargs)
