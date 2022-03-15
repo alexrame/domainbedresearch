@@ -118,7 +118,7 @@ class Soup():
         self.network_soup = copy.deepcopy(networks[0])
 
     def update(self):
-        for param in zip(self.network_swa.parameters(), *[net.parameters() for net in self.networks]):
+        for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
             param_q = sum(param[1:])
             param_k.data = (param_k.data * self.swa_count +
