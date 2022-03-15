@@ -248,6 +248,7 @@ def _hparams(algorithm, dataset, random_seed):
 
     if algorithm in ["Ensembling", "Ensemblingv2"]:
         _hparam("num_members", 2, lambda r: 2)
+        _hparam('lr_ratio', 0, lambda r: r.choice([0]))
         _hparam('shared_init', 0, lambda r: r.choice([0]))
         _hparam('specialized', 0, lambda r: r.choice([0]))
 

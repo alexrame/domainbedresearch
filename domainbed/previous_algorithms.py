@@ -3275,3 +3275,156 @@ class TwoModelsCMNIST(Algorithm):
 
         results.update(results_bias)
         return results
+
+
+
+class Ensemblingv2(Ensembling):
+
+    def __init__(self):
+        Ensembling.__init__(self)
+        self.register_buffer("update_count", torch.tensor([0]))
+        self._init_domain_matcher()
+        self._init_diversifier()
+
+    def _init_domain_matcher(self):
+        # member diversifier
+        if self.hparams["diversity_loss"] in diversity.DICT_NAME_TO_DIVERSIFIER:
+            self.member_diversifier = diversity.DICT_NAME_TO_DIVERSIFIER[
+                self.hparams["diversity_loss"]
+            ](hparams=self.hparams, features_size=self.features_size, num_classes=self.num_classes)
+        else:
+            self.member_diversifier = None
+
+    def _init_diversifier(self):
+        if self.hparams["similarity_loss"] == "none":
+            self.domain_matchers = None
+        elif self.hparams["similarity_loss"] == "fishr":
+            raise ValueError()
+            # self.domain_matchers = [
+            #     FishrDomainMatcher(self.hparams, self.optimizer, self.num_domains)
+            #     for _ in range(self.num_members)
+            # ]
+        else:
+            raise ValueError(self.hparams["similarity_loss"])
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+        bsize = minibatches[0][0].size(0)
+
+        features_per_member = []  # (num_members, num_minibatches, bsize, n_outputs_featurizer)
+        logits_per_member = []  # (num_members, num_minibatches, bsize, num_classes)
+        nlls_per_member = []  # (num_members, num_minibatches)
+
+        for member in range(self.num_members):
+            features_member = self.featurizers[member](all_x)
+            logits_member = self.classifiers[member](features_member)
+
+            features_per_member.append(features_member)
+            logits_per_member.append(logits_member)
+            nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            nlls_per_member.append(nll_member)
+
+        all_nll = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        objective = 0 + all_nll
+        out = {"nll": (all_nll).item()}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key].mean().item()
+
+        penalty_active = self.update_count >= self.hparams["penalty_anneal_iters"]
+        if self.update_count == self.hparams["penalty_anneal_iters"] != 0:
+            # Reset Adam as in IRM or V-REx, because it may not like the sharp jump in
+            # gradient magnitudes that happens at this step.
+            self._init_optimizer()
+        self.update_count += 1
+
+        if self.domain_matchers is not None:
+            if self.hparams["similarity_loss"] == "fishr":
+                for member in range(self.num_members):
+                    logits_member = logits_per_member[member]
+                    dict_penalty = self.domain_matchers[member].compute_fishr_penalty(
+                        logits_member, all_classes=all_classes, classifier=self.classifiers[member]
+                    )
+                    if penalty_active:
+                        objective = objective + (
+                            self.hparams["lambda_domain_matcher"] * dict_penalty["penalty_var"]
+                        )
+                    out.update(
+                        {f'{key}_{member}': value.item() for key, value in dict_penalty.items()}
+                    )
+            else:
+                raise ValueError(self.domain_matcher)
+
+        self.diversity_labeled()
+        # optim steps
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        if self.hparams['swa']:
+            for swa in self.swas:
+                swa.update()
+        return out
+
+    def _update_full(self, minibatches):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+
+        features_per_member = []  # (num_classifiers, num_minibatches, bsize, n_outputs_featurizer)
+        logits_per_member = []  # (num_classifiers, num_minibatches, bsize, num_classes)
+        nlls_per_member = []  # (num_classifiers, num_minibatches)
+
+        for member in range(self.num_members):
+            features_member = self.featurizers[member](all_x)
+            logits_member = self.classifiers[member](features_member)
+
+            features_per_member.append(features_member)
+            logits_per_member.append(logits_member)
+            nll_member = F.cross_entropy(logits_member, all_classes, reduction="none")
+            nlls_per_member.append(nll_member)
+
+        objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
+        out = {"nll": (objective)}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key].mean()
+        return out, objective
+
+    def diversity_labeled(self):
+        # firstorder information bottleneck
+        ibstats_per_member = (
+            logits_per_member if self.hparams["ib_space"] == "logits" else features_per_member
+        )
+        loss_ib_firstorder = 0
+        for member in range(self.num_members):
+            ibstats_per_member_domain = ibstats_per_member[member].reshape(
+                self.num_domains, bsize, -1
+            )
+            for domain in range(self.num_domains):
+                loss_ib_firstorder += ibstats_per_member_domain[domain].var(dim=0).mean()
+        if penalty_active:
+            objective = objective + (
+                loss_ib_firstorder * self.hparams["lambda_ib_firstorder"] /
+                (self.num_members * self.num_domains)
+            )
+
+        # diversity across members
+        if self.member_diversifier is not None and self.num_members > 1:
+            kwargs = {
+                "features_per_member":
+                torch.stack(features_per_member, dim=0
+                           ).reshape(self.num_members, self.num_domains, bsize, self.features_size),
+                "logits_per_member":
+                torch.stack(logits_per_member, dim=0
+                           ).reshape(self.num_members, self.num_domains, bsize, self.num_classes),
+                "classes":
+                all_classes,
+                "nlls_per_member":
+                torch.stack(nlls_per_member,
+                            dim=0).reshape(self.num_members, self.num_domains, bsize),
+                "classifiers":
+                self.classifiers
+            }
+            dict_diversity = self.member_diversifier.forward(**kwargs)
+            out.update({key: value.item() for key, value in dict_diversity.items()})
+            if penalty_active:
+                objective = objective + dict_diversity["loss_div"
+                                                      ] * self.hparams["lambda_diversity_loss"]
