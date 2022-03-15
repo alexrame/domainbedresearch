@@ -771,8 +771,6 @@ class Ensembling(Algorithm):
 
     def to(self, device):
         Algorithm.to(self, device)
-        for i in range(self.hparams['num_members']):
-            self.optimizers[i] = self.optimizers[i].to(device)
         self.soup.network_soup.to(device)
         if self.hparams['swa']:
             self.soupswa.network_soup.to(device)
@@ -780,7 +778,6 @@ class Ensembling(Algorithm):
                 swa.network_swa.to(device)
             for i in range(self.hparams['num_members']):
                 self.swa_temperatures[i] = self.swa_temperatures[i].to(device)
-                self.t_swa_optimizers[i] = self.t_swa_optimizers[i].to(device)
 
     def eval(self):
         Algorithm.eval(self)
