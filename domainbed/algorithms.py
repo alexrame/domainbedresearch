@@ -638,6 +638,13 @@ class Ensembling(Algorithm):
         self.featurizers = nn.ModuleList(
             [networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)]
         )
+        if self.hparams["shared_init"]:
+            network_0 = self.featurizers[0]
+            for i in range(1, self.num_members):
+                network_i = self.featurizers[i]
+                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
+                    param_i.data = param_0.data
+
         self.features_size = self.featurizers[0].n_outputs
 
         self._init_classifiers()
