@@ -644,6 +644,7 @@ class Ensembling(Algorithm):
         # domain matcher
         self._init_optimizer()
         self._init_swa()
+        self._init_temperature()
 
     def _init_classifiers(self):
         self.classifiers = nn.ModuleList(
