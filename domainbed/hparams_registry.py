@@ -365,7 +365,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif dataset == "Collage":
         _hparam('batch_size', 256, lambda r: 256)
     elif dataset in SMALL_IMAGES:
-        _hparam('batch_size', 64, lambda r: int(2**r.uniform(3, 9)))
+        _hparam('batch_size', int(os.environ.get("BS", 1)) * 64, lambda r: int(os.environ.get("BS", 1)) * int(2**r.uniform(3, 9)))
     elif algorithm == 'ARM':
         _hparam('batch_size', 8, lambda r: 8)
     elif dataset == 'DomainNet':
