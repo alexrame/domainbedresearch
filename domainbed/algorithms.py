@@ -430,35 +430,41 @@ class ERM(Algorithm):
             # feats0 = dict_stats[key0]["feats"]
             # hessian_comp_swa = hessian(
             #     self.swa.get_classifier(), nn.CrossEntropyLoss(reduction='sum'), data=(feats0, targets_torch), cuda=True)
-            if self.hparams['swa'] == 1:
-                hessian_comp_swa = hessian(
-                    self.swa.network_swa,
-                    nn.CrossEntropyLoss(reduction='mean'),
-                    dataloader=loader,
-                    cuda=True
-                )
-                results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
-            else:
-                hessian_comp_swa = hessian(
-                    self.swas[0].network_swa,
-                    nn.CrossEntropyLoss(reduction='mean'),
-                    dataloader=loader,
-                    cuda=True
-                )
-                results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
 
             if not self.hparams.get("num_members"):
+                if self.hparams['swa']:
+                    hessian_comp_swa = hessian(
+                        self.swa.network_swa,
+                        nn.CrossEntropyLoss(reduction='mean'),
+                        dataloader=loader,
+                        cuda=True
+                    )
+                    results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
                 hessian_comp_net = hessian(
                     self.network, nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
                 )
                 results[f"Flatness/nettrace"] = np.mean(hessian_comp_net.trace())
             else:
+                hessian_comp_soup = hessian(
+                    self.soup.network_soup,
+                    nn.CrossEntropyLoss(reduction='mean'),
+                    dataloader=loader,
+                    cuda=True
+                )
+                results[f"Flatness/souptrace"] = np.mean(hessian_comp_soup.trace())
+                if self.hparams['swa']:
+                    hessian_comp_swa = hessian(
+                        self.swas[0].network_swa,
+                        nn.CrossEntropyLoss(reduction='mean'),
+                        dataloader=loader,
+                        cuda=True
+                    )
+                    results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
                 hessian_comp_net = hessian(
                     self.networks[0], nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
                 )
                 results[f"Flatness/net0trace"] = np.mean(hessian_comp_net.trace())
 
-        assert self.swa_temperature.requires_grad
         if update_temperature:
             for _ in range(20):
                 for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
