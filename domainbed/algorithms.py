@@ -749,7 +749,6 @@ class Ensembling(Algorithm):
         for member in range(self.num_members):
             features_member = self.featurizers[member](x_per_member[member])
             logits_member = self.classifiers[member](features_member)
-
             features_per_member.append(features_member)
             logits_per_member.append(logits_member)
             nll_member = F.cross_entropy(logits_member, classes_per_member[member], reduction="none")

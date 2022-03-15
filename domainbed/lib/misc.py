@@ -125,7 +125,7 @@ class SWAEns(SWA):
         self.swa_start_iter = 100
         self.swa_end_iter = float("inf")
         assert not self.hparams.get("split_swa")
-        assert not self.layerwise
+        assert not hparams.get("layerwise")
         self.swa_count = 0
 
     def update(self):
@@ -133,7 +133,6 @@ class SWAEns(SWA):
         if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
             if self.global_iter == self.swa_start_iter:
                 print(f"Begin swa for num: {self.num}")
-            assert not self.layerwise
             self._update_all()
         return self.compute_distance_nets()
 
@@ -145,15 +144,16 @@ class SWAEns(SWA):
         self.swa_count += 1
 
     def compute_distance_nets(self):
-        dist_l2 = 0
-        cos = 0
-        count_params = 0
-        for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
-            dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
-            num_params = int(param_q.numel())
-            count_params += num_params
-            cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
-        return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
+        return {}
+        # dist_l2 = 0
+        # cos = 0
+        # count_params = 0
+        # for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
+        #     dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
+        #     num_params = int(param_q.numel())
+        #     count_params += num_params
+        #     cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
+        # return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
     """
