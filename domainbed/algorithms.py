@@ -691,7 +691,8 @@ class Ensembling(Algorithm):
                 misc.SWA(self.networks[member], hparams=self.hparams)
                 for member in range(self.num_members)
             ]
-            self.soupswa = misc.Soup(networks=self.swas)
+            self.soupswa = misc.Soup(
+                networks=[swa.network_swa for swa in self.swas])
         else:
             self.swas = []
 
@@ -701,7 +702,6 @@ class Ensembling(Algorithm):
         elif self.hparams['specialized'] == "r":
             raise ValueError()
             # todo create diversity randomly per batch
-            out = self._update_random(minibatches)
         else:
             out = self._update_full(minibatches)
 
