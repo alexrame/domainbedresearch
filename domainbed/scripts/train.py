@@ -363,8 +363,8 @@ def main():
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
 
-    metrics.update({k: v for k, v in results.items() if k not in ["hparams", "args"]})
-    metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
+    metrics.update({k: v for k, v in results_end.items() if k not in ["hparams", "args"]})
+    # metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
     experiments_handler.main_mlflow(run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams)
 
 
