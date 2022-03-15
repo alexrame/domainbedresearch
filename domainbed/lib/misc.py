@@ -120,9 +120,7 @@ class Soup():
     def update(self):
         for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
-            param_q = sum(param[1:])
-            param_k.data = (param_k.data * self.swa_count +
-                            param_q.data / len(self.networks)) / (1. + self.swa_count)
+            param_k.data = sum(param[1:]).data / len(self.networks)
 
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
