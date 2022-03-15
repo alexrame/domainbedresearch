@@ -702,10 +702,11 @@ class Ensembling(Algorithm):
         objective.backward()
         self.optimizer.step()
         if self.hparams['swa']:
+            out.update(self.swa.update())
             for i, swa in enumerate(self.swas):
                 swa_dict = swa.update()
                 out.update({key + str(i): value for key, value in swa_dict.items()})
-        return out
+        return {key: value.item() for key, value in out.items()}
 
     def _update_full(self, minibatches):
         all_x = torch.cat([x for x, y in minibatches])
@@ -725,16 +726,17 @@ class Ensembling(Algorithm):
             nlls_per_member.append(nll_member)
 
         objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
-        out = {"nll": (objective).item()}
+        out = {"nll": (objective)}
         for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key].mean().item()
+            out[f"nll_{key}"] = nlls_per_member[key].mean()
         return out, objective
 
     def _update_specialized(self, minibatches):
         assert self.num_members % len(minibatches) == 0
         num_domains_per_member = self.num_members // len(minibatches)
         index_per_member = [
-            [num_domains_per_member*i + j for j in range(num_domains_per_member)]
+            [num_domains_per_member * i + j
+             for j in range(num_domains_per_member)]
             for i in range(self.num_members)
         ]
         x_per_member = [torch.cat([minibatches[index][0] for index in index_per_member[i]])

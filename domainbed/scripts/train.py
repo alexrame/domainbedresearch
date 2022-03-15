@@ -306,8 +306,12 @@ def main():
                 results["lr"] = scheduler.get_lr()
 
             for key, val in checkpoint_vals.items():
-                results[key] = np.mean(val)
-                writer.add_scalar("Metrics/" + key, results[key], step)
+                try:
+                    results[key] = np.mean(val)
+                    writer.add_scalar("Metrics/" + key, results[key], step)
+                except Exception as exc:
+                    print(exc)
+                    print(key, val)
 
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
