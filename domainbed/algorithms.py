@@ -678,7 +678,7 @@ class Ensembling(Algorithm):
         lrs = [self.hparams["lr"] for member in range(self.num_members)]
         if self.hparams.get("lr_ratio", 0) != 0:
             for member in range(self.num_members):
-                lrs[member] /= float(self.hparams.get("lr_ratio"))
+                lrs[member] /= float(self.hparams.get("lr_ratio"))**member
         print("Ensembling lrs: ", lrs)
         self.optimizers = [
             torch.optim.Adam(
