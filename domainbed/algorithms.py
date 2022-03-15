@@ -721,9 +721,9 @@ class Ensembling(Algorithm):
     def update(self, minibatches, unlabeled=None):
         if self.hparams['specialized'] == 1:
             out = self._update_specialized(minibatches)
-        elif self.hparams['specialized'] == "r":
-            raise ValueError()
+        elif self.hparams['specialized']:
             # todo create diversity randomly per batch
+            out = self._update_partial(minibatches, step=self.hparams['specialized'])
         else:
             out = self._update_full(minibatches)
 
@@ -750,6 +750,43 @@ class Ensembling(Algorithm):
 
         objective = torch.stack(nlls_per_member, dim=0).mean()
         out = {"nll": objective}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key]
+        return out
+
+    def _update_partial(self, minibatches, step):
+        num_domains_per_member = self.num_members // len(minibatches)
+        index_per_member = [
+            [num_domains_per_member * i + j
+             for j in range(num_domains_per_member)]
+            for i in range(self.num_members)
+        ]
+
+        nlls_per_member = []  # (num_members, num_domains_per_member)
+
+        for member in range(self.num_members):
+            x_for_member = torch.cat(
+                [minibatches[index][0] for index in index_per_member[member]] +
+                [minibatches[index][0][member::step] for index in range(len(minibatches)) if index not in index_per_member[member]]
+                )
+            classes_for_member = torch.cat(
+                [minibatches[index][1] for index in index_per_member[member]] + [
+                    minibatches[index][1][member::step]
+                    for index in range(len(minibatches))
+                    if index not in index_per_member[member]
+                ]
+            )
+            logits_member = self.networks[member](x_for_member)
+            nll_member = F.cross_entropy(
+                logits_member, classes_for_member, reduction="mean"
+            )
+            nlls_per_member.append(nll_member)
+            self.optimizers[member].zero_grad()
+            nll_member.backward()
+            self.optimizers[member].step()
+
+        objective = torch.stack(nlls_per_member, dim=0).mean()
+        out = {"nll": (objective)}
         for key in range(self.num_members):
             out[f"nll_{key}"] = nlls_per_member[key]
         return out
