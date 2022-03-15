@@ -757,9 +757,9 @@ class Ensembling(Algorithm):
             nlls_per_member.append(nll_member)
 
         objective = torch.stack(nlls_per_member, dim=0).sum(0).mean()
-        out = {"nll": (objective).item()}
+        out = {"nll": (objective)}
         for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key].mean().item()
+            out[f"nll_{key}"] = nlls_per_member[key].mean()
         return out, objective
 
     def eval(self):
