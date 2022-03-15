@@ -131,8 +131,6 @@ class SWAEns(SWA):
     def update(self):
         self.global_iter += 1
         if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
-            if self.global_iter == self.swa_start_iter:
-                print(f"Begin swa for num: {self.num}")
             self._update_all()
         return self.compute_distance_nets()
 
