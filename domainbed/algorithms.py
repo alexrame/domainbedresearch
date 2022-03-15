@@ -674,7 +674,6 @@ class Ensembling(Algorithm):
                 for member in range(self.num_members)
             ]
         )
-        self.soup = misc.Soup(self.networks)
 
         if self.hparams["shared_init"]:
             network_0 = self.networks[0]
@@ -689,7 +688,9 @@ class Ensembling(Algorithm):
         # domain matcher
         self._init_optimizer()
         self._init_swa()
+        self.soup = misc.Soup(self.networks)
         self._init_temperature()
+
 
     def _init_optimizer(self):
         lrs = [self.hparams["lr"] for member in range(self.num_members)]
