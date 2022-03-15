@@ -128,11 +128,10 @@ class ERM(Algorithm):
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
-            if self.hparams['swa'] != 1 or self.hparams.get("num_members"):
+            if self.hparams.get('num_members', 1) != 1:
                 self.swa_temperatures = []
                 self.t_swa_optimizers = []
-                num_swa = max(self.hparams['swa'], self.hparams.get("num_members", 1))
-                for _ in range(num_swa):
+                for _ in range(self.hparams.get('num_members', 1)):
                     self.swa_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
                     self.t_swa_optimizers.append(
                         torch.optim.Adam(
@@ -141,6 +140,19 @@ class ERM(Algorithm):
                             weight_decay=self.hparams["weight_decay"],
                         )
                     )
+                self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+                self.t_soupswa_optimizer = torch.optim.Adam(
+                    [self.soupswa_temperature],
+                    lr=self.hparams["lr"],
+                    weight_decay=self.hparams["weight_decay"],
+                )
+        if self.hparams.get('num_members', 1) != 1:
+            self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.t_soup_optimizer = torch.optim.Adam(
+                [self.soup_temperature],
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams["weight_decay"],
+            )
 
     def get_temperature(self, key, return_optim=False):
         if key == "net":
@@ -151,11 +163,19 @@ class ERM(Algorithm):
             if return_optim:
                 return self.swa_temperature, self.t_swa_optimizer
             return self.swa_temperature
-        if self.hparams['swa'] == 1 and not self.hparams.get("num_members"):
+        if not self.hparams.get("num_members"):
             if return_optim:
                 return None, None
             return None
 
+        if key == "soup":
+            if return_optim:
+                return self.soup_temperature, self.t_soup_optimizer
+            return self.soup_temperature
+        if key == "soupswa":
+            if return_optim:
+                return self.soupswa_temperature, self.t_soupswa_optimizer
+            return self.soupswa_temperature
         if not key.startswith("swa"):
             raise ValueError()
         i = int(key[-1])
@@ -165,13 +185,7 @@ class ERM(Algorithm):
 
     def _init_swa(self):
         if self.hparams['swa']:
-            if self.hparams['swa'] == 1:
-                self.swa = misc.SWA(self.network, hparams=self.hparams)
-            else:
-                self.swas = [
-                    misc.SWA(self.network, hparams=self.hparams, num=i)
-                    for i in range(self.hparams['swa'])
-                ]
+            self.swa = misc.SWA(self.network, hparams=self.hparams)
         else:
             self.swa = None
 
@@ -250,27 +264,14 @@ class ERM(Algorithm):
             self.optimizer.step()
 
         if self.hparams['swa']:
-            if self.hparams['swa'] == 1:
-                self.swa.update()
-            else:
-                for swa in self.swas:
-                    swa.update()
+            self.swa.update()
 
         return {key: value.item() for key, value in output_dict.items()}
 
     def predict(self, x):
         results = {"net": self.network(x)}
         if self.hparams['swa']:
-            if self.hparams['swa'] == 1:
-                results["swa"] = self.swa.network_swa(x)
-            else:
-                batch_logits_swa = []
-                for i in range(self.hparams['swa']):
-                    logits_swa = self.swas[i].network_swa(x)
-                    results["swa" + str(i)] = logits_swa
-                    batch_logits_swa.append(logits_swa)
-
-                results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
+            results["swa"] = self.swa.network_swa(x)
         return results
 
     # def predict_feat(self, x):
@@ -281,24 +282,18 @@ class ERM(Algorithm):
     #     else:
     #         results = {"net": feats_network}
     #     return results
+    def to(self, device):
+        Algorithm.to(self, device)
 
     def eval(self):
         Algorithm.eval(self)
         if self.hparams['swa']:
-            if self.hparams['swa'] == 1:
-                self.swa.network_swa.eval()
-            else:
-                for i in range(self.hparams['swa']):
-                    self.swas[i].network_swa.eval()
+            self.swa.network_swa.eval()
 
     def train(self, *args):
         Algorithm.train(self, *args)
         if self.hparams['swa']:
-            if self.hparams['swa'] == 1:
-                self.swa.network_swa.train(*args)
-            else:
-                for i in range(self.hparams['swa']):
-                    self.swas[i].network_swa.train(*args)
+            self.swa.network_swa.train(*args)
 
     def accuracy(self, loader, device, compute_trace=False, update_temperature=False):
         self.eval()
@@ -333,7 +328,7 @@ class ERM(Algorithm):
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
 
-                    if key in ["net", "swa", "swa0", "swa1"]:
+                    if key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                         temperature = self.get_temperature(key)
                         if temperature is None:
                             continue
@@ -362,28 +357,28 @@ class ERM(Algorithm):
                 )
 
         targets_torch = torch.cat(batch_classes)
-        for regex in ["swanet", "swa0net0", "swa0net", "swa01", "net01", "soupswa", "soupswa0"]:
+        for regex in ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet", "soupswaswa", "soupswasoup"]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
             elif regex == "swa0net0":
                 key0 = "swa0"
                 key1 = "net0"
-            elif regex == "swa0net":
-                key0 = "swa0"
-                key1 = "net"
-            elif regex == "swa01":
+            elif regex == "swa0swa1":
                 key0 = "swa0"
                 key1 = "swa1"
             elif regex == "net01":
                 key0 = "net0"
                 key1 = "net1"
-            elif regex == "soupswa":
+            elif regex == "soupnet":
                 key0 = "soup"
+                key1 = "net"
+            elif regex == "soupswaswa":
+                key0 = "soupswa"
                 key1 = "swa"
-            elif regex == "soupswa0":
-                key0 = "soup"
-                key1 = "swa0"
+            elif regex == "soupswasoup":
+                key0 = "soupswa"
+                key1 = "soup"
             else:
                 raise ValueError(regex)
 
@@ -450,8 +445,8 @@ class ERM(Algorithm):
 
         assert self.swa_temperature.requires_grad
         if update_temperature:
-            for _ in range(50):
-                for key in ["net", "swa", "swa0", "swa1"]:
+            for _ in range(20):
+                for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                     if key not in dict_stats:
                         continue
                     logits = dict_stats[key]["logits"].to(device)
@@ -658,6 +653,7 @@ class Ensembling(Algorithm):
                 for member in range(self.num_members)
             ]
         )
+        self.soup = misc.Soup(self.networks)
 
         if self.hparams["shared_init"]:
             network_0 = self.networks[0]
@@ -691,11 +687,11 @@ class Ensembling(Algorithm):
     def _init_swa(self):
         if self.hparams['swa']:
             assert self.hparams['swa'] == 1
-            self.swa = misc.SWAEns(networks=self.networks, hparams=self.hparams)
             self.swas = [
                 misc.SWA(self.networks[member], hparams=self.hparams)
                 for member in range(self.num_members)
             ]
+            self.soupswa = misc.Soup(networks=self.swas)
         else:
             self.swas = []
 
@@ -709,11 +705,12 @@ class Ensembling(Algorithm):
         else:
             out = self._update_full(minibatches)
 
+        self.soup.update()
         if self.hparams['swa']:
-            out.update(self.swa.update())
             for i, swa in enumerate(self.swas):
                 swa_dict = swa.update()
                 out.update({key + str(i): value for key, value in swa_dict.items()})
+            self.soupswa.update()
         return {key: value.item() for key, value in out.items()}
 
     def _update_full(self, minibatches):
@@ -772,17 +769,32 @@ class Ensembling(Algorithm):
             out[f"nll_{key}"] = nlls_per_member[key]
         return out
 
+    def to(self, device):
+        Algorithm.to(self, device)
+        for i in range(self.hparams['num_members']):
+            self.optimizers[i] = self.optimizers[i].to(device)
+        self.soup.network_soup.to(device)
+        if self.hparams['swa']:
+            self.soupswa.network_soup.to(device)
+            for swa in self.swas:
+                swa.network_swa.to(device)
+            for i in range(self.hparams['num_members']):
+                self.swa_temperatures[i] = self.swa_temperatures[i].to(device)
+                self.t_swa_optimizers[i] = self.t_swa_optimizers[i].to(device)
+
     def eval(self):
         Algorithm.eval(self)
+        self.soup.network_soup.eval()
         if self.hparams['swa']:
-            self.swa.network_swa.eval()
+            self.soupswa.network_soup.eval()
             for swa in self.swas:
                 swa.network_swa.eval()
 
     def train(self, *args):
         Algorithm.train(self, *args)
+        self.soup.network_soup.train(*args)
         if self.hparams['swa']:
-            self.swa.network_swa.train(*args)
+            self.soupswa.network_soup.train(*args)
             for swa in self.swas:
                 swa.network_swa.train(*args)
 
@@ -799,7 +811,8 @@ class Ensembling(Algorithm):
                 logits_swa = self.swas[num_member].network_swa(x)
                 batch_logits_swa.append(logits_swa)
                 results["swa" + str(num_member)] = logits_swa
-            results["soup"] = self.swa.network_swa(x)
+            results["soup"] = self.soup.network_soup(x)
+            results["soupswa"] = self.soupswa.network_soup(x)
 
         results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
         if self.hparams['swa']:

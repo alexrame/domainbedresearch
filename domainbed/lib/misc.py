@@ -112,46 +112,18 @@ class SWA:
         return self._featurizer_mav
 
 
-class SWAEns(SWA):
-
-    def __init__(self, networks, hparams):
+class Soup():
+    def __init__(self, networks):
         self.networks = networks
-        self.network_swa = copy.deepcopy(networks[0])
-        self.network_swa.eval()
-        self._classifier_mav = None
-        self._featurizer_mav = None
-        self.global_iter = 0
-        self.hparams = hparams
-        self.swa_start_iter = 100
-        self.swa_end_iter = float("inf")
-        assert not self.hparams.get("split_swa")
-        assert not hparams.get("layerwise")
-        self.swa_count = 0
+        self.network_soup = copy.deepcopy(networks[0])
 
     def update(self):
-        self.global_iter += 1
-        if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
-            self._update_all()
-        return self.compute_distance_nets()
-
-    def _update_all(self):
         for param in zip(self.network_swa.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
             param_q = sum(param[1:])
-            param_k.data = (param_k.data * self.swa_count + param_q.data) / (1. + self.swa_count)
-        self.swa_count += 1
+            param_k.data = (param_k.data * self.swa_count +
+                            param_q.data / len(self.networks)) / (1. + self.swa_count)
 
-    def compute_distance_nets(self):
-        return {}
-        # dist_l2 = 0
-        # cos = 0
-        # count_params = 0
-        # for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
-        #     dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
-        #     num_params = int(param_q.numel())
-        #     count_params += num_params
-        #     cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
-        # return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
     """

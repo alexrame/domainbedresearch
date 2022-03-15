@@ -223,27 +223,7 @@ def main():
     except:
         pass
     try:
-        algorithm.swa.network_swa.to(device)
-    except:
-        pass
-    try:
         algorithm.hypernet.to(device)
-    except:
-        pass
-    try:
-        for swa in algorithm.swas:
-            swa.network_swa.to(device)
-    except:
-        pass
-    try:
-        algorithm.ts.temperature = algorithm.ts.temperature.to(device)
-        algorithm.ts_swa.temperature = algorithm.ts_swa.temperature.to(device)
-    except:
-        pass
-    try:
-        for i in range(algorithm.hparams['swa']):
-            algorithm.swa_temperatures[i] = algorithm.swa_temperatures[i].to(device)
-            algorithm.t_swa_optimizers[i] = algorithm.t_swa_optimizers[i].to(device)
     except:
         pass
 
