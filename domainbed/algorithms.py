@@ -344,14 +344,14 @@ class ERM(Algorithm):
                     dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
                 )
         if self.hparams.get("num_members"):
-            results["Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for key in self.hparams.get("num_members")])
+            results["Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for key in range(self.hparams.get("num_members"))])
             results["Calibration/ece_netm"] = np.mean(
-                [results[f"Calibration/ece_net{key}"] for key in self.hparams.get("num_members")]
+                [results[f"Calibration/ece_net{key}"] for key in range(self.hparams.get("num_members"))]
             )
             if self.hparams.get("swa"):
-                results["Accuracies/acc_swam"] = np.mean([results[f"Accuracies/acc_swa{key}"] for key in self.hparams.get("num_members")])
+                results["Accuracies/acc_swam"] = np.mean([results[f"Accuracies/acc_swa{key}"] for key in range(self.hparams.get("num_members"))])
                 results["Calibration/ece_swam"] = np.mean(
-                    [results[f"Calibration/ece_swa{key}"] for key in self.hparams.get("num_members")]
+                    [results[f"Calibration/ece_swa{key}"] for key in range(self.hparams.get("num_members"))]
                 )
 
         targets_torch = torch.cat(batch_classes)
