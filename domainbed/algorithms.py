@@ -10,7 +10,7 @@ import random
 try:
     from pyhessian import hessian
 except:
-    hessian == None
+    hessian = None
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, losses
 from domainbed.lib.misc import count_param, set_requires_grad
