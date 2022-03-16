@@ -255,11 +255,11 @@ def main():
             "model_hparams": hparams,
             "model_dict": algorithm.cpu().state_dict()
         }
-        if algorithm.hparams.get("num_members"):
-            save_dict["soup_dict"] = algorithm.soup.network_soup.cpu().state_dict()
+        # if algorithm.hparams.get("num_members"):
+        #     save_dict["soup_dict"] = algorithm.soup.network_soup.cpu().state_dict()
         if algorithm.hparams.get("swa"):
             if algorithm.hparams.get("num_members"):
-                save_dict["soupswa_dict"] = algorithm.soupswa.network_soup.cpu().state_dict()
+                # save_dict["soupswa_dict"] = algorithm.soupswa.network_soup.cpu().state_dict()
                 for member in range(algorithm.num_members):
                     save_dict[f"swa{member}_dict"] = algorithm.swas[member].network_swa.cpu().state_dict()
             else:

@@ -82,10 +82,25 @@ class ERM(Algorithm):
         self.classifier = networks.Classifier(
             self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
         )
+        self.num_classes = num_classes
         self.network = nn.Sequential(self.featurizer, self.classifier)
+        self._init_network()
         self._init_swa()
         self._init_optimizer()
         self._init_temperature()
+
+    def _init_network(self):
+        if not self.hparams["shared_init"]:
+            return
+        path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
+        if self.hparams["shared_init"] == 1 or os.environ.get("CREATE_INIT"):
+            if os.environ.get("CREATE_INIT"):
+                assert not os.path.exists(path)
+                torch.save(self.network.state_dict(), path)
+        else:
+            assert os.path.exists(path)
+            weights = torch.load(path)
+            self.network.load_state_dict(weights)
 
     def _init_temperature(self):
         self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
@@ -101,7 +116,7 @@ class ERM(Algorithm):
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
-            if self.hparams.get('num_members', 1) != 1:
+            if self.hparams.get('num_members'):
                 self.swa_temperatures = []
                 self.t_swa_optimizers = []
                 for _ in range(self.hparams.get('num_members', 1)):
@@ -119,7 +134,7 @@ class ERM(Algorithm):
                     lr=self.hparams["lr"],
                     weight_decay=self.hparams["weight_decay"],
                 )
-        if self.hparams.get('num_members', 1) != 1:
+        if self.hparams.get('num_members'):
             self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
             self.t_soup_optimizer = torch.optim.Adam(
                 [self.soup_temperature],
@@ -128,7 +143,7 @@ class ERM(Algorithm):
             )
             self.net_temperatures = []
             self.t_net_optimizers = []
-            for _ in range(self.hparams.get('num_members', 1)):
+            for _ in range(self.hparams.get('num_members')):
                 self.net_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
                 self.t_net_optimizers.append(
                     torch.optim.Adam(
@@ -171,6 +186,7 @@ class ERM(Algorithm):
             return self.net_temperatures[i]
 
         raise ValueError(key)
+
     def _init_swa(self):
         if self.hparams['swa']:
             self.swa = misc.SWA(self.network, hparams=self.hparams)
@@ -252,7 +268,7 @@ class ERM(Algorithm):
             self.optimizer.step()
 
         if self.hparams['swa']:
-            self.swa.update()
+            raise ValueError()
 
         return {key: value.item() for key, value in output_dict.items()}
 
@@ -496,7 +512,6 @@ class SWA(ERM):
                 )
 
     def update(self, minibatches, unlabeled=None):
-        bsize = minibatches[0][0].size(0)
 
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])
@@ -505,49 +520,48 @@ class SWA(ERM):
         all_loss = F.cross_entropy(all_logits, all_classes, reduction="none")
 
         output_dict = {'lossmean': all_loss.mean()}
-        penalty_active = self.update_count >= self.hparams["penalty_anneal_iters"]
-        if self.update_count == self.hparams["penalty_anneal_iters"] != 0:
-            # Reset Adam as in IRM or V-REx, because it may not like the sharp jump in
-            # gradient magnitudes that happens at this step.
-            self._init_optimizer()
-        self.update_count += 1
-
-        if self.hparams["diversity_loss"] == "sampling":
-            assert self.hparams.get("div_eta") != 0
 
         objective = all_loss.mean()
         if self.member_diversifier is not None:
-            if self.hparams["div_data"] in ["uda", "udaandiid"]:
-                assert unlabeled is not None
-                div_objective, div_dict = self.increase_diversity_unlabeled(unlabeled)
-                if self.hparams["div_data"] in ["udaandiid"]:
-                    output_dict.update({key + "uda": value for key, value in div_dict.items()})
-                else:
-                    output_dict.update(div_dict)
-            if self.hparams["div_data"] in ["", "none", "udaandiid"]:
-                div_objective, div_dict = self.increase_diversity_labeled(
-                    all_x, all_features, all_classes, all_loss, all_logits, bsize
-                )
-                output_dict.update(div_dict)
-            if penalty_active:
-                objective = objective + div_objective
-
-        else:
-            pass
+            raise ValueError()
+            # if self.hparams["diversity_loss"] == "sampling":
+            #     assert self.hparams.get("div_eta") != 0
+            # penalty_active = self.update_count >= self.hparams["penalty_anneal_iters"]
+            # if self.update_count == self.hparams["penalty_anneal_iters"] != 0:
+            #         # Reset Adam as in IRM or V-REx, because it may not like the sharp jump in
+            #     # gradient magnitudes that happens at this step.
+            #     self._init_optimizer()
+            # self.update_count += 1
+            # if self.hparams["div_data"] in ["uda", "udaandiid"]:
+            #     assert unlabeled is not None
+            #     div_objective, div_dict = self.increase_diversity_unlabeled(unlabeled)
+            #     if self.hparams["div_data"] in ["udaandiid"]:
+            #         output_dict.update({key + "uda": value for key, value in div_dict.items()})
+            #     else:
+            #         output_dict.update(div_dict)
+            # if self.hparams["div_data"] in ["", "none", "udaandiid"]:
+            #     bsize = minibatches[0][0].size(0)
+            #     div_objective, div_dict = self.increase_diversity_labeled(
+            #         all_x, all_features, all_classes, all_loss, all_logits, bsize
+            #     )
+            #     output_dict.update(div_dict)
+            # if penalty_active:
+            #     objective = objective + div_objective
 
         if self.hparams.get('sam'):
-            self.optimizer.zero_grad()
-            # first forward-backward pass
-            objective.backward()
-            self.optimizer.first_step(zero_grad=True)
-            # second forward-backward pass
-            objective2 = F.cross_entropy(
-                self.classifier(self.featurizer(all_x)), all_classes, reduction="mean"
-            )
-            # make sure to do a full forward pass
-            objective2.backward()
-            self.optimizer.second_step()
-            output_dict["objective2"] = objective2
+            raise ValueError
+            # self.optimizer.zero_grad()
+            # # first forward-backward pass
+            # objective.backward()
+            # self.optimizer.first_step(zero_grad=True)
+            # # second forward-backward pass
+            # objective2 = F.cross_entropy(
+            #     self.classifier(self.featurizer(all_x)), all_classes, reduction="mean"
+            # )
+            # # make sure to do a full forward pass
+            # objective2.backward()
+            # self.optimizer.second_step()
+            # output_dict["objective2"] = objective2
         else:
             self.optimizer.zero_grad()
             objective.backward()
@@ -660,13 +674,13 @@ class Ensembling(Algorithm):
                 for member in range(self.num_members)
             ]
         )
-        self._init_network_init()
+        self._init_network()
         self._init_optimizer()
         self._init_swa()
         self.soup = misc.Soup(self.networks)
         self._init_temperature()
 
-    def _init_network_init(self):
+    def _init_network(self):
         if not self.hparams["shared_init"]:
             return
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
