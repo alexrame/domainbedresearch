@@ -24,35 +24,8 @@ from backpack.extensions import BatchGrad
 
 ALGORITHMS = [
     "ERM",
-    # "Fish",
     "IRM",
-    "Subspace",
     "SWA",
-    # "IRMAdv",
-    # "GroupDRO",
-    # "Mixup",
-    # "MLDG",
-    # "CORAL",
-    # "COREL",
-    # "MMD",
-    # "DANN",
-    # "CDANN",
-    # "MTL",
-    # "SagNet",
-    # "ARM",
-    # "VREx",
-    # "VRExema",
-    # "RSC",
-    # "SD",
-    # "ANDMask",
-    # "SANDMask",
-    # "IGA",
-    # "SelfReg",
-    # "FisherMMD",
-    # "LFF",
-    # "KernelDiversity",
-    # "EnsembleKernelDiversity",
-    # "Fishr",
     "Ensembling",
 ]
 
@@ -361,14 +334,24 @@ class ERM(Algorithm):
 
         results = {}
         for key in dict_stats:
-            results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()) / \
-                                               len(dict_stats[key]["correct"].numpy())
+            results[f"Accuracies/acc_{key}"] = sum(
+                dict_stats[key]["correct"].numpy()) / len(dict_stats[key]["correct"].numpy())
             results[f"Calibration/ece_{key}"] = misc.get_ece(
                 dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
             )
             if "confstemp" in dict_stats[key]:
                 results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
                     dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+                )
+        if self.hparams.get("num_members"):
+            results[f"Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for i in self.hparams.get("num_members")])
+            results[f"Calibration/ece_netm"] = np.mean(
+                [results[f"Calibration/ece_net{key}"] for i in self.hparams.get("num_members")]
+            )
+            if self.hparams.get("swa"):
+                results[f"Accuracies/acc_swam"] = np.mean([results[f"Accuracies/acc_swa{key}"] for i in self.hparams.get("num_members")])
+                results[f"Calibration/ece_swam"] = np.mean(
+                    [results[f"Calibration/ece_swa{key}"] for i in self.hparams.get("num_members")]
                 )
 
         targets_torch = torch.cat(batch_classes)
@@ -408,22 +391,22 @@ class ERM(Algorithm):
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
                 targets, preds0, preds1
             )
-            results[f"Diversity/{regex}agre"] = diversity_metrics.agreement_measure(
-                targets, preds0, preds1
-            )
+            # results[f"Diversity/{regex}agre"] = diversity_metrics.agreement_measure(
+            #     targets, preds0, preds1
+            # )
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
                 targets, preds0, preds1
             )
 
-            # new div metrics
-            probs0 = dict_stats[key0]["probs"].numpy()
-            probs1 = dict_stats[key1]["probs"].numpy()
-            results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
-            results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
-                targets, probs0, probs1
-            )
+            # # new div metrics
+            # probs0 = dict_stats[key0]["probs"].numpy()
+            # probs1 = dict_stats[key1]["probs"].numpy()
+            # results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
+            # results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(
+            #     targets, probs0, probs1
+            # )
 
         # Flatness metrics
         if compute_trace and hessian is not None:
@@ -693,7 +676,7 @@ class Ensembling(Algorithm):
 
 
     def _init_optimizer(self):
-        lrs = [self.hparams["lr"] for member in range(self.num_members)]
+        lrs = [self.hparams["lr"] for _ in range(self.num_members)]
         if self.hparams.get("lr_ratio", 0) != 0:
             for member in range(self.num_members):
                 lrs[member] /= float(self.hparams.get("lr_ratio"))**member
@@ -720,18 +703,22 @@ class Ensembling(Algorithm):
 
     def update(self, minibatches, unlabeled=None):
         if self.hparams['specialized'] == 1:
-            out = self._update_specialized(minibatches)
+            nlls_per_member = self._update_specialized(minibatches)
         elif self.hparams['specialized']:
             # todo create diversity randomly per batch
-            out = self._update_partial(minibatches, step=self.hparams['specialized'])
+            nlls_per_member = self._update_partial(minibatches, step=self.hparams['specialized'])
         else:
-            out = self._update_full(minibatches)
+            nlls_per_member = self._update_full(minibatches)
+
+        out = {"nll": torch.stack(nlls_per_member, dim=0).mean()}
+        for key in range(self.num_members):
+            out[f"nll_{key}"] = nlls_per_member[key]
 
         self.soup.update()
         if self.hparams['swa']:
             for i, swa in enumerate(self.swas):
                 swa_dict = swa.update()
-                out.update({key + str(i): value for key, value in swa_dict.items()})
+                # out.update({key + str(i): value for key, value in swa_dict.items()})
             self.soupswa.update()
         return {key: value.item() for key, value in out.items()}
 
@@ -743,18 +730,16 @@ class Ensembling(Algorithm):
         for member in range(self.num_members):
             logits_member = self.networks[member](all_x)
             nll_member = F.cross_entropy(logits_member, all_classes, reduction="mean")
+            nlls_per_member.append(nll_member)
+
+            # optimization step
             self.optimizers[member].zero_grad()
             nll_member.backward()
             self.optimizers[member].step()
-            nlls_per_member.append(nll_member)
 
-        objective = torch.stack(nlls_per_member, dim=0).mean()
-        out = {"nll": objective}
-        for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key]
-        return out
+        return nlls_per_member
 
-    def _update_partial(self, minibatches, step):
+    def _update_partial(self, minibatches, step=2):
         num_domains_per_member = self.num_members // len(minibatches)
         index_per_member = [
             [num_domains_per_member * i + j
@@ -781,15 +766,13 @@ class Ensembling(Algorithm):
                 logits_member, classes_for_member, reduction="mean"
             )
             nlls_per_member.append(nll_member)
+
+            # optimization step
             self.optimizers[member].zero_grad()
             nll_member.backward()
             self.optimizers[member].step()
 
-        objective = torch.stack(nlls_per_member, dim=0).mean()
-        out = {"nll": (objective)}
-        for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key]
-        return out
+        return nlls_per_member
 
     def _update_specialized(self, minibatches):
         assert self.num_members % len(minibatches) == 0
@@ -818,15 +801,13 @@ class Ensembling(Algorithm):
                 logits_member, classes_per_member[member], reduction="mean"
             )
             nlls_per_member.append(nll_member)
+
+            # optimization step
             self.optimizers[member].zero_grad()
             nll_member.backward()
             self.optimizers[member].step()
 
-        objective = torch.stack(nlls_per_member, dim=0).mean()
-        out = {"nll": (objective)}
-        for key in range(self.num_members):
-            out[f"nll_{key}"] = nlls_per_member[key]
-        return out
+        return nlls_per_member
 
     def to(self, device):
         Algorithm.to(self, device)

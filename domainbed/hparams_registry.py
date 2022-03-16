@@ -250,7 +250,7 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam("num_members", 2, lambda r: 2)
         _hparam('lr_ratio', 0, lambda r: r.choice([0]))
         _hparam('shared_init', 0, lambda r: r.choice([0]))
-        _hparam('specialized', 0, lambda r: r.choice([0]))
+        _hparam('specialized', 0, lambda r: int(2**r.randint(0, 4)))
 
     if algorithm == "Ensemblingv2":
 
@@ -274,7 +274,7 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('penalty_reg', 10**(-5), lambda r: r.choice([10**(-5), 10**(-6), 10**(-7)]))
 
     if algorithm in ["Ensemblingv2", "SWA"]:
-        if os.environ.get("HP") == "D":
+        if os.environ.get("HP") in ["D", "EoA"]:
             _hparam('penalty_anneal_iters', 1500, lambda r: 1500)
         else:
             _hparam('penalty_anneal_iters', 1500, lambda r: int(r.uniform(0., 5000. if MAX_EPOCH_5000 else 2000)))
@@ -311,10 +311,8 @@ def _hparams(algorithm, dataset, random_seed):
     # below corresponds to exactly one hparam. Avoid nested conditionals.
 
     # learning rate
-    if os.environ.get("HP") == "D":
+    if os.environ.get("HP") in ["D", "EoA"]:
         _hparam('lr', 5e-5, lambda r: 5e-5)
-    elif os.environ.get("HP") == "1":
-        _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5]))
     elif dataset == "Spirals":
         _hparam('lr', 0.01, lambda r: 10**r.uniform(-3.5, -1.5))
     elif dataset in SMALL_IMAGES:
@@ -344,8 +342,8 @@ def _hparams(algorithm, dataset, random_seed):
 
     if os.environ.get("HP") == "D":
         _hparam('weight_decay', 0., lambda r: 0)
-    elif os.environ.get("HP") == "1":
-        _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-6]))
+    elif os.environ.get("HP") == "EoA":
+        _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -4))
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
     elif dataset in SMALL_IMAGES:
@@ -354,7 +352,7 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -2))
 
     # batch size
-    if os.environ.get("HP") in ["1", "D"]:
+    if os.environ.get("HP") in ["1", "D", "EoA"]:
         _hparam('batch_size', int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * 32)
     elif dataset == "Spirals":
         _hparam('batch_size', 512, lambda r: int(2**r.uniform(3, 9)))
