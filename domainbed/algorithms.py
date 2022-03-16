@@ -497,7 +497,6 @@ class SWA(ERM):
         self.features_size = self.featurizer.n_outputs
         self.register_buffer("update_count", torch.tensor([0]))
 
-        self.hparams["num_members"] = 2
         if self.hparams["diversity_loss"] in [None, "none"]:
             self.member_diversifier = None
         else:
@@ -508,7 +507,8 @@ class SWA(ERM):
                     hparams=self.hparams,
                     features_size=self.features_size,
                     num_classes=self.num_classes,
-                    num_domains=num_domains
+                    num_domains=num_domains,
+                    num_members=2
                 )
 
     def update(self, minibatches, unlabeled=None):

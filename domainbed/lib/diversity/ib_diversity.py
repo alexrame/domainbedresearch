@@ -27,7 +27,7 @@ class MiLoss(nn.modules.loss._Loss):
 
 class IBDiversity(DiversityLoss):
 
-    def __init__(self, hparams, features_size, num_classes, **kwargs):
+    def __init__(self, hparams, features_size, num_classes, num_members, **kwargs):
         DiversityLoss.__init__(self, hparams)
 
         self.conditional = self.hparams["conditional_d"]
@@ -37,6 +37,7 @@ class IBDiversity(DiversityLoss):
         self.discriminator_loss = nn.BCEWithLogitsLoss()
         self.adversarial_loss = MiLoss(hparams)
         self.num_classes = num_classes
+        self.num_members = num_members
 
         self._init_discriminator(num_classes if self.ib_space == "logits" else features_size)
 
@@ -44,10 +45,7 @@ class IBDiversity(DiversityLoss):
         if self.conditional:
             self.discriminator = ib_mlp.CondDiscMLP(input_size, self.num_classes, self.hparams)
             self.embedding_layers = nn.ModuleList(
-                [
-                    nn.Embedding(self.num_classes, input_size)
-                    for _ in range(self.hparams["num_members"])
-                ]
+                [nn.Embedding(self.num_classes, input_size) for _ in range(self.num_members)]
             )
         else:
             self.discriminator = ib_mlp.DiscMLP(input_size, self.hparams)
