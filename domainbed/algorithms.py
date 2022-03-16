@@ -640,6 +640,9 @@ class Ensembling(Algorithm):
         super().__init__(input_shape, num_classes, num_domains, hparams)
         self.hparams = hparams
         self.num_members = self.hparams["num_members"]
+        self.num_classes = num_classes
+        self.loss = nn.CrossEntropyLoss(reduction="mean")
+
         featurizers = [
             networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)
         ]
@@ -657,23 +660,30 @@ class Ensembling(Algorithm):
                 for member in range(self.num_members)
             ]
         )
-
-        if self.hparams["shared_init"]:
-            network_0 = self.networks[0]
-            for i in range(1, self.num_members):
-                network_i = self.networks[i]
-                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
-                    param_i.data = param_0.data
-
-        self.loss = nn.CrossEntropyLoss(reduction="mean")
-        self.num_classes = num_classes
-
-        # domain matcher
+        self._init_network_init()
         self._init_optimizer()
         self._init_swa()
         self.soup = misc.Soup(self.networks)
         self._init_temperature()
 
+    def _init_network_init(self):
+        if not self.hparams["shared_init"]:
+            return
+        path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
+        if self.hparams["shared_init"] == 1 or os.environ.get("CREATE_INIT"):
+            network_0 = self.networks[0]
+            for i in range(1, self.num_members):
+                network_i = self.networks[i]
+                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
+                    param_i.data = param_0.data
+            if os.environ.get("CREATE_INIT"):
+                assert not os.path.exists(path)
+                torch.save(network_0.state_dict(), path)
+        else:
+            assert os.path.exists(path)
+            weights = torch.load(path)
+            for i in range(0, self.num_members):
+                self.networks[i].load_state_dict(weights)
 
     def _init_optimizer(self):
         lrs = [self.hparams["lr"] for _ in range(self.num_members)]

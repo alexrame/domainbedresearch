@@ -33,7 +33,7 @@ def is_dumpable(value):
     return True
 
 
-class SWA:
+class SWA():
     def __init__(self, network, hparams, num=None):
         self.network = network
         self.network_swa = copy.deepcopy(network)
