@@ -297,11 +297,6 @@ class ERM(Algorithm):
     def to(self, device):
         Algorithm.to(self, device)
 
-    def eval(self):
-        Algorithm.eval(self)
-        if self.hparams['swa']:
-            self.swa.network_swa.eval()
-
     def train(self, *args):
         Algorithm.train(self, *args)
         if self.hparams['swa']:
@@ -848,14 +843,6 @@ class Ensembling(Algorithm):
             self.soupswa.network_soup.to(device)
             for swa in self.swas:
                 swa.network_swa.to(device)
-
-    def eval(self):
-        Algorithm.eval(self)
-        self.soup.network_soup.eval()
-        if self.hparams['swa']:
-            self.soupswa.network_soup.eval()
-            for swa in self.swas:
-                swa.network_swa.eval()
 
     def train(self, *args):
         Algorithm.train(self, *args)

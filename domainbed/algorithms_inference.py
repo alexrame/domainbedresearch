@@ -24,8 +24,8 @@ def get_algorithm_class(algorithm_name):
     return globals()[algorithm_name]
 
 
-
 class ERM(algorithms.ERM):
+
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
@@ -44,13 +44,15 @@ class ERM(algorithms.ERM):
 
 
 class Ensembling(algorithms.Ensembling):
+
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
 
         featurizers = [
-            networks.Featurizer(input_shape, self.hparams) for _ in range(self.hparams["num_members"])
+            networks.Featurizer(input_shape, self.hparams)
+            for _ in range(self.hparams["num_members"])
         ]
         classifiers = [
             networks.Classifier(
@@ -79,11 +81,11 @@ class Ensembling(algorithms.Ensembling):
 
 
 class Soup(algorithms.Ensembling):
+
     def __init__(self, input_shape, num_classes, num_domains):
         """
         """
-        algorithms.Algorithm.__init__(
-            self, input_shape, num_classes, num_domains, hparams={})
+        algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
 
         self.networks = []
         self.swas = []
@@ -99,14 +101,14 @@ class Soup(algorithms.Ensembling):
             swa.to(device)
         self.soupswa.network_soup.to(device)
 
-    def eval(self):
-        algorithms.Algorithm.eval(self)
+    def train(self, *args):
+        algorithms.Algorithm.train(self, *args)
         for net in self.networks:
-            net.eval()
-        self.soup.network_soup.eval()
+            net.train(*args)
+        self.soup.network_soup.train(*args)
         for swa in self.swas:
-            swa.eval()
-        self.soupswa.network_soup.eval()
+            swa.train(*args)
+        self.soupswa.network_soup.train(*args)
 
     def add_new_algorithm(self, algorithm):
         if isinstance(algorithm, ERM):
@@ -181,17 +183,21 @@ class Soup(algorithms.Ensembling):
         results = {}
 
         for key in dict_stats:
-            results[f"Accuracies/acc_{key}"] = sum(
-                dict_stats[key]["correct"].numpy()) / len(dict_stats[key]["correct"].numpy())
+            results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()
+                                                  ) / len(dict_stats[key]["correct"].numpy())
             results[f"Calibration/ece_{key}"] = misc.get_ece(
                 dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
             )
 
-        results["Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())])
+        results["Accuracies/acc_netm"] = np.mean(
+            [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
+        )
         results["Calibration/ece_netm"] = np.mean(
             [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
         )
-        results["Accuracies/acc_swam"] = np.mean([results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())])
+        results["Accuracies/acc_swam"] = np.mean(
+            [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
+        )
         results["Calibration/ece_swam"] = np.mean(
             [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
         )
