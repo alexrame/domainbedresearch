@@ -909,7 +909,6 @@ class Ensembling(Algorithm):
             results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
-        import pdb; pdb.set_trace()
 
         return results
 

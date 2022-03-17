@@ -121,6 +121,7 @@ class Soup():
         for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
+            import pdb; pdb.set_trace()
 
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
