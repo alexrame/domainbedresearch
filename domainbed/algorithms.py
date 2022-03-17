@@ -69,32 +69,6 @@ class Algorithm(torch.nn.Module):
         return {}
 
 
-class ERMInference(Algorithm):
-    def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(ERM, self).__init__(input_shape, num_classes, num_domains, hparams)
-        self.featurizer = networks.Featurizer(input_shape, self.hparams)
-        self.classifier = networks.Classifier(
-            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
-        )
-        self.num_classes = num_classes
-        self.network = nn.Sequential(self.featurizer, self.classifier)
-        self._init_network()
-        self._init_swa()
-        self._init_optimizer()
-        self._init_temperature()
-
-    def _init_swa(self):
-        if self.hparams['swa']:
-            self.swa = misc.SWA(self.network, hparams=self.hparams)
-        else:
-            self.swa = None
-
-    def predict(self, x):
-        results = {"net": self.network(x)}
-        if self.hparams['swa']:
-            results["swa"] = self.swa.network_swa(x)
-        return results
-
 
 class ERM(Algorithm):
     """

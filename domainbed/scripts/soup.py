@@ -76,10 +76,7 @@ def main():
         raise NotImplementedError
     splits, names = create_splits(inf_args, dataset)
 
-    algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
-
     # load args
-
     folders = [path for path in os.listdir(inf_args.output_dir) if not os.path.isfile(path)]
 
     good_folders = []
@@ -91,9 +88,10 @@ def main():
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
+        hparams = save_dict["model_hparams"]
 
         if (
-            train_args.dataset != inf_args.dataset or train_args.algorithm != inf_args.algorithm or
+            train_args.dataset != inf_args.dataset or
             train_args.test_envs != inf_args.test_envs or
             train_args.trial_seed != inf_args.trial_seed or
             train_args.holdout_fraction != inf_args.holdout_fraction
@@ -103,6 +101,9 @@ def main():
 
         print(f"good: {folder}")
         good_folders.append(folder)
+
+    if len(good_folders) == 0:
+        return
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -119,6 +120,7 @@ def main():
 
             # load model
             hparams = save_dict["model_hparams"]
+            algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
                 len(dataset) - len(inf_args.test_envs), hparams
@@ -150,49 +152,59 @@ def main():
             misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
             misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
-    elif inf_args.mode == "soup":
+    elif inf_args.mode == "ens":
+        ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
+        ens_algorithm = ens_algorithm_class(
+            dataset.input_shape, dataset.num_classes,
+            len(dataset) - len(inf_args.test_envs),
+        )
         for folder in good_folders:
             print(f"Inference at folder: {folder}")
             save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
-            random.seed(train_args.seed)
-            np.random.seed(train_args.seed)
-            torch.manual_seed(train_args.seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
 
             # load model
             hparams = save_dict["model_hparams"]
+            algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
                 len(dataset) - len(inf_args.test_envs), hparams
             )
             algorithm._init_from_save_dict(save_dict)
-            algorithm.to(device)
+            ens_algorithm.add_new_algorithm(algorithm)
 
-            eval_loaders = [
-                FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
-                for split in splits
-            ]
+            del algorithm
 
-            results = {}
-            evals = zip(names, eval_loaders)
-            for i, (name, loader) in enumerate(evals):
-                print(f"Inference at {name}")
-                acc = algorithm.accuracy(
-                    loader,
-                    device,
-                    compute_trace=False,
-                    update_temperature=False,
-                    output_temperature=(i == len(names) - 1)
-                )
-                for key in acc:
-                    results[name + f'_{key}'] = acc[key]
+        ens_algorithm.to(device)
 
-            results_keys = sorted(results.keys())
-            printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
-            misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
-            misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
+        random.seed(train_args.seed)
+        np.random.seed(train_args.seed)
+        torch.manual_seed(train_args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+        eval_loaders = [
+            FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+            for split in splits
+        ]
+        results = {}
+        evals = zip(names, eval_loaders)
+        for i, (name, loader) in enumerate(evals):
+            print(f"Inference at {name}")
+            acc = ens_algorithm.accuracy(
+                loader,
+                device,
+                compute_trace=False,
+                update_temperature=False,
+                output_temperature=(i == len(names) - 1)
+            )
+            for key in acc:
+                results[name + f'_{key}'] = acc[key]
+
+        results_keys = sorted(results.keys())
+        printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
+        misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
+        misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
 
 if __name__ == "__main__":
