@@ -71,6 +71,33 @@ class Algorithm(torch.nn.Module):
         return {}
 
 
+class ERMInference(Algorithm):
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(ERM, self).__init__(input_shape, num_classes, num_domains, hparams)
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        self.classifier = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams['nonlinear_classifier']
+        )
+        self.num_classes = num_classes
+        self.network = nn.Sequential(self.featurizer, self.classifier)
+        self._init_network()
+        self._init_swa()
+        self._init_optimizer()
+        self._init_temperature()
+
+    def _init_swa(self):
+        if self.hparams['swa']:
+            self.swa = misc.SWA(self.network, hparams=self.hparams)
+        else:
+            self.swa = None
+
+    def predict(self, x):
+        results = {"net": self.network(x)}
+        if self.hparams['swa']:
+            results["swa"] = self.swa.network_swa(x)
+        return results
+
+
 class ERM(Algorithm):
     """
     Empirical Risk Minimization (ERM)
@@ -102,56 +129,64 @@ class ERM(Algorithm):
             weights = torch.load(path)
             self.network.load_state_dict(weights)
 
-    def _init_temperature(self):
+    def _init_temperature(self, init_optimizers=True):
         self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-        self.t_optimizer = torch.optim.Adam(
-            [self.temperature],
-            lr=self.hparams["lr"],
-            weight_decay=self.hparams["weight_decay"],
-        )
-        if self.hparams['swa']:
-            self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-            self.t_swa_optimizer = torch.optim.Adam(
-                [self.swa_temperature],
+        if init_optimizers:
+            self.t_optimizer = torch.optim.Adam(
+                [self.temperature],
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
+        if self.hparams['swa']:
+            self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+            if init_optimizers:
+                self.t_swa_optimizer = torch.optim.Adam(
+                    [self.swa_temperature],
+                    lr=self.hparams["lr"],
+                    weight_decay=self.hparams["weight_decay"],
+                )
             if self.hparams.get('num_members'):
                 self.swa_temperatures = []
-                self.t_swa_optimizers = []
+                if init_optimizers:
+                    self.t_swa_optimizers = []
                 for _ in range(self.hparams.get('num_members', 1)):
                     self.swa_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
-                    self.t_swa_optimizers.append(
+                    if init_optimizers:
+                        self.t_swa_optimizers.append(
+                            torch.optim.Adam(
+                                [self.swa_temperatures[-1]],
+                                lr=self.hparams["lr"],
+                                weight_decay=self.hparams["weight_decay"],
+                            )
+                        )
+                self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+                if init_optimizers:
+                    self.t_soupswa_optimizer = torch.optim.Adam(
+                        [self.soupswa_temperature],
+                        lr=self.hparams["lr"],
+                        weight_decay=self.hparams["weight_decay"],
+                    )
+        if self.hparams.get('num_members'):
+            self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+            if init_optimizers:
+                self.t_soup_optimizer = torch.optim.Adam(
+                    [self.soup_temperature],
+                    lr=self.hparams["lr"],
+                    weight_decay=self.hparams["weight_decay"],
+                )
+            self.net_temperatures = []
+            if init_optimizers:
+                self.t_net_optimizers = []
+            for _ in range(self.hparams.get('num_members')):
+                self.net_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
+                if init_optimizers:
+                    self.t_net_optimizers.append(
                         torch.optim.Adam(
-                            [self.swa_temperatures[-1]],
+                            [self.net_temperatures[-1]],
                             lr=self.hparams["lr"],
                             weight_decay=self.hparams["weight_decay"],
                         )
                     )
-                self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-                self.t_soupswa_optimizer = torch.optim.Adam(
-                    [self.soupswa_temperature],
-                    lr=self.hparams["lr"],
-                    weight_decay=self.hparams["weight_decay"],
-                )
-        if self.hparams.get('num_members'):
-            self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-            self.t_soup_optimizer = torch.optim.Adam(
-                [self.soup_temperature],
-                lr=self.hparams["lr"],
-                weight_decay=self.hparams["weight_decay"],
-            )
-            self.net_temperatures = []
-            self.t_net_optimizers = []
-            for _ in range(self.hparams.get('num_members')):
-                self.net_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
-                self.t_net_optimizers.append(
-                    torch.optim.Adam(
-                        [self.net_temperatures[-1]],
-                        lr=self.hparams["lr"],
-                        weight_decay=self.hparams["weight_decay"],
-                    )
-                )
 
     def get_temperature(self, key, return_optim=False):
         if key == "net":
@@ -187,12 +222,6 @@ class ERM(Algorithm):
 
         raise ValueError(key)
 
-    def _init_swa(self):
-        if self.hparams['swa']:
-            self.swa = misc.SWA(self.network, hparams=self.hparams)
-        else:
-            self.swa = None
-
     def _init_optimizer(self):
         if self.hparams.get('sam'):
             phosam = 10 * self.hparams["phosam"] if self.hparams["samadapt"
@@ -225,6 +254,13 @@ class ERM(Algorithm):
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
+
+
+    def _init_swa(self):
+        if self.hparams['swa']:
+            self.swa = misc.SWA(self.network, hparams=self.hparams)
+        else:
+            self.swa = None
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
