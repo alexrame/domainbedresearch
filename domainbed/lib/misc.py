@@ -34,7 +34,7 @@ def is_dumpable(value):
 
 
 class SWA():
-    def __init__(self, network, hparams, num=None):
+    def __init__(self, network, hparams, swa_start_iter=100):
         self.network = network
         self.network_swa = copy.deepcopy(network)
         self.network_swa.eval()
@@ -44,14 +44,8 @@ class SWA():
         self._featurizer_mav = None
         self.layerwise = hparams.get("layerwise", "")
         self.hparams = hparams
-        self.num = num
-        if self.hparams.get("split_swa"):
-            assert num is not None
-            self.swa_start_iter = {0: 100, 1: 2500}[num]
-            self.swa_end_iter = {0: 2500, 1: float("inf")}[num]
-        else:
-            self.swa_start_iter = 100
-            self.swa_end_iter = float("inf")
+        self.swa_start_iter = swa_start_iter
+        self.swa_end_iter = float("inf")
         if self.layerwise:
             self.list_layers_count = [0 for _ in self.network.parameters()]
         else:

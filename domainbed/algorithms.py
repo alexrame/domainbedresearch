@@ -115,18 +115,20 @@ class ERM(Algorithm):
                 weight_decay=self.hparams["weight_decay"],
             )
         if self.hparams['swa']:
-            self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-            if init_optimizers:
-                self.t_swa_optimizer = torch.optim.Adam(
-                    [self.swa_temperature],
-                    lr=self.hparams["lr"],
-                    weight_decay=self.hparams["weight_decay"],
-                )
-            if self.hparams.get('num_members'):
+            if self.swa is not None:
+                self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+                if init_optimizers:
+                    self.t_swa_optimizer = torch.optim.Adam(
+                        [self.swa_temperature],
+                        lr=self.hparams["lr"],
+                        weight_decay=self.hparams["weight_decay"],
+                    )
+            if self.swas is not None:
+                num_temps = len(self.swas)
                 self.swa_temperatures = []
                 if init_optimizers:
                     self.t_swa_optimizers = []
-                for _ in range(self.hparams.get('num_members', 1)):
+                for _ in range(num_temps):
                     self.swa_temperatures.append(nn.Parameter(torch.ones(1), requires_grad=True))
                     if init_optimizers:
                         self.t_swa_optimizers.append(
@@ -136,13 +138,14 @@ class ERM(Algorithm):
                                 weight_decay=self.hparams["weight_decay"],
                             )
                         )
-                self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-                if init_optimizers:
-                    self.t_soupswa_optimizer = torch.optim.Adam(
-                        [self.soupswa_temperature],
-                        lr=self.hparams["lr"],
-                        weight_decay=self.hparams["weight_decay"],
-                    )
+                if self.hparams.get('num_members'):
+                    self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+                    if init_optimizers:
+                        self.t_soupswa_optimizer = torch.optim.Adam(
+                            [self.soupswa_temperature],
+                            lr=self.hparams["lr"],
+                            weight_decay=self.hparams["weight_decay"],
+                        )
         if self.hparams.get('num_members'):
             self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
             if init_optimizers:
@@ -171,9 +174,19 @@ class ERM(Algorithm):
                 return self.temperature, self.t_optimizer
             return self.temperature
         if key == "swa":
+            if self.swa is None:
+                if return_optim:
+                    return None, None
+                return None
             if return_optim:
                 return self.swa_temperature, self.t_swa_optimizer
             return self.swa_temperature
+        i = int(key[-1])
+        if key == "swa" + str(i) and self.swas is not None:
+            if return_optim:
+                return self.swa_temperatures[i], self.t_swa_optimizers[i]
+            return self.swa_temperatures[i]
+
         if not self.hparams.get("num_members"):
             if return_optim:
                 return None, None
@@ -187,17 +200,15 @@ class ERM(Algorithm):
             if return_optim:
                 return self.soupswa_temperature, self.t_soupswa_optimizer
             return self.soupswa_temperature
-        i = int(key[-1])
-        if key == "swa" + str(i):
-            if return_optim:
-                return self.swa_temperatures[i], self.t_swa_optimizers[i]
-            return self.swa_temperatures[i]
+
         if key == "net" + str(i):
             if return_optim:
                 return self.net_temperatures[i], self.t_net_optimizers[i]
             return self.net_temperatures[i]
 
-        raise ValueError(key)
+        if return_optim:
+            return None, None
+        return None
 
     def _init_optimizer(self):
         self.optimizer = torch.optim.Adam(
@@ -207,8 +218,17 @@ class ERM(Algorithm):
             )
 
     def _init_swa(self):
+        self.swa = None
+        self.swas = None
         if self.hparams['swa']:
-            self.swa = misc.SWA(self.network, hparams=self.hparams)
+            if self.hparams['swa'] == 1:
+                self.swa = misc.SWA(self.network, hparams=self.hparams)
+            else:
+                _start = [0, 2500, 3000]
+                self.swas = [
+                    misc.SWA(self.network, hparams=self.hparams, swa_start_iter=_start[i])
+                    for i in range(self.hparams['swa'])
+                ]
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
@@ -221,16 +241,26 @@ class ERM(Algorithm):
         loss.backward()
         self.optimizer.step()
 
-        if self.hparams['swa']:
-            swa_dict = self.swa.update()
-            output_dict.update(swa_dict)
+        self.update_swa()
 
         return {key: value.item() for key, value in output_dict.items()}
 
+    def update_swa(self):
+        if self.swa is not None:
+            self.swa.update()
+        if self.swas is not None:
+            for swa in self.swas:
+                swa.update()
+
     def predict(self, x):
         results = {"net": self.network(x)}
-        if self.hparams['swa']:
+
+        if self.swa is not None:
             results["swa"] = self.swa.network_swa(x)
+        if self.swas is not None:
+            for i, swa in enumerate(self.swas):
+                results[f"swa{i}"] = swa.network_swa(x)
+
         return results
 
     # def predict_feat(self, x):
@@ -244,13 +274,21 @@ class ERM(Algorithm):
 
     def to(self, device):
         Algorithm.to(self, device)
-        if self.hparams['swa']:
+
+        if self.swa is not None:
             self.swa.network_swa.to(device)
+        if self.swas is not None:
+            for swa in self.swas:
+                swa.network_swa.to(device)
 
     def train(self, *args):
         Algorithm.train(self, *args)
-        if self.hparams['swa']:
+
+        if self.swa is not None:
             self.swa.network_swa.train(*args)
+        if self.swas is not None:
+            for swa in self.swas:
+                swa.network_swa.train(*args)
 
     def accuracy(self, loader, device, compute_trace=False, update_temperature=False, output_temperature=False):
         self.eval()
@@ -312,6 +350,7 @@ class ERM(Algorithm):
                 results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
                     dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
                 )
+
         if self.hparams.get("num_members"):
             results["Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for key in range(self.hparams.get("num_members"))])
             results["Calibration/ece_netm"] = np.mean(
@@ -324,7 +363,7 @@ class ERM(Algorithm):
                 )
 
         targets_torch = torch.cat(batch_classes)
-        for regex in ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet", "soupswaswa", "soupswasoup"]:
+        for regex in ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet",]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
@@ -385,13 +424,22 @@ class ERM(Algorithm):
 
             if not self.hparams.get("num_members"):
                 if self.hparams['swa']:
-                    hessian_comp_swa = hessian(
-                        self.swa.network_swa,
-                        nn.CrossEntropyLoss(reduction='mean'),
-                        dataloader=loader,
-                        cuda=True
-                    )
-                    results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
+                    if self.swa is not None:
+                        hessian_comp_swa = hessian(
+                            self.swa.network_swa,
+                            nn.CrossEntropyLoss(reduction='mean'),
+                            dataloader=loader,
+                            cuda=True
+                        )
+                        results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
+                    else:
+                        hessian_comp_swa = hessian(
+                            self.swas[0].network_swa,
+                            nn.CrossEntropyLoss(reduction='mean'),
+                            dataloader=loader,
+                            cuda=True
+                        )
+                        results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
                 hessian_comp_net = hessian(
                     self.network, nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
                 )
@@ -523,10 +571,7 @@ class SWA(ERM):
             objective.backward()
             self.optimizer.step()
 
-        if self.hparams['swa']:
-            for i, swa in enumerate(self.swas):
-                swa_dict = swa.update()
-                output_dict.update({key + str(i): value for key, value in swa_dict.items()})
+        self.update_swa()
 
         return {key: value.detach().item() for key, value in output_dict.items()}
 
@@ -663,6 +708,7 @@ class Ensembling(Algorithm):
         ]
 
     def _init_swa(self):
+        self.swa = None
         if self.hparams['swa']:
             assert self.hparams['swa'] == 1
             self.swas = [
@@ -672,7 +718,7 @@ class Ensembling(Algorithm):
             self.soupswa = misc.Soup(
                 networks=[swa.network_swa for swa in self.swas])
         else:
-            self.swas = []
+            self.swas = None
 
     def update(self, minibatches, unlabeled=None):
         if self.hparams['specialized'] == 1:
@@ -859,8 +905,7 @@ class GroupDRO(ERM):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        if self.hparams['swa']:
-            self.swa.update()
+        self.update_swa()
 
         return {'loss': loss.item()}
 
@@ -892,8 +937,7 @@ class Mixup(ERM):
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
-        if self.hparams['swa']:
-            self.swa.update()
+        self.update_swa()
 
         return {'loss': objective.item()}
 
@@ -927,8 +971,7 @@ class GroupDRO(ERM):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        if self.hparams['swa']:
-            self.swa.update()
+        self.update_swa()
 
         return {'loss': loss.item()}
 
@@ -1008,8 +1051,7 @@ class AbstractMMD(ERM):
         if torch.is_tensor(penalty):
             penalty = penalty.item()
 
-        if self.hparams['swa']:
-            self.swa.update()
+        self.update_swa()
 
         return {'loss': objective.item(), 'penalty': penalty}
 
@@ -1086,8 +1128,7 @@ class Fishr(ERM):
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
-        if self.hparams['swa']:
-            self.swa.update()
+        self.update_swa()
 
         return {'loss': objective.item(), 'nll': all_nll.item(), 'penalty': penalty.item()}
 

@@ -256,15 +256,13 @@ def main():
             "model_hparams": hparams,
             "model_dict": algorithm.cpu().state_dict(),
         }
-        # if algorithm.hparams.get("num_members"):
-        #     save_dict["soup_dict"] = algorithm.soup.network_soup.cpu().state_dict()
         if algorithm.hparams.get("swa"):
-            if algorithm.hparams.get("num_members"):
-                # save_dict["soupswa_dict"] = algorithm.soupswa.network_soup.cpu().state_dict()
-                for member in range(algorithm.num_members):
-                    save_dict[f"swa{member}_dict"] = algorithm.swas[member].network_swa.cpu().state_dict()
-            else:
+            if algorithm.swas is not None:
+                for i, swa in enumerate(algorithm.swas):
+                    save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
+            if algorithm.swa is not None:
                 save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
+
         torch.save(save_dict, os.path.join(args.output_dir, filename))
 
     last_results_keys = None
