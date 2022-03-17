@@ -39,7 +39,7 @@ class ERM(algorithms.ERM):
     def _init_from_save_dict(self, save_dict):
         self.load_state_dict(save_dict["model_dict"])
         if self.hparams['swa']:
-            self.swa.load_state_dict(save_dict["swa_dict"])
+            self.swa.network_swa.load_state_dict(save_dict["swa_dict"])
 
 
 class Ensembling(algorithms.Ensembling):
@@ -74,5 +74,5 @@ class Ensembling(algorithms.Ensembling):
         self.soup.update()
         if self.hparams['swa']:
             for member in range(self.hparams["num_members"]):
-                self.swas[member].load_state_dict(save_dict[f"swa{member}_dict"])
+                self.swas[member].network_swa.load_state_dict(save_dict[f"swa{member}_dict"])
             self.soupswa.update()
