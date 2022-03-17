@@ -114,7 +114,7 @@ class Soup(algorithms.Ensembling):
             self.swas.append(copy.deepcopy(algorithm.swa))
         else:
             assert isinstance(algorithm, Ensembling)
-            for member in algorithm.hparams["num_members"]:
+            for member in range(algorithm.hparams["num_members"]):
                 self.networks.append(copy.deepcopy(algorithm.networks[member]))
                 self.swas.append(copy.deepcopy(algorithm.swas[member]))
 
