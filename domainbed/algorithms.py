@@ -915,8 +915,8 @@ class Ensembling(Algorithm):
     def accuracy(self, *args, **kwargs):
         return ERM.accuracy(self, *args, **kwargs)
 
-    def _init_temperature(self):
-        return ERM._init_temperature(self)
+    def _init_temperature(self, *args, **kwargs):
+        return ERM._init_temperature(self, *args, **kwargs)
 
     def get_temperature(self, *args, **kwargs):
         return ERM.get_temperature(self, *args, **kwargs)
