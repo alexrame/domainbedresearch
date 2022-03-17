@@ -274,7 +274,6 @@ class ERM(Algorithm):
 
     def to(self, device):
         Algorithm.to(self, device)
-
         if self.swa is not None:
             self.swa.network_swa.to(device)
         if self.swas is not None:
@@ -283,7 +282,6 @@ class ERM(Algorithm):
 
     def train(self, *args):
         Algorithm.train(self, *args)
-
         if self.swa is not None:
             self.swa.network_swa.train(*args)
         if self.swas is not None:
