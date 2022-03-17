@@ -15,10 +15,12 @@ from domainbed.lib.fast_data_loader import FastDataLoader
 def create_splits(inf_args, dataset):
     splits = []
     names = []
+    inf_env = inf_args.inf_env.split("_")
     for env_i, env in enumerate(dataset):
         doit = False
-        doit = doit or ("test" in inf_args.inf_env and env_i in inf_args.test_envs)
-        doit = doit or ("train" in inf_args.inf_env and env_i not in inf_args.test_envs)
+        doit = doit or ("test" in inf_env and env_i in inf_args.test_envs)
+        doit = doit or ("train" in inf_env and env_i not in inf_args.test_envs)
+        doit = doit or (str(env_i) in inf_env and env_i not in inf_args.test_envs)
         if not doit:
             continue
 
@@ -26,11 +28,11 @@ def create_splits(inf_args, dataset):
             env, int(len(env) * inf_args.holdout_fraction),
             misc.seed_hash(inf_args.trial_seed, env_i)
         )
-        if "in" in inf_args.inf_env:
+        if "in" in inf_env:
             splits.append(in_)
             names.append('env{}_in'.format(env_i))
 
-        if "out" in inf_args.inf_env:
+        if "out" in inf_env:
             splits.append(out_)
             names.append('env{}_out'.format(env_i))
     return splits, names
@@ -45,7 +47,7 @@ def main():
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--test_envs', type=int, nargs='+')
-    parser.add_argument('--inf_env', type=str, default="testin")
+    parser.add_argument('--inf_env', type=str, default="test_in")
     parser.add_argument(
         '--trial_seed',
         type=int,

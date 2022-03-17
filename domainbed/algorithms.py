@@ -501,7 +501,10 @@ class ERM(Algorithm):
         for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
             if key not in dict_stats:
                 continue
-            temperature, optimizer = self.get_temperature(key, return_optim=True)
+            if update_temperature:
+                temperature, optimizer = self.get_temperature(key, return_optim=True)
+            else:
+                temperature = self.get_temperature(key, return_optim=False)
             if temperature is None:
                 continue
             if update_temperature:
