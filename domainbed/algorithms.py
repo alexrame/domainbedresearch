@@ -848,7 +848,7 @@ class GroupDRO(ERM):
 
         for m in range(len(minibatches)):
             x, y = minibatches[m]
-            losses[m] = F.cross_entropy(self.predict(x), y)
+            losses[m] = F.cross_entropy(self.network(x), y)
             self.q[m] *= (self.hparams["groupdro_eta"] * losses[m].data).exp()
 
         self.q /= self.q.sum()
@@ -881,7 +881,7 @@ class Mixup(ERM):
             lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
 
             x = lam * xi + (1 - lam) * xj
-            predictions = self.predict(x)
+            predictions = self.network(x)
 
             objective += lam * F.cross_entropy(predictions, yi)
             objective += (1 - lam) * F.cross_entropy(predictions, yj)
@@ -916,7 +916,7 @@ class GroupDRO(ERM):
 
         for m in range(len(minibatches)):
             x, y = minibatches[m]
-            losses[m] = F.cross_entropy(self.predict(x), y)
+            losses[m] = F.cross_entropy(self.network(x), y)
             self.q[m] *= (self.hparams["groupdro_eta"] * losses[m].data).exp()
 
         self.q /= self.q.sum()
@@ -1001,11 +1001,12 @@ class AbstractMMD(ERM):
             penalty /= (nmb * (nmb - 1) / 2)
 
         self.optimizer.zero_grad()
-        (objective + (self.hparams['mmd_gamma']*penalty)).backward()
+        (objective + (self.hparams['mmd_lambda'] * penalty)).backward()
         self.optimizer.step()
 
         if torch.is_tensor(penalty):
             penalty = penalty.item()
+
         if self.hparams['swa']:
             self.swa.update()
 

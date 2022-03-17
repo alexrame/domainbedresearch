@@ -61,7 +61,7 @@ class SWA():
         self.global_iter += 1
         if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
             if self.global_iter == self.swa_start_iter:
-                print(f"Begin swa for num: {self.num}")
+                print(f"Begin swa at iter: {self.global_iter}")
             if self.layerwise:
                 self._update_layerwise()
             else:

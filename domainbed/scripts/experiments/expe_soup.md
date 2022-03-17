@@ -73,6 +73,10 @@ swanetratio: 0.1751700680
 
 
 
+python3 -m domainbed.scripts.sweep launch --output_dir=/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/ermshhpeoa0317 --command_launcher multi_gpu --datasets OfficeHome --algorithms ERM --single_test_envs --hp swa 1 --hp shared_init /gpfswork/rech/edr/utr15kn/dataplace/data/domainbed/inits/home_0316 --test_envs 0
+
+
+
 
 
 
