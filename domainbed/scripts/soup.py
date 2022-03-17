@@ -53,6 +53,7 @@ def main():
     parser.add_argument(
         '--trial_seed',
         type=int,
+        default=-1,
         help='Trial number (used for seeding split_dataset and random_hparams).'
     )
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
@@ -93,7 +94,7 @@ def main():
         if (
             train_args.dataset != inf_args.dataset or
             train_args.test_envs != inf_args.test_envs or
-            train_args.trial_seed != inf_args.trial_seed or
+            (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1) or
             train_args.holdout_fraction != inf_args.holdout_fraction
         ):
             print(f"bad: {folder}")
@@ -201,6 +202,7 @@ def main():
                 results[name + f'_{key}'] = acc[key]
 
         results_keys = sorted(results.keys())
+        print(f"Results for at {inf_args.trial_seed}")
         misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=12, latex=True)
         misc.print_row([results[key] for key in results_keys], colwidth=12, latex=True)
     else:
