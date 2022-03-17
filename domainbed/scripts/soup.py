@@ -1,5 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Ensembling --dataset OfficeHome --test_envs 0 --trial_seed 2 --output_dir /data/rame/experiments/domainbed/swaensshhpdeoa0316/0583a640ee2afc0cd74c88540ba06bad/
+# PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Ensembling --dataset OfficeHome --test_envs 0 --trial_seed 2 --output_dir /data/rame/experiments/domainbed/swaensshhpdeoa0316/0583a640ee2afc0cd74c88540ba06bad/
 
 import argparse
 import os
@@ -16,6 +16,11 @@ def create_splits(inf_args, dataset):
     in_splits = []
     out_splits = []
     for env_i, env in enumerate(dataset):
+        if inf_args.inf_env == "test" and env_i not in inf_args.test_envs:
+            continue
+        if inf_args.inf_env == "train" and env_i in inf_args.test_envs:
+            continue
+
         out, in_ = misc.split_dataset(
             env, int(len(env) * inf_args.holdout_fraction),
             misc.seed_hash(inf_args.trial_seed, env_i)
@@ -23,8 +28,6 @@ def create_splits(inf_args, dataset):
 
         in_splits.append((in_))
         out_splits.append((out))
-
-    print("Train Envs:", [env for env in enumerate(in_splits) if env not in inf_args.test_envs])
     return in_splits, out_splits
 
 
@@ -37,6 +40,7 @@ def main():
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--test_envs', type=int, nargs='+')
+    parser.add_argument('--inf_env', type=str, default="test")
     parser.add_argument(
         '--trial_seed',
         type=int,
@@ -47,9 +51,7 @@ def main():
     parser.add_argument('--data_dir', type=str, default="default")
     inf_args = parser.parse_args()
 
-    assert os.path.exists(inf_args.output_dir)
-    save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
-    hparams = save_dict["model_hparams"]
+
 
     if inf_args.data_dir == "default":
         if "DATA" in os.environ:
@@ -59,18 +61,17 @@ def main():
 
     if inf_args.dataset in vars(datasets):
         dataset_class = vars(datasets)[inf_args.dataset]
-        dataset = dataset_class(inf_args.data_dir, inf_args.test_envs, hparams=hparams)
+        dataset = dataset_class(
+            inf_args.data_dir, inf_args.test_envs, hparams={"data_augmentation": True}
+        )
     else:
         raise NotImplementedError
     in_splits, out_splits = create_splits(inf_args, dataset)
 
     algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
-    algorithm = algorithm_class(
-        dataset.input_shape, dataset.num_classes,
-        len(dataset) - len(inf_args.test_envs), hparams
-    )
 
-    # load model
+
+    # load args
     train_args = NameSpace(save_dict["args"])
 
     assert train_args.dataset == inf_args.dataset
@@ -88,10 +89,19 @@ def main():
         device = "cuda"
     else:
         device = "cpu"
+    assert os.path.exists(inf_args.output_dir)
+
+    # load model
+    save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
+    hparams = save_dict["model_hparams"]
+
+    algorithm = algorithm_class(
+        dataset.input_shape, dataset.num_classes,
+        len(dataset) - len(inf_args.test_envs), hparams
+    )
     algorithm._init_from_save_dict(save_dict)
     algorithm.to(device)
 
-    # evaluation
     eval_loaders = [
         FastDataLoader(dataset=env, batch_size=64, num_workers=dataset.N_WORKERS)
         for env in (in_splits + out_splits)
