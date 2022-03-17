@@ -122,7 +122,7 @@ def main():
             loader, device,
             compute_trace=False,
             update_temperature=False,
-            output_temperature=(i == len(evals) - 1)
+            output_temperature=(i == len(names) - 1)
         )
         for key in acc:
             results[name + f'_{key}'] = acc[key]
