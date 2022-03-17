@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
+import os
 from domainbed.pretrained_resnets import PretrainedResnet18
 import torch
 import torch.nn as nn
@@ -99,11 +100,12 @@ class ResNet(torch.nn.Module):
     """ResNet with the softmax chopped off and the batchnorm frozen"""
     def __init__(self, input_shape, hparams):
         super(ResNet, self).__init__()
+        pretrained = os.environ.get('PRETRAINED', True)
         if hparams['resnet18']:
-            self.network = torchvision.models.resnet18(pretrained=True)
+            self.network = torchvision.models.resnet18(pretrained=pretrained)
             self.n_outputs = 512
         else:
-            self.network = torchvision.models.resnet50(pretrained=True)
+            self.network = torchvision.models.resnet50(pretrained=pretrained)
             self.n_outputs = 2048
 
         # self.network = remove_batch_norm_from_resnet(self.network)
