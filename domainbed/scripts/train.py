@@ -253,7 +253,7 @@ def main():
             "model_input_shape": dataset.input_shape,
             "model_num_classes": dataset.num_classes,
             "model_hparams": hparams,
-            "model_dict": algorithm.cpu().state_dict()
+            "model_dict": algorithm.cpu().state_dict(),
         }
         # if algorithm.hparams.get("num_members"):
         #     save_dict["soup_dict"] = algorithm.soup.network_soup.cpu().state_dict()

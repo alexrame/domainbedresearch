@@ -56,10 +56,7 @@ class ERM(algorithms.ERM):
         self._init_swa()
         self._init_temperature(init_optimizers=False)
 
-    def _init_from_folder(self, folder):
-        path = os.path.join(folder, "model.pkl")
-        assert os.path.exists(path)
-        save_dict = torch.load(path)
+    def _init_from_save_dict(self, save_dict):
         self.load_state_dict(save_dict["model_dict"])
         if self.hparams['swa']:
             self.swa.load_state_dict(save_dict["swa_dict"])
