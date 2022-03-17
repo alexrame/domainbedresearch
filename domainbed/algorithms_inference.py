@@ -96,7 +96,7 @@ class Soup(algorithms.Ensembling):
             net.to(device)
         self.soup.network_soup.to(device)
         for swa in self.swas:
-            swa.network_swa.to(device)
+            swa.to(device)
         self.soupswa.network_soup.to(device)
 
     def eval(self):
@@ -105,13 +105,13 @@ class Soup(algorithms.Ensembling):
             net.eval()
         self.soup.network_soup.eval()
         for swa in self.swas:
-            swa.network_swa.eval()
+            swa.eval()
         self.soupswa.network_soup.eval()
 
     def add_new_algorithm(self, algorithm):
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
-            self.swas.append(copy.deepcopy(algorithm.swa))
+            self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
         else:
             assert isinstance(algorithm, Ensembling)
             for member in range(algorithm.hparams["num_members"]):
@@ -133,7 +133,7 @@ class Soup(algorithms.Ensembling):
             logits = self.networks[num_member](x)
             batch_logits.append(logits)
             results["net" + str(num_member)] = logits
-            logits_swa = self.swas[num_member].network_swa(x)
+            logits_swa = self.swas[num_member](x)
             batch_logits_swa.append(logits_swa)
             results["swa" + str(num_member)] = logits_swa
 
