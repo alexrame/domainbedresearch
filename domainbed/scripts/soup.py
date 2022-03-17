@@ -72,6 +72,8 @@ def main():
 
 
     # load args
+    save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
+
     train_args = NameSpace(save_dict["args"])
 
     assert train_args.dataset == inf_args.dataset
@@ -92,9 +94,7 @@ def main():
     assert os.path.exists(inf_args.output_dir)
 
     # load model
-    save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
     hparams = save_dict["model_hparams"]
-
     algorithm = algorithm_class(
         dataset.input_shape, dataset.num_classes,
         len(dataset) - len(inf_args.test_envs), hparams
