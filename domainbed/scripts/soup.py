@@ -7,7 +7,7 @@ import random
 import numpy as np
 import torch
 import torch.utils.data
-from domainbed import datasets, algorithms
+from domainbed import datasets, algorithms_instance
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
@@ -63,7 +63,7 @@ def main():
     else:
         raise NotImplementedError
 
-    algorithm_class = algorithms.get_algorithm_class(inf_args.algorithm)
+    algorithm_class = algorithms_instance.get_algorithm_class(inf_args.algorithm)
     algorithm = algorithm_class(
         dataset.input_shape, dataset.num_classes,
         len(dataset) - len(inf_args.test_envs), hparams
