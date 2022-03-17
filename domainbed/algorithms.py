@@ -224,7 +224,7 @@ class ERM(Algorithm):
             if self.hparams['swa'] == 1:
                 self.swa = misc.SWA(self.network, hparams=self.hparams)
             else:
-                _start = [0, 2500, 3000]
+                _start = [100, 2500]
                 self.swas = [
                     misc.SWA(self.network, hparams=self.hparams, swa_start_iter=_start[i])
                     for i in range(self.hparams['swa'])
