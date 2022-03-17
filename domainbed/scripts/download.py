@@ -1,5 +1,3 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 from torchvision.datasets import MNIST
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
@@ -14,8 +12,8 @@ import os
 # from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
 # from wilds.datasets.fmow_dataset import FMoWDataset
 
-# utils #######################################################################
 
+# utils #######################################################################
 
 def stage_path(data_dir, name):
     full_path = os.path.join(data_dir, name)
@@ -98,14 +96,11 @@ def download_vlcs(data_dir):
     # Original URL: http://www.eecs.qmul.ac.uk/~dl307/project_iccv2017
     full_path = stage_path(data_dir, "VLCS")
 
-    download_and_extract(
-        "https://drive.google.com/uc?id=1skwblH1_okBwxWxmRsp9_qi15hyPpxg8",
-        os.path.join(data_dir, "VLCS.tar.gz")
-    )
+    download_and_extract("https://drive.google.com/uc?id=1skwblH1_okBwxWxmRsp9_qi15hyPpxg8",
+                         os.path.join(data_dir, "VLCS.tar.gz"))
 
 
 # MNIST #######################################################################
-
 
 def download_mnist(data_dir):
     # Original URL: http://yann.lecun.com/exdb/mnist/
@@ -115,49 +110,31 @@ def download_mnist(data_dir):
 
 # PACS ########################################################################
 
-
 def download_pacs(data_dir):
     # Original URL: http://www.eecs.qmul.ac.uk/~dl307/project_iccv2017
     full_path = stage_path(data_dir, "PACS")
 
-    download_and_extract(
-        "https://drive.google.com/uc?id=0B6x7gtvErXgfbF9CSk53UkRxVzg",
-        os.path.join(data_dir, "PACS.zip")
-    )
+    download_and_extract("https://drive.google.com/uc?id=1JFr8f805nMUelQWWmfnJR3y4_SYoN5Pd",
+                         os.path.join(data_dir, "PACS.zip"))
 
-    os.rename(os.path.join(data_dir, "kfold"), full_path)
+    os.rename(os.path.join(data_dir, "kfold"),
+              full_path)
 
 
 # Office-Home #################################################################
-
-
-# def download_office_home(data_dir):
-#     # Original URL: http://hemanthdv.org/OfficeHome-Dataset/
-#     full_path = stage_path(data_dir, "office_home")
-
-#     download_and_extract(
-#         # "https://drive.google.com/file/d/0B81rNlvomiwed0V1YUxQdC1uOTg/",
-#         # "https://drive.google.com/uc?id={}".format("0B81rNlvomiwed0V1YUxQdC1uOTg")",
-#         "https://drive.google.com/uc?id=0B81rNlvomiwed0V1YUxQdC1uOTg",
-#         os.path.join(data_dir, "office_home.zip")
-#     )
-
-#     os.rename(os.path.join(data_dir, "OfficeHomeDataset_10072016"), full_path)
-
 
 def download_office_home(data_dir):
     # Original URL: http://hemanthdv.org/OfficeHome-Dataset/
     full_path = stage_path(data_dir, "office_home")
 
-    download_and_extract(
-        "https://drive.google.com/uc?id=1uY0pj7oFsjMxRwaD3Sxy0jgel0fsYXLC",
-        os.path.join(data_dir, "office_home.zip")
-    )
+    download_and_extract("https://drive.google.com/uc?id=1uY0pj7oFsjMxRwaD3Sxy0jgel0fsYXLC",
+                         os.path.join(data_dir, "office_home.zip"))
 
-    os.rename(os.path.join(data_dir, "OfficeHomeDataset_10072016"), full_path)
+    os.rename(os.path.join(data_dir, "OfficeHomeDataset_10072016"),
+              full_path)
+
 
 # DomainNET ###################################################################
-
 
 def download_domain_net(data_dir):
     # Original URL: http://ai.bu.edu/M3SDA/
@@ -172,8 +149,8 @@ def download_domain_net(data_dir):
         "http://csr.bu.edu/ftp/visda/2019/multi-source/sketch.zip"
     ]
 
-    #for url in urls:
-    #    download_and_extract(url, os.path.join(full_path, url.split("/")[-1]))
+    for url in urls:
+        download_and_extract(url, os.path.join(full_path, url.split("/")[-1]))
 
     with open("domainbed/misc/domain_net_duplicates.txt", "r") as f:
         for line in f.readlines():
@@ -185,42 +162,29 @@ def download_domain_net(data_dir):
 
 # TerraIncognita ##############################################################
 
-
 def download_terra_incognita(data_dir):
     # Original URL: https://beerys.github.io/CaltechCameraTraps/
+    # New URL: http://lila.science/datasets/caltech-camera-traps
+
     full_path = stage_path(data_dir, "terra_incognita")
 
     download_and_extract(
-        # "http://www.vision.caltech.edu/~sbeery/datasets/caltechcameratraps18/eccv_18_all_images_sm.tar.gz",
         "https://lilablobssc.blob.core.windows.net/caltechcameratraps/eccv_18_all_images_sm.tar.gz",
-        os.path.join(full_path, "terra_incognita_images.tar.gz")
-    )
+        os.path.join(full_path, "terra_incognita_images.tar.gz"))
 
     download_and_extract(
-        # "http://www.vision.caltech.edu/~sbeery/datasets/caltechcameratraps18/eccv_18_all_annotations.tar.gz",
-        # "https://lilablobssc.blob.core.windows.net/caltechcameratraps/eccv_18_annotations.tar.gz",
         "https://lilablobssc.blob.core.windows.net/caltechcameratraps/labels/caltech_camera_traps.json.zip",
-        os.path.join(full_path, "terra_incognita_annotations.tar.gz")
-    )
+        os.path.join(full_path, "caltech_camera_traps.json.zip"))
 
-    include_locations = [
-        # 38, 46, 100, 43,
-        "38",
-        "46",
-        "100",
-        "43"
-    ]
+    include_locations = ["38", "46", "100", "43"]
 
     include_categories = [
-        "bird", "bobcat", "cat", "coyote", "dog", "empty", "opossum", "rabbit", "raccoon",
-        "squirrel"
+        "bird", "bobcat", "cat", "coyote", "dog", "empty", "opossum", "rabbit",
+        "raccoon", "squirrel"
     ]
 
     images_folder = os.path.join(full_path, "eccv_18_all_images_sm/")
-    annotations_file = os.path.join(
-        full_path, "caltech_images_20210113.json"
-        # "CaltechCameraTrapsECCV18.json"
-    )
+    annotations_file = os.path.join(full_path, "caltech_images_20210113.json")
     destination_folder = full_path
 
     stats = {}
@@ -241,7 +205,8 @@ def download_terra_incognita(data_dir):
         if image_location not in include_locations:
             continue
 
-        loc_folder = os.path.join(destination_folder, 'location_' + str(image_location) + '/')
+        loc_folder = os.path.join(destination_folder,
+                                  'location_' + str(image_location) + '/')
 
         if not os.path.exists(loc_folder):
             os.mkdir(loc_folder)
@@ -274,23 +239,21 @@ def download_terra_incognita(data_dir):
 
                 shutil.copyfile(src_path, dst_path)
 
-    # shutil.rmtree(images_folder)
-    # os.remove(annotations_file)
+    shutil.rmtree(images_folder)
+    os.remove(annotations_file)
 
 
 # SVIRO #################################################################
-
 
 def download_sviro(data_dir):
     # Original URL: https://sviro.kl.dfki.de
     full_path = stage_path(data_dir, "sviro")
 
-    download_and_extract(
-        "https://sviro.kl.dfki.de/?wpdmdl=1731",
-        os.path.join(data_dir, "sviro_grayscale_rectangle_classification.zip")
-    )
+    download_and_extract("https://sviro.kl.dfki.de/?wpdmdl=1731",
+                         os.path.join(data_dir, "sviro_grayscale_rectangle_classification.zip"))
 
-    os.rename(os.path.join(data_dir, "SVIRO_DOMAINBED"), full_path)
+    os.rename(os.path.join(data_dir, "SVIRO_DOMAINBED"),
+              full_path)
 
 
 if __name__ == "__main__":
@@ -301,7 +264,7 @@ if __name__ == "__main__":
     # download_mnist(args.data_dir)
     # download_pacs(args.data_dir)
     download_office_home(args.data_dir)
-    #download_domain_net(args.data_dir)
+    # download_domain_net(args.data_dir)
     # download_vlcs(args.data_dir)
     # download_terra_incognita(args.data_dir)
     # download_sviro(args.data_dir)
