@@ -245,11 +245,12 @@ def main():
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
-    def save_checkpoint(filename):
+    def save_checkpoint(filename, results):
         if args.skip_model_save:
             return
         save_dict = {
             "args": vars(args),
+            "results": results,
             "model_input_shape": dataset.input_shape,
             "model_num_classes": dataset.num_classes,
             "model_hparams": hparams,
@@ -343,19 +344,16 @@ def main():
 
             epochs_path = os.path.join(args.output_dir, 'results.jsonl')
             with open(epochs_path, 'a') as f:
-                try:
-                    f.write(json.dumps(results, sort_keys=True) + "\n")
-                except Exception as e:
-                    results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
-                    results_nodumpable = {key: value for key, value in results.items() if not misc.is_dumpable(value)}
-                    print("fail to dump:", results_nodumpable)
-                    f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
+                results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
+                f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
             algorithm_dict = algorithm.state_dict()
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
             if args.save_model_every_checkpoint:
-                save_checkpoint(f'model_step{step}.pkl')
+                save_checkpoint(
+                    f'model_step{step}.pkl', results=json.dumps(results_dumpable, sort_keys=True)
+                )
 
             for key, value in algorithm.get_tb_dict().items():
                 writer.add_scalar(f'General/{key}', value, step)
@@ -366,7 +364,8 @@ def main():
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
-    save_checkpoint('model.pkl')
+    results_dumpable = {key: value for key, value in results_end.items() if misc.is_dumpable(value)}
+    save_checkpoint('model.pkl', results=json.dumps(results_dumpable, sort_keys=True))
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')

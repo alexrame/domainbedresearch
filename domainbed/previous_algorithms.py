@@ -3,6 +3,89 @@ from domainbed.lib import torchutils
 
 
 
+
+class SAM(ERM):
+    def _init_optimizer(self):
+        if self.hparams.get('sam'):
+            phosam = 10 * self.hparams["phosam"] if self.hparams["samadapt"
+                                                                ] else self.hparams["phosam"]
+            if self.hparams.get('sam') == "inv":
+                phosam = -phosam
+            if self.hparams.get('sam') == "onlyswa":
+                raise ValueError(self.hparams.get('sam'))
+                # self.optimizer = samswa.SAMswa(
+                #     self.network.parameters(),
+                #     params_swa=self.swa.network_swa.parameters(),
+                #     base_optimizer=torch.optim.Adam,
+                #     adaptive=self.hparams["samadapt"],
+                #     rho=phosam,
+                #     lr=self.hparams["lr"],
+                #     weight_decay=self.hparams["weight_decay"],
+                # )
+            else:
+                self.optimizer = sam.SAM(
+                    self.network.parameters(),
+                    torch.optim.Adam,
+                    adaptive=self.hparams["samadapt"],
+                    rho=phosam,
+                    lr=self.hparams["lr"],
+                    weight_decay=self.hparams["weight_decay"],
+                )
+        else:
+            self.optimizer = torch.optim.Adam(
+                self.network.parameters(),
+                lr=self.hparams["lr"],
+                weight_decay=self.hparams["weight_decay"],
+            )
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+        if self.hparams['sam'] == "perdomain":
+            domain = random.randint(0, self.num_domains - 1)
+            loss = F.cross_entropy(self.network(minibatches[domain][0]), minibatches[domain][1])
+        elif self.hparams['sam'] == "swa":
+            predictions = self.network(all_x)
+            with torch.no_grad():
+                predictions_swa = self.swa.network_swa(all_x)
+            loss = F.cross_entropy((predictions + predictions_swa) / 2, all_classes)
+        elif self.hparams['sam'] == "swasam":
+            predictions = self.network(all_x)
+            with torch.no_grad():
+                predictions_swa = self.swa.network_swa(all_x)
+            loss = (1 + self.hparams['swasamcoeff']) * F.cross_entropy(
+                (predictions + self.hparams['swasamcoeff'] * predictions_swa) /
+                (1 + self.hparams['swasamcoeff']), all_classes
+            )
+        elif self.hparams['sam'] == "onlyswa":
+            loss = F.cross_entropy(self.swa.network_swa(all_x), all_classes)
+        else:
+            loss = F.cross_entropy(self.network(all_x), all_classes)
+
+        output_dict = {'loss': loss}
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        if self.hparams['swa']:
+            swa_dict = self.swa.update()
+            output_dict.update(swa_dict)
+
+        return {key: value.item() for key, value in output_dict.items()}
+       if self.hparams['sam']:
+            self.optimizer.zero_grad()
+            # first forward-backward pass
+            loss.backward()
+            self.optimizer.first_step(zero_grad=True)
+            # second forward-backward pass
+            loss_second_step = F.cross_entropy(self.network(all_x), all_classes)
+            # make sure to do a full forward pass
+            loss_second_step.backward()
+            self.optimizer.second_step()
+            output_dict["loss_secondstep"] = loss_second_step
+
+
 class Subspace(ERM):
     """
     Subspace learning
@@ -132,17 +215,6 @@ class FishrDomainMatcher():
             misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
             for _ in range(self.num_domains)
         ]
-
-        if self.hparams.get('swa') == "gradvar":
-            raise NotImplementedError
-            self.ema_per_domain_mean_swa = [
-                misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
-                for _ in range(self.num_domains)
-            ]
-            self.ema_per_domain_var_swa = [
-                misc.MovingAverage(ema=hparams["ema"], oneminusema_correction=True)
-                for _ in range(self.num_domains)
-            ]
 
         self.list_methods = hparams["method"].split("_")
 

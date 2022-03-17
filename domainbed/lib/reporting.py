@@ -19,14 +19,21 @@ def load_records(path):
             with open(results_path, "r") as f:
                 for line in f:
                     line_parsed = json.loads(line[:-1])
-                    if (os.environ.get("COND") is None or line_parsed["hparams"]["div_eta"] == 0):
-                        records.append(json.loads(line[:-1]))
-                    else:
-                        continue
+                    records.append(json.loads(line[:-1]))
         except IOError:
             pass
 
     return Q(records)
+
+def load_records_subdir(path, subdir):
+    results_path = os.path.join(path, subdir, "results.jsonl")
+    try:
+        with open(results_path, "r") as f:
+            for line in f:
+                line_parsed = json.loads(line[:-1])
+            return line_parsed
+    except IOError:
+        pass
 
 def get_grouped_records(records):
     """Group records by (trial_seed, dataset, algorithm, test_env). Because

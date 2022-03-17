@@ -42,7 +42,7 @@ class SWA():
         self.global_iter = 0
         self._classifier_mav = None
         self._featurizer_mav = None
-        self.layerwise = hparams["layerwise"]
+        self.layerwise = hparams.get("layerwise", "")
         self.hparams = hparams
         self.num = num
         if self.hparams.get("split_swa"):

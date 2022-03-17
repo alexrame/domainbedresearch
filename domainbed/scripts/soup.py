@@ -17,8 +17,7 @@ def create_splits(inf_args, dataset):
     names = []
     inf_env = inf_args.inf_env.split("_")
     for env_i, env in enumerate(dataset):
-        doit = False
-        doit = doit or ("test" in inf_env and env_i in inf_args.test_envs)
+        doit = "test" in inf_env and env_i in inf_args.test_envs
         doit = doit or ("train" in inf_env and env_i not in inf_args.test_envs)
         doit = doit or (str(env_i) in inf_env and env_i not in inf_args.test_envs)
         if not doit:
@@ -78,14 +77,17 @@ def main():
     splits, names = create_splits(inf_args, dataset)
 
     # load args
-    folders = [path for path in os.listdir(inf_args.output_dir) if not os.path.isfile(path)]
-
-    good_folders = []
+    folders = [
+        os.path.join(output_dir, path) for output_dir in inf_args.output_dir.split(",") for path in os.listdir(output_dir)
+    ]
+    good_folders = {}
     for folder in folders:
-        full_folder = os.path.join(inf_args.output_dir, folder)
-        model_path = os.path.join(full_folder, "model.pkl")
+        if not os.path.isdir(folder):
+            continue
+        name_folder = os.path.split(folder)[-1]
+        model_path = os.path.join(folder, "model.pkl")
         if not os.path.exists(model_path):
-            print(f"absent: {folder}")
+            print(f"absent: {name_folder}")
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
@@ -97,11 +99,13 @@ def main():
             (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1) or
             train_args.holdout_fraction != inf_args.holdout_fraction
         ):
-            print(f"bad: {folder}")
+            print(f"bad: {name_folder}")
             continue
 
-        print(f"good: {folder}")
-        good_folders.append(folder)
+        print(f"good: {name_folder}")
+        # TODO
+        proxy_perf = 0
+        good_folders[folder] = proxy_perf
 
     if len(good_folders) == 0:
         return
@@ -111,7 +115,7 @@ def main():
     if inf_args.mode == "1by1":
         for folder in good_folders:
             print(f"Inference at folder: {folder}")
-            save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
+            save_dict = torch.load(os.path.join(folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
             random.seed(train_args.seed)
             np.random.seed(train_args.seed)
@@ -161,7 +165,7 @@ def main():
         )
         for folder in good_folders:
             print(f"Ingredient from folder: {folder}")
-            save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
+            save_dict = torch.load(os.path.join(folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
 
             # load model
