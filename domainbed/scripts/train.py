@@ -323,7 +323,7 @@ def main():
                     writer.add_scalar(tb_name, acc[key], step)
 
             results_keys = sorted(results.keys())
-            printed_keys = [key for key in results_keys if "Diversity" not in key.lower()]
+            printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
             if results_keys != last_results_keys:
                 misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12)
                 last_results_keys = results_keys

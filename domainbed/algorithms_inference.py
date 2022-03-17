@@ -66,13 +66,13 @@ class Ensembling(algorithms.Ensembling):
             ]
         )
         self._init_swa()
-        self.soup = misc.Soup(self.networks)
         self._init_temperature(init_optimizers=False)
 
     def _init_from_save_dict(self, save_dict):
         self.load_state_dict(save_dict["model_dict"])
-        self.soup.update()
+        self.soup = misc.Soup(self.networks)
         if self.hparams['swa']:
             for member in range(self.hparams["num_members"]):
                 self.swas[member].network_swa.load_state_dict(save_dict[f"swa{member}_dict"])
-            self.soupswa.update()
+            self.soupswa = misc.Soup(
+                networks=[swa.network_swa for swa in self.swas])

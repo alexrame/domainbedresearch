@@ -112,14 +112,16 @@ def main():
 
     evals = zip(eval_loader_names, eval_loaders)
     for name, loader in evals:
+        print(f"Inference at {name}")
         acc = algorithm.accuracy(
-            loader, device, compute_trace=False, update_temperature=False
+            loader, device, compute_trace=False, update_temperature=False,
+            output_temperature=True
         )
         for key in acc:
             results[name + f'_{key}'] = acc[key]
 
     results_keys = sorted(results.keys())
-    printed_keys = [key for key in results_keys if "Diversity" not in key.lower()]
+    printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
     misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
     misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
