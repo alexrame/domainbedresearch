@@ -153,7 +153,7 @@ def main():
     for env_i, env in enumerate(dataset):
         uda = []
 
-        if not algorithm_class.CUSTOM_FORWARD and dataset_class.CUSTOM_DATASET:
+        if dataset_class.CUSTOM_DATASET:
             env = misc.CustomToRegularDataset(env)
 
         out, in_ = misc.split_dataset(env, int(len(env)*args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))

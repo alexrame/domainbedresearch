@@ -45,8 +45,6 @@ class Algorithm(torch.nn.Module):
     - predict()
     """
 
-    CUSTOM_FORWARD = False
-
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(Algorithm, self).__init__()
         self.input_shape = input_shape
