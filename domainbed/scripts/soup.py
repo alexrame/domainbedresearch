@@ -127,7 +127,7 @@ def main():
 
     results_keys = sorted(results.keys())
     printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
-    misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12)
+    misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
     misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
 
