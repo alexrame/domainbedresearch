@@ -58,6 +58,7 @@ def main():
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
+    parser.add_argument('--mode', type=str, default="1by1")
     inf_args = parser.parse_args()
 
     if inf_args.data_dir == "default":
@@ -86,7 +87,7 @@ def main():
         full_folder = os.path.join(inf_args.output_dir, folder)
         model_path = os.path.join(full_folder, "model.pkl")
         if not os.path.exists(model_path):
-            print(f"{model_path} does not exist")
+            print(f"absent: {folder}")
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
@@ -97,55 +98,101 @@ def main():
             train_args.trial_seed != inf_args.trial_seed or
             train_args.holdout_fraction != inf_args.holdout_fraction
         ):
-            print(f"{folder} not good config")
+            print(f"bad: {folder}")
             continue
 
+        print(f"good: {folder}")
         good_folders.append(folder)
 
-    for folder in good_folders:
-        print(f"Inference at folder: {folder}")
-        random.seed(train_args.seed)
-        np.random.seed(train_args.seed)
-        torch.manual_seed(train_args.seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        if torch.cuda.is_available():
-            device = "cuda"
-        else:
-            device = "cpu"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # load model
-        hparams = save_dict["model_hparams"]
-        algorithm = algorithm_class(
-            dataset.input_shape, dataset.num_classes,
-            len(dataset) - len(inf_args.test_envs), hparams
-        )
-        algorithm._init_from_save_dict(save_dict)
-        algorithm.to(device)
+    if inf_args.mode == "1by1":
+        for folder in good_folders:
+            print(f"Inference at folder: {folder}")
+            save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
+            train_args = NameSpace(save_dict["args"])
+            random.seed(train_args.seed)
+            np.random.seed(train_args.seed)
+            torch.manual_seed(train_args.seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
-        eval_loaders = [
-            FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
-            for split in splits
-        ]
-
-        results = {}
-        evals = zip(names, eval_loaders)
-        for i, (name, loader) in enumerate(evals):
-            print(f"Inference at {name}")
-            acc = algorithm.accuracy(
-                loader,
-                device,
-                compute_trace=False,
-                update_temperature=False,
-                output_temperature=(i == len(names) - 1)
+            # load model
+            hparams = save_dict["model_hparams"]
+            algorithm = algorithm_class(
+                dataset.input_shape, dataset.num_classes,
+                len(dataset) - len(inf_args.test_envs), hparams
             )
-            for key in acc:
-                results[name + f'_{key}'] = acc[key]
+            algorithm._init_from_save_dict(save_dict)
+            algorithm.to(device)
 
-        results_keys = sorted(results.keys())
-        printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
-        misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
-        misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
+            eval_loaders = [
+                FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+                for split in splits
+            ]
+
+            results = {}
+            evals = zip(names, eval_loaders)
+            for i, (name, loader) in enumerate(evals):
+                print(f"Inference at {name}")
+                acc = algorithm.accuracy(
+                    loader,
+                    device,
+                    compute_trace=False,
+                    update_temperature=False,
+                    output_temperature=(i == len(names) - 1)
+                )
+                for key in acc:
+                    results[name + f'_{key}'] = acc[key]
+
+            results_keys = sorted(results.keys())
+            printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
+            misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
+            misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
+
+    elif inf_args.mode == "soup":
+        for folder in good_folders:
+            print(f"Inference at folder: {folder}")
+            save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
+            train_args = NameSpace(save_dict["args"])
+            random.seed(train_args.seed)
+            np.random.seed(train_args.seed)
+            torch.manual_seed(train_args.seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+
+            # load model
+            hparams = save_dict["model_hparams"]
+            algorithm = algorithm_class(
+                dataset.input_shape, dataset.num_classes,
+                len(dataset) - len(inf_args.test_envs), hparams
+            )
+            algorithm._init_from_save_dict(save_dict)
+            algorithm.to(device)
+
+            eval_loaders = [
+                FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+                for split in splits
+            ]
+
+            results = {}
+            evals = zip(names, eval_loaders)
+            for i, (name, loader) in enumerate(evals):
+                print(f"Inference at {name}")
+                acc = algorithm.accuracy(
+                    loader,
+                    device,
+                    compute_trace=False,
+                    update_temperature=False,
+                    output_temperature=(i == len(names) - 1)
+                )
+                for key in acc:
+                    results[name + f'_{key}'] = acc[key]
+
+            results_keys = sorted(results.keys())
+            printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
+            misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
+            misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
 
 if __name__ == "__main__":
