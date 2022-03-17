@@ -116,11 +116,13 @@ def main():
 
     results = {}
     evals = zip(names, eval_loaders)
-    for name, loader in evals:
+    for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
         acc = algorithm.accuracy(
-            loader, device, compute_trace=False, update_temperature=False,
-            output_temperature=True
+            loader, device,
+            compute_trace=False,
+            update_temperature=False,
+            output_temperature=(i == len(evals) - 1)
         )
         for key in acc:
             results[name + f'_{key}'] = acc[key]

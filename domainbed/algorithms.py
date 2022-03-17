@@ -520,7 +520,7 @@ class ERM(Algorithm):
                     loss_T.backward()
                     optimizer.step()
             if output_temperature:
-                results["temp/" + key] = temperature.item()
+                results["temp_" + key] = temperature.item()
 
         self.train()
         return results
@@ -904,12 +904,12 @@ class Ensembling(Algorithm):
                 logits_swa = self.swas[num_member].network_swa(x)
                 batch_logits_swa.append(logits_swa)
                 results["swa" + str(num_member)] = logits_swa
-            results["soup"] = self.soup.network_soup(x)
-            results["soupswa"] = self.soupswa.network_soup(x)
-
         results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
         if self.hparams['swa']:
             results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
+        results["soup"] = self.soup.network_soup(x)
+        results["soupswa"] = self.soupswa.network_soup(x)
+        import pdb; pdb.set_trace()
 
         return results
 
