@@ -10,6 +10,10 @@ from domainbed import datasets, algorithms
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
+class NameSpace(object):
+    def __init__(self, adict):
+        self.__dict__.update(adict)
+
 def main():
     parser = argparse.ArgumentParser(description='Domain generalization')
     parser.add_argument('--algorithm', type=str)
@@ -27,7 +31,7 @@ def main():
     # load model
     assert os.path.exists(inf_args.output_dir)
     save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
-    train_args = save_dict["args"]
+    train_args = NameSpace(save_dict["args"])
 
     assert train_args.dataset == inf_args.dataset
     assert train_args.algorithm == inf_args.algorithm
