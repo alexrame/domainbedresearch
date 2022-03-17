@@ -74,5 +74,5 @@ class Ensembling(algorithms.Ensembling):
         self.soup.update()
         if self.hparams['swa']:
             for member in range(self.hparams["num_members"]):
-                self.swa[member].load_state_dict(save_dict[f"swa{member}_dict"])
+                self.swas[member].load_state_dict(save_dict[f"swa{member}_dict"])
             self.soupswa.update()
