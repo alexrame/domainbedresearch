@@ -209,8 +209,6 @@ class ERM(Algorithm):
     def _init_swa(self):
         if self.hparams['swa']:
             self.swa = misc.SWA(self.network, hparams=self.hparams)
-        else:
-            self.swa = None
 
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
@@ -243,8 +241,11 @@ class ERM(Algorithm):
     #     else:
     #         results = {"net": feats_network}
     #     return results
+
     def to(self, device):
         Algorithm.to(self, device)
+        if self.hparams['swa']:
+            self.swa.network_swa.to(device)
 
     def train(self, *args):
         Algorithm.train(self, *args)
