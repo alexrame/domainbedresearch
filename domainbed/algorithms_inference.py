@@ -75,3 +75,38 @@ class Ensembling(algorithms.Ensembling):
             for member in range(self.hparams["num_members"]):
                 self.swas[member].network_swa.load_state_dict(save_dict[f"swa{member}_dict"])
             self.soupswa = misc.Soup(networks=[swa.network_swa for swa in self.swas])
+
+
+class Soup(algorithms.Ensembling):
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        """
+        """
+        algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
+
+        featurizers = [
+            networks.Featurizer(input_shape, self.hparams) for _ in range(self.hparams["num_members"])
+        ]
+        classifiers = [
+            networks.Classifier(
+                featurizers[0].n_outputs,
+                self.num_classes,
+                self.hparams["nonlinear_classifier"],
+                hparams=self.hparams,
+            ) for _ in range(self.hparams["num_members"])
+        ]
+        self.networks = nn.ModuleList(
+            [
+                nn.Sequential(featurizers[member], classifiers[member])
+                for member in range(self.hparams["num_members"])
+            ]
+        )
+        self._init_swa()
+        self._init_temperature(init_optimizers=False)
+
+    def _init_from_save_dict(self, save_dict):
+        self.load_state_dict(save_dict["model_dict"])
+        self.soup = misc.Soup(self.networks)
+        if self.hparams['swa']:
+            for member in range(self.hparams["num_members"]):
+                self.swas[member].network_swa.load_state_dict(save_dict[f"swa{member}_dict"])
+            self.soupswa = misc.Soup(networks=[swa.network_swa for swa in self.swas])

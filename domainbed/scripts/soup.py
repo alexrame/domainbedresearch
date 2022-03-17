@@ -39,8 +39,10 @@ def create_splits(inf_args, dataset):
 
 
 class NameSpace(object):
+
     def __init__(self, adict):
         self.__dict__.update(adict)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Domain generalization')
@@ -57,8 +59,6 @@ def main():
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
     inf_args = parser.parse_args()
-
-
 
     if inf_args.data_dir == "default":
         if "DATA" in os.environ:
@@ -77,60 +77,75 @@ def main():
 
     algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
 
-
     # load args
-    save_dict = torch.load(os.path.join(inf_args.output_dir, "model.pkl"))
 
-    train_args = NameSpace(save_dict["args"])
+    folders = [path for path in os.listdir(inf_args.output_dir) if not os.path.isfile(path)]
 
-    assert train_args.dataset == inf_args.dataset
-    assert train_args.algorithm == inf_args.algorithm
-    assert train_args.test_envs == inf_args.test_envs
-    assert train_args.trial_seed == inf_args.trial_seed
-    assert train_args.holdout_fraction == inf_args.holdout_fraction
+    good_folders = []
+    for folder in folders:
+        full_folder = os.path.join(inf_args.output_dir, folder)
+        model_path = os.path.join(full_folder, "model.pkl")
+        if not os.path.exists(model_path):
+            print(f"{model_path} does not exist")
+            continue
+        save_dict = torch.load(model_path)
+        train_args = NameSpace(save_dict["args"])
 
-    random.seed(train_args.seed)
-    np.random.seed(train_args.seed)
-    torch.manual_seed(train_args.seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-    assert os.path.exists(inf_args.output_dir)
+        if (
+            train_args.dataset != inf_args.dataset or train_args.algorithm != inf_args.algorithm or
+            train_args.test_envs != inf_args.test_envs or
+            train_args.trial_seed != inf_args.trial_seed or
+            train_args.holdout_fraction != inf_args.holdout_fraction
+        ):
+            print(f"{folder} not good config")
+            continue
 
-    # load model
-    hparams = save_dict["model_hparams"]
-    algorithm = algorithm_class(
-        dataset.input_shape, dataset.num_classes,
-        len(dataset) - len(inf_args.test_envs), hparams
-    )
-    algorithm._init_from_save_dict(save_dict)
-    algorithm.to(device)
+        good_folders.append(folder)
 
-    eval_loaders = [
-        FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
-        for split in splits
-    ]
+    for folder in good_folders:
+        print(f"Inference at folder: {folder}")
+        random.seed(train_args.seed)
+        np.random.seed(train_args.seed)
+        torch.manual_seed(train_args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        if torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
 
-    results = {}
-    evals = zip(names, eval_loaders)
-    for i, (name, loader) in enumerate(evals):
-        print(f"Inference at {name}")
-        acc = algorithm.accuracy(
-            loader, device,
-            compute_trace=False,
-            update_temperature=False,
-            output_temperature=(i == len(names) - 1)
+        # load model
+        hparams = save_dict["model_hparams"]
+        algorithm = algorithm_class(
+            dataset.input_shape, dataset.num_classes,
+            len(dataset) - len(inf_args.test_envs), hparams
         )
-        for key in acc:
-            results[name + f'_{key}'] = acc[key]
+        algorithm._init_from_save_dict(save_dict)
+        algorithm.to(device)
 
-    results_keys = sorted(results.keys())
-    printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
-    misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
-    misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
+        eval_loaders = [
+            FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+            for split in splits
+        ]
+
+        results = {}
+        evals = zip(names, eval_loaders)
+        for i, (name, loader) in enumerate(evals):
+            print(f"Inference at {name}")
+            acc = algorithm.accuracy(
+                loader,
+                device,
+                compute_trace=False,
+                update_temperature=False,
+                output_temperature=(i == len(names) - 1)
+            )
+            for key in acc:
+                results[name + f'_{key}'] = acc[key]
+
+        results_keys = sorted(results.keys())
+        printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
+        misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
+        misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
 
 if __name__ == "__main__":
