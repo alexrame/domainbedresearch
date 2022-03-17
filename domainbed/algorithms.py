@@ -498,27 +498,26 @@ class ERM(Algorithm):
                 )
                 results[f"Flatness/net0trace"] = np.mean(hessian_comp_net.trace())
 
-        if update_temperature:
-            for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
-                if key not in dict_stats:
-                    continue
-                temperature, optimizer = self.get_temperature(key, return_optim=True)
-                if temperature is None:
-                    continue
-                if update_temperature:
-                    for _ in range(20):
-                        logits = dict_stats[key]["logits"].to(device)
-                        temperature = temperature.to(device)
-                        assert temperature.requires_grad
+        for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
+            if key not in dict_stats:
+                continue
+            temperature, optimizer = self.get_temperature(key, return_optim=True)
+            if temperature is None:
+                continue
+            if update_temperature:
+                for _ in range(20):
+                    logits = dict_stats[key]["logits"].to(device)
+                    temperature = temperature.to(device)
+                    assert temperature.requires_grad
 
-                        loss_T = F.cross_entropy(
-                            misc.apply_temperature_on_logits(logits, temperature), targets_torch
-                        )
-                        optimizer.zero_grad()
-                        loss_T.backward()
-                        optimizer.step()
-                if output_temperature:
-                    results["temp/" + key] = temperature.item()
+                    loss_T = F.cross_entropy(
+                        misc.apply_temperature_on_logits(logits, temperature), targets_torch
+                    )
+                    optimizer.zero_grad()
+                    loss_T.backward()
+                    optimizer.step()
+            if output_temperature:
+                results["temp/" + key] = temperature.item()
 
         self.train()
         return results

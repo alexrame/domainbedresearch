@@ -13,22 +13,27 @@ from domainbed.lib.fast_data_loader import FastDataLoader
 
 
 def create_splits(inf_args, dataset):
-    in_splits = []
-    out_splits = []
+    splits = []
+    names = []
     for env_i, env in enumerate(dataset):
-        if inf_args.inf_env == "test" and env_i not in inf_args.test_envs:
-            continue
-        if inf_args.inf_env == "train" and env_i in inf_args.test_envs:
+        doit = False
+        doit = doit or ("test" in inf_args.inf_env and env_i in inf_args.test_envs)
+        doit = doit or ("train" in inf_args.inf_env and env_i not in inf_args.test_envs)
+        if not doit:
             continue
 
-        out, in_ = misc.split_dataset(
+        out_, in_ = misc.split_dataset(
             env, int(len(env) * inf_args.holdout_fraction),
             misc.seed_hash(inf_args.trial_seed, env_i)
         )
+        if "in" in inf_args.inf_env:
+            splits.append(in_)
+            names.append('env{}_in'.format(env_i))
 
-        in_splits.append((in_))
-        out_splits.append((out))
-    return in_splits, out_splits
+        if "out" in inf_args.inf_env:
+            splits.append(out_)
+            names.append('env{}_out'.format(env_i))
+    return splits, names
 
 
 class NameSpace(object):
@@ -40,7 +45,7 @@ def main():
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--test_envs', type=int, nargs='+')
-    parser.add_argument('--inf_env', type=str, default="test")
+    parser.add_argument('--inf_env', type=str, default="testin")
     parser.add_argument(
         '--trial_seed',
         type=int,
@@ -66,7 +71,7 @@ def main():
         )
     else:
         raise NotImplementedError
-    in_splits, out_splits = create_splits(inf_args, dataset)
+    splits, names = create_splits(inf_args, dataset)
 
     algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
 
@@ -103,14 +108,12 @@ def main():
     algorithm.to(device)
 
     eval_loaders = [
-        FastDataLoader(dataset=env, batch_size=64, num_workers=dataset.N_WORKERS)
-        for env in (in_splits + out_splits)
+        FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+        for split in splits
     ]
-    eval_loader_names = ['env{}_in'.format(i) for i in range(len(in_splits))]
-    eval_loader_names += ['env{}_out'.format(i) for i in range(len(out_splits))]
-    results = {}
 
-    evals = zip(eval_loader_names, eval_loaders)
+    results = {}
+    evals = zip(names, eval_loaders)
     for name, loader in evals:
         print(f"Inference at {name}")
         acc = algorithm.accuracy(
@@ -122,7 +125,7 @@ def main():
 
     results_keys = sorted(results.keys())
     printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
-    misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
+    misc.print_row(printed_keys, colwidth=12, latex=True)
     misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
 
 

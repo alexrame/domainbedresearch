@@ -74,5 +74,4 @@ class Ensembling(algorithms.Ensembling):
         if self.hparams['swa']:
             for member in range(self.hparams["num_members"]):
                 self.swas[member].network_swa.load_state_dict(save_dict[f"swa{member}_dict"])
-            self.soupswa = misc.Soup(
-                networks=[swa.network_swa for swa in self.swas])
+            self.soupswa = misc.Soup(networks=[swa.network_swa for swa in self.swas])
