@@ -158,7 +158,7 @@ def main():
             dataset.input_shape, dataset.num_classes,
             len(dataset) - len(inf_args.test_envs),
         )
-        for folder in good_folders:
+        for folder in good_folders[:2]:
             print(f"Inference at folder: {folder}")
             save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
