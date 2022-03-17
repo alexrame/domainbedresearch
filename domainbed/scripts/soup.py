@@ -158,8 +158,8 @@ def main():
             dataset.input_shape, dataset.num_classes,
             len(dataset) - len(inf_args.test_envs),
         )
-        for folder in good_folders[:2]:
-            print(f"Inference at folder: {folder}")
+        for folder in good_folders:
+            print(f"Ingredient from folder: {folder}")
             save_dict = torch.load(os.path.join(inf_args.output_dir, folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
 
@@ -176,7 +176,6 @@ def main():
             del algorithm
 
         ens_algorithm.to(device)
-
         random.seed(train_args.seed)
         np.random.seed(train_args.seed)
         torch.manual_seed(train_args.seed)
