@@ -687,14 +687,11 @@ class Ensembling(Algorithm):
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         """
         """
-        super().__init__(input_shape, num_classes, num_domains, hparams)
-        self.hparams = hparams
-        self.num_members = self.hparams["num_members"]
-        self.num_classes = num_classes
+        Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
         self.loss = nn.CrossEntropyLoss(reduction="mean")
 
         featurizers = [
-            networks.Featurizer(input_shape, self.hparams) for _ in range(self.num_members)
+            networks.Featurizer(input_shape, self.hparams) for _ in range(self.hparams["num_members"])
         ]
         classifiers = [
             networks.Classifier(
@@ -702,12 +699,12 @@ class Ensembling(Algorithm):
                 self.num_classes,
                 self.hparams["nonlinear_classifier"],
                 hparams=self.hparams,
-            ) for _ in range(self.num_members)
+            ) for _ in range(self.hparams["num_members"])
         ]
         self.networks = nn.ModuleList(
             [
                 nn.Sequential(featurizers[member], classifiers[member])
-                for member in range(self.num_members)
+                for member in range(self.hparams["num_members"])
             ]
         )
         self._init_network()
@@ -722,7 +719,7 @@ class Ensembling(Algorithm):
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
         if self.hparams["shared_init"] == 1 or os.environ.get("CREATE_INIT"):
             network_0 = self.networks[0]
-            for i in range(1, self.num_members):
+            for i in range(1, self.hparams["num_members"]):
                 network_i = self.networks[i]
                 for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
                     param_i.data = param_0.data
@@ -732,13 +729,13 @@ class Ensembling(Algorithm):
         else:
             assert os.path.exists(path)
             weights = torch.load(path)
-            for i in range(0, self.num_members):
+            for i in range(0, self.hparams["num_members"]):
                 self.networks[i].load_state_dict(weights)
 
     def _init_optimizer(self):
-        lrs = [self.hparams["lr"] for _ in range(self.num_members)]
+        lrs = [self.hparams["lr"] for _ in range(self.hparams["num_members"])]
         if self.hparams.get("lr_ratio", 0) != 0:
-            for member in range(self.num_members):
+            for member in range(self.hparams["num_members"]):
                 lrs[member] /= float(self.hparams.get("lr_ratio"))**member
         print("Ensembling lrs: ", lrs)
         self.optimizers = [
@@ -746,7 +743,7 @@ class Ensembling(Algorithm):
                 list(self.networks[member].parameters()),
                 lr=lrs[member],
                 weight_decay=self.hparams["weight_decay"],
-            ) for member in range(self.num_members)
+            ) for member in range(self.hparams["num_members"])
         ]
 
     def _init_swa(self):
@@ -754,7 +751,7 @@ class Ensembling(Algorithm):
             assert self.hparams['swa'] == 1
             self.swas = [
                 misc.SWA(self.networks[member], hparams=self.hparams)
-                for member in range(self.num_members)
+                for member in range(self.hparams["num_members"])
             ]
             self.soupswa = misc.Soup(
                 networks=[swa.network_swa for swa in self.swas])
@@ -771,7 +768,7 @@ class Ensembling(Algorithm):
             nlls_per_member = self._update_full(minibatches)
 
         out = {"nll": torch.stack(nlls_per_member, dim=0).mean()}
-        for key in range(self.num_members):
+        for key in range(self.hparams["num_members"]):
             out[f"nll_{key}"] = nlls_per_member[key]
 
         self.soup.update()
@@ -787,7 +784,7 @@ class Ensembling(Algorithm):
         all_classes = torch.cat([y for x, y in minibatches])
         nlls_per_member = []  # (num_classifiers, num_minibatches)
 
-        for member in range(self.num_members):
+        for member in range(self.hparams["num_members"]):
             logits_member = self.networks[member](all_x)
             nll_member = F.cross_entropy(logits_member, all_classes, reduction="mean")
             nlls_per_member.append(nll_member)
@@ -800,16 +797,16 @@ class Ensembling(Algorithm):
         return nlls_per_member
 
     def _update_partial(self, minibatches, step=2):
-        num_domains_per_member = self.num_members // len(minibatches)
+        num_domains_per_member = self.hparams["num_members"] // len(minibatches)
         index_per_member = [
             [num_domains_per_member * i + j
              for j in range(num_domains_per_member)]
-            for i in range(self.num_members)
+            for i in range(self.hparams["num_members"])
         ]
 
         nlls_per_member = []  # (num_members, num_domains_per_member)
 
-        for member in range(self.num_members):
+        for member in range(self.hparams["num_members"]):
             x_for_member = torch.cat(
                 [minibatches[index][0] for index in index_per_member[member]] +
                 [minibatches[index][0][member::step] for index in range(len(minibatches)) if index not in index_per_member[member]]
@@ -835,27 +832,27 @@ class Ensembling(Algorithm):
         return nlls_per_member
 
     def _update_specialized(self, minibatches):
-        assert self.num_members % len(minibatches) == 0
-        num_domains_per_member = self.num_members // len(minibatches)
+        assert self.hparams["num_members"] % len(minibatches) == 0
+        num_domains_per_member = self.hparams["num_members"] // len(minibatches)
         index_per_member = [
             [num_domains_per_member * i + j
              for j in range(num_domains_per_member)]
-            for i in range(self.num_members)
+            for i in range(self.hparams["num_members"])
         ]
         x_per_member = [
             torch.cat([minibatches[index][0]
                        for index in index_per_member[i]])
-            for i in range(self.num_members)
+            for i in range(self.hparams["num_members"])
         ]
         classes_per_member = [
             torch.cat([minibatches[index][1]
                        for index in index_per_member[i]])
-            for i in range(self.num_members)
+            for i in range(self.hparams["num_members"])
         ]
 
         nlls_per_member = []  # (num_members, num_domains_per_member)
 
-        for member in range(self.num_members):
+        for member in range(self.hparams["num_members"]):
             logits_member = self.networks[member](x_per_member[member])
             nll_member = F.cross_entropy(
                 logits_member, classes_per_member[member], reduction="mean"
@@ -898,7 +895,7 @@ class Ensembling(Algorithm):
         batch_logits = []
         batch_logits_swa = []
 
-        for num_member in range(self.num_members):
+        for num_member in range(self.hparams["num_members"]):
             logits = self.networks[num_member](x)
             batch_logits.append(logits)
             results["net" + str(num_member)] = logits

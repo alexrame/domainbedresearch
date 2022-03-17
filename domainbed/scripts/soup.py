@@ -12,16 +12,16 @@ from domainbed.lib.fast_data_loader import FastDataLoader
 
 def main():
     parser = argparse.ArgumentParser(description='Domain generalization')
-    parser.add_argument('--output_dir', type=str)
-    parser.add_argument('--data_dir', type=str, default="default")
-    parser.add_argument('--dataset', type=str)
     parser.add_argument('--algorithm', type=str)
+    parser.add_argument('--dataset', type=str)
     parser.add_argument('--test_envs', type=int, nargs='+')
     parser.add_argument(
         '--trial_seed',
         type=int,
         help='Trial number (used for seeding split_dataset and random_hparams).'
     )
+    parser.add_argument('--output_dir', type=str)
+    parser.add_argument('--data_dir', type=str, default="default")
     inf_args = parser.parse_args()
 
     # load model
@@ -85,51 +85,32 @@ def main():
                 in_, int(len(in_) * train_args.uda_holdout_fraction),
                 misc.seed_hash(train_args.trial_seed, env_i)
             )
-            # uda, out = misc.split_dataset(out, int(len(out)*args.uda_holdout_fraction),
-            #                               misc.seed_hash(args.trial_seed, env_i))
 
-        in_weights, out_weights, uda_weights = None, None, None
-        in_splits.append((in_, in_weights))
-        out_splits.append((out, out_weights))
+        in_splits.append((in_))
+        out_splits.append((out))
         if len(uda):
-            uda_splits.append((uda, uda_weights))
+            uda_splits.append((uda))
 
     if train_args.task == "domain_adaptation" and len(uda_splits) == 0:
         raise ValueError("Not enough unlabeled samples for domain adaptation.")
 
-    print("Train Envs:", [i for (i, _) in enumerate(in_splits) if i not in inf_args.test_envs])
+    print("Train Envs:", [env for env in enumerate(in_splits) if env not in inf_args.test_envs])
 
     eval_loaders = [
         FastDataLoader(dataset=env, batch_size=64, num_workers=dataset.N_WORKERS)
-        for env, _ in (in_splits + out_splits + uda_splits)
+        for env in (in_splits + out_splits + uda_splits)
     ]
-    eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
     eval_loader_names = ['env{}_in'.format(i) for i in range(len(in_splits))]
     eval_loader_names += ['env{}_out'.format(i) for i in range(len(out_splits))]
     eval_loader_names += ['env{}_uda'.format(i) for i in range(len(uda_splits))]
 
     results = {}
 
-    evals = zip(eval_loader_names, eval_loaders, eval_weights)
-    for name, loader, weights in evals:
-        if hasattr(algorithm, "accuracy"):
-            if os.environ.get("HESSIAN") == "1":
-                traced_envs = [inf_args.test_envs[0], inf_args.test_envs[0] +
-                                1] if inf_args.test_envs[0] != 3 else [1, 3]
-                compute_trace = any([("env" + str(env)) in name for env in traced_envs])
-                # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
-            else:
-                compute_trace = False
-            update_temperature = name in [
-                'env{}_out'.format(i)
-                for i in range(len(out_splits))
-                if i not in inf_args.test_envs
-            ]
-            acc = algorithm.accuracy(
-                loader, device, compute_trace, update_temperature=update_temperature
-            )
-        else:
-            acc = misc.accuracy(algorithm, loader, weights, device)
+    evals = zip(eval_loader_names, eval_loaders)
+    for name, loader in evals:
+        acc = algorithm.accuracy(
+            loader, device, compute_trace=False, update_temperature=False
+        )
         for key in acc:
             results[name + f'_{key}'] = acc[key]
 
@@ -139,8 +120,6 @@ def main():
         misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12, latex=True)
         last_results_keys = results_keys
     misc.print_row([results[key] for key in printed_keys], colwidth=12, latex=True)
-
-
 
 
 if __name__ == "__main__":
