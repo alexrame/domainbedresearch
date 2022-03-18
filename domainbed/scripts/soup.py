@@ -91,6 +91,7 @@ def _get_args():
 
     return inf_args
 
+
 def create_splits(inf_args, dataset, inf_env, filter):
     splits = []
     names = []
@@ -119,6 +120,10 @@ def create_splits(inf_args, dataset, inf_env, filter):
 
     return splits, names
 
+class NameSpace(object):
+
+    def __init__(self, adict):
+        self.__dict__.update(adict)
 
 def get_testiid_score(results, keyacc, test_envs):
     if not results:
@@ -133,13 +138,6 @@ def get_testiid_score(results, keyacc, test_envs):
         else:
             break
     return np.mean([results[key] for key in val_env_keys])
-
-
-class NameSpace(object):
-
-    def __init__(self, adict):
-        self.__dict__.update(adict)
-
 
 def find_folders(inf_args):
     folders = [
