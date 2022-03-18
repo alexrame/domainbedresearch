@@ -107,6 +107,7 @@ class Soup(algorithms.Ensembling):
         self.swas = []
         self.soup = None
         self.soupswa = None
+        self._init_memory()
 
     def to(self, device):
         algorithms.Algorithm.to(self, device)
@@ -126,24 +127,39 @@ class Soup(algorithms.Ensembling):
             swa.train(*args)
         self.soupswa.network_soup.train(*args)
 
+    def _init_memory(self):
+        self.memory = {"net": 0, "swa": 0}
+
     def add_new_algorithm(self, algorithm):
+        self._init_memory()
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
+            self.memory["net"] += 1
         else:
             assert isinstance(algorithm, Ensembling)
             for member, network in enumerate(algorithm.networks):
                 if int(os.environ.get('NETMEMBER', member)) == member:
                     self.networks.append(copy.deepcopy(network))
+                    self.memory["net"] += 1
 
         if algorithm.swa is not None:
+            self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
         if algorithm.swas is not None:
             for swa in algorithm.swas:
                 if int(os.environ.get('SWAMEMBER', member)) == member:
                     self.swas.append(copy.deepcopy(swa.network_swa))
+                    self.memory["swa"] += 1
 
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)
+
+    def delete_last(self):
+        self.networks = self.networks[:-self.memory["net"]]
+        self.swas = self.swas[:-self.memory["swa"]]
+        self.soup = misc.Soup(self.networks)
+        self.soupswa = misc.Soup(self.swas)
+        self._init_memory()
 
     def num_members(self):
         return len(self.networks)
