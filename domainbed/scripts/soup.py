@@ -201,8 +201,7 @@ def find_folders(inf_args, verbose=False):
             criteriontopk=inf_args.criteriontopk,
             test_envs=inf_args.test_envs
         )
-        import pdb; pdb.set_trace()
-        cluster = "_".join([train_args.__dict__[cluster] for cluster in inf_args.cluster])
+        cluster = "|".join([str(train_args.__dict__[cluster]) for cluster in inf_args.cluster])
         if cluster not in found_folders_per_cluster:
             found_folders_per_cluster[cluster] = {}
         found_folders_per_cluster[cluster][folder] = score_folder
