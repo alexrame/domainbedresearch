@@ -241,6 +241,8 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
         misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
 
         for key in val_results:
+            if not key.startswith("Accuracies"):
+                continue
             if val_results[key] > best_results.get(key, ([], 0.))[1]:
                 if key == f"Accuracies/acc_soup":
                     good_nums.append(num)
@@ -251,6 +253,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
             print(f"Skip num {num}")
         else:
             print(f"Add num {num}")
+        print("")
 
     print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
     print(best_results)
@@ -305,7 +308,6 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
         )
         for key in acc:
             results[name + "_" + key.split("/")[-1]] = acc[key]
-
 
     print(f"OOD results for {inf_args} with {len(good_folders)}")
     results_keys = sorted(results.keys())
