@@ -166,7 +166,7 @@ def find_folders(inf_args):
             print(f"bad trial seed: {name_folder}")
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
-            print(f"warning: different holdout fraction: {name_folder}")
+            print(f"Warning different holdout fraction: {name_folder} but keep")
 
         print(f"found: {name_folder}")
         proxy_perf = get_testiid_score(
@@ -237,12 +237,12 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
 
         print(f"Val results for {inf_args} at {num}")
         results_keys = sorted(val_results.keys())
-        misc.print_row(results_keys, colwidth=15, latex=True)
+        misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
         misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
 
         for key in val_results:
             if val_results[key] > best_results.get(key, ([], 0.))[1]:
-                if key == f"Accuracies/acc_{inf_args.keyacc}":
+                if key == f"Accuracies/acc_soup":
                     good_nums.append(num)
                 best_results[key] = (good_nums[:], val_results[key])
 
