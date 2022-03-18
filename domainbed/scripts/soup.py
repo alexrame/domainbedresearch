@@ -21,6 +21,76 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
 
+
+def main():
+    inf_args = _get_args()
+    print(f"Begin soup for {inf_args}")
+
+    if inf_args.dataset in vars(datasets):
+        dataset_class = vars(datasets)[inf_args.dataset]
+        dataset = dataset_class(
+            inf_args.data_dir, inf_args.test_envs, hparams={"data_augmentation": True}
+        )
+    else:
+        raise NotImplementedError
+
+    # load args
+    found_folders = find_folders(inf_args)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    if inf_args.mode == "greedy":
+        val_splits, val_names = create_splits(
+            inf_args,
+            dataset,
+            inf_env="train" if inf_args.selection == "train" else "test",
+            filter="out"
+        )
+        good_nums = get_greedy_folders(
+            found_folders, dataset, inf_args, val_names, val_splits, device
+        )
+        good_folders = [found_folders[num] for num in good_nums]
+    elif inf_args.topk != 0:
+        print(f"Select {inf_args.topk} checkpoints out of {len(good_folders)}")
+        good_folders = found_folders[:inf_args.topk]
+    else:
+        good_folders = found_folders[:]
+
+    ood_splits, ood_names = create_splits(
+        inf_args, dataset, inf_env="test", filter="full" if inf_args.selection == "train" else "in"
+    )
+    get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device)
+
+
+def _get_args():
+    parser = argparse.ArgumentParser(description='Domain generalization')
+    parser.add_argument('--algorithm', type=str)
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--test_envs', type=int, nargs='+')
+    parser.add_argument(
+        '--trial_seed',
+        type=int,
+        default=-1,
+        help='Trial number (used for seeding split_dataset and random_hparams).'
+    )
+    parser.add_argument('--holdout_fraction', type=float, default=0.2)
+    parser.add_argument('--output_dir', type=str)
+    parser.add_argument('--data_dir', type=str, default="default")
+    parser.add_argument('--mode', type=str, default="1by1")
+
+    # select which folders
+    parser.add_argument('--keyacc', type=str, default="net")
+    parser.add_argument('--topk', type=int, default=0)
+    parser.add_argument('--selection', type=str, default="train")  # or "oracle"
+
+    inf_args = parser.parse_args()
+    if inf_args.data_dir == "default":
+        if "DATA" in os.environ:
+            inf_args.data_dir = os.path.join(os.environ["DATA"], "data/domainbed/")
+        else:
+            inf_args.data_dir = "domainbed/data"
+
+    return inf_args
+
 def create_splits(inf_args, dataset, inf_env, filter):
     splits = []
     names = []
@@ -32,7 +102,7 @@ def create_splits(inf_args, dataset, inf_env, filter):
 
         if filter == "full":
             splits.append(env)
-            names.append('env{}'.format(env_i))
+            names.append('e{}'.format(env_i))
         else:
             out_, in_ = misc.split_dataset(
                 env, int(len(env) * inf_args.holdout_fraction),
@@ -40,10 +110,10 @@ def create_splits(inf_args, dataset, inf_env, filter):
             )
             if filter == "in":
                 splits.append(in_)
-                names.append('env{}_in'.format(env_i))
+                names.append('e{}_in'.format(env_i))
             elif filter == "out":
                 splits.append(out_)
-                names.append('env{}_out'.format(env_i))
+                names.append('e{}_out'.format(env_i))
             else:
                 raise ValueError(filter)
 
@@ -134,11 +204,11 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
             hparams=save_dict["model_hparams"]
         )
         algorithm._init_from_save_dict(save_dict)
+        ens_algorithm.to("cpu")
         ens_algorithm.add_new_algorithm(algorithm)
-
         del algorithm
-
         ens_algorithm.to(device)
+
         random.seed(train_args.seed)
         np.random.seed(train_args.seed)
         torch.manual_seed(train_args.seed)
@@ -151,7 +221,6 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
         ]
         val_results = {}
         val_evals = zip(val_names, val_loaders)
-        num_evals = len(val_names)
         for i, (name, loader) in enumerate(val_evals):
             print(f"Inference at {name} at num {num}")
             results_of_one_eval = ens_algorithm.accuracy(
@@ -162,7 +231,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
                 output_temperature=False
             )
             for key in results_of_one_eval:
-                val_results[key] = val_results.get(key, 0) + results_of_one_eval[key] / num_evals
+                val_results[key] = val_results.get(key, 0) + results_of_one_eval[key] / len(val_names)
 
         for key in val_results:
             if val_results[key] > best_results.get(key, ([], 0.))[1]:
@@ -170,81 +239,16 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
                     good_nums.append(num)
                 best_results[key] = (good_nums[:], val_results[key])
 
+        print(f"OOD results for {inf_args} at {num}")
         if num not in good_nums:
             ens_algorithm.delete_last()
         else:
-            print("Num {num} was added")
+            print(f"Num {num} was added")
 
-    print(f"Best OOD results for {inf_args} with {num+1}")
+    print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
     print(best_results)
     return good_nums
 
-
-def _get_args():
-    parser = argparse.ArgumentParser(description='Domain generalization')
-    parser.add_argument('--algorithm', type=str)
-    parser.add_argument('--dataset', type=str)
-    parser.add_argument('--test_envs', type=int, nargs='+')
-    parser.add_argument(
-        '--trial_seed',
-        type=int,
-        default=-1,
-        help='Trial number (used for seeding split_dataset and random_hparams).'
-    )
-    parser.add_argument('--holdout_fraction', type=float, default=0.2)
-    parser.add_argument('--output_dir', type=str)
-    parser.add_argument('--data_dir', type=str, default="default")
-    parser.add_argument('--mode', type=str, default="1by1")
-
-    # select which folders
-    parser.add_argument('--keyacc', type=str, default="net")
-    parser.add_argument('--topk', type=int, default=0)
-    parser.add_argument('--selection', type=str, default="train")  # or "oracle"
-    return parser.parse_args()
-
-
-def main():
-    inf_args = _get_args()
-    print(f"Begin soup for {inf_args}")
-    if inf_args.data_dir == "default":
-        if "DATA" in os.environ:
-            inf_args.data_dir = os.path.join(os.environ["DATA"], "data/domainbed/")
-        else:
-            inf_args.data_dir = "domainbed/data"
-
-    if inf_args.dataset in vars(datasets):
-        dataset_class = vars(datasets)[inf_args.dataset]
-        dataset = dataset_class(
-            inf_args.data_dir, inf_args.test_envs, hparams={"data_augmentation": True}
-        )
-    else:
-        raise NotImplementedError
-
-    # load args
-    found_folders = find_folders(inf_args)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    if inf_args.mode == "greedy":
-        val_splits, val_names = create_splits(
-            inf_args,
-            dataset,
-            inf_env="train" if inf_args.selection == "train" else "test",
-            filter="out"
-        )
-        good_nums = get_greedy_folders(
-            found_folders, dataset, inf_args, val_names, val_splits, device
-        )
-        good_folders = [found_folders[num] for num in good_nums]
-    elif inf_args.topk != 0:
-        print(f"Select {inf_args.topk} checkpoints out of {len(good_folders)}")
-        good_folders = found_folders[:inf_args.topk]
-    else:
-        good_folders = found_folders[:]
-
-    ood_splits, ood_names = create_splits(
-        inf_args, dataset, inf_env="test", filter="full" if inf_args.selection == "train" else "in"
-    )
-    get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device)
 
 
 def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device):
@@ -299,6 +303,7 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
     print(f"OOD results for {inf_args} with {len(good_folders)}")
     misc.print_row(results_keys, colwidth=15, latex=True)
     misc.print_row([results[key] for key in results_keys], colwidth=15, latex=True)
+
 
 
 if __name__ == "__main__":
