@@ -40,8 +40,11 @@ class ERM(algorithms.ERM):
     def _init_from_save_dict(self, save_dict):
         self.load_state_dict(save_dict["model_dict"])
         if self.hparams['swa']:
-            self.swa.network_swa.load_state_dict(save_dict["swa_dict"])
-
+            if self.hparams['swa'] == 1:
+                self.swa.network_swa.load_state_dict(save_dict["swa_dict"])
+            else:
+                for i in range(self.hparams['swa']):
+                    self.swas[i].network_swa.load_state_dict(save_dict[f"swa{i}_dict"])
 
 class Ensembling(algorithms.Ensembling):
 
@@ -113,14 +116,18 @@ class Soup(algorithms.Ensembling):
     def add_new_algorithm(self, algorithm):
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
-            self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
         else:
             assert isinstance(algorithm, Ensembling)
-            for member in range(algorithm.hparams["num_members"]):
-                if member != 0:
-                    continue
-                self.networks.append(copy.deepcopy(algorithm.networks[member]))
-                self.swas.append(copy.deepcopy(algorithm.swas[member].network_swa))
+            for member, network in enumerate(algorithm.networks):
+                if int(os.environ.get('NETMEMBER', member)) == member:
+                    self.networks.append(copy.deepcopy(network))
+
+        if algorithm.swa is not None:
+            self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
+        if algorithm.swas is not None:
+            for swa in algorithm.swas:
+                if int(os.environ.get('SWAMEMBER', member)) == member:
+                    self.swas.append(copy.deepcopy(swa.network_swa))
 
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)

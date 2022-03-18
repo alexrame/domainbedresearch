@@ -128,7 +128,8 @@ def main():
             algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
-                len(dataset) - len(inf_args.test_envs), hparams
+                len(dataset) - len(inf_args.test_envs),
+                hparams
             )
             algorithm._init_from_save_dict(save_dict)
             algorithm.to(device)
@@ -173,7 +174,7 @@ def main():
             algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
-                len(dataset) - len(inf_args.test_envs), hparams
+                len(dataset) - len(inf_args.test_envs)
             )
             algorithm._init_from_save_dict(save_dict)
             ens_algorithm.add_new_algorithm(algorithm)
