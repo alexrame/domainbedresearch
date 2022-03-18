@@ -43,7 +43,7 @@ def get_featurizer(network):
 
 
 
-def compute_hessian(network, loader):
+def compute_hessian(network, loader, maxIter=100):
     if hessian is None:
         return 0
 
@@ -53,7 +53,7 @@ def compute_hessian(network, loader):
         dataloader=loader,
         cuda=True
     )
-    return np.mean(hessian_comp_soup.trace())
+    return np.mean(hessian_comp_soup.trace(maxIter=maxIter))
 
 
 class SWA():
