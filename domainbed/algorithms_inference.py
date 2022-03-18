@@ -193,7 +193,7 @@ class Soup(algorithms.Ensembling):
                 # Do this because memory error otherwise
                 continue
             results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
-            results["swa" + str(num_member)] = self.swas[num_member].get_featurizer()(x)
+            results["swa" + str(num_member)] = misc.get_featurizer(self.swas[num_member])(x)
         # results["soup"] = self.soup.get_featurizer()(x)
         # results["soupswa"] = self.soupswa.get_featurizer()(x)
         return results
