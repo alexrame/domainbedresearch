@@ -491,59 +491,37 @@ class ERM(Algorithm):
         results = {}
         if hessian is None:
             return {}
-        if not self.hparams.get("num_members"):
-            if self.hparams['swa']:
-                if self.swa is not None:
-                    hessian_comp_swa = hessian(
-                        self.swa.network_swa,
-                        nn.CrossEntropyLoss(reduction='mean'),
-                        dataloader=loader,
-                        cuda=True
-                    )
-                    results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
-                else:
-                    hessian_comp_swa = hessian(
-                        self.swas[0].network_swa,
-                        nn.CrossEntropyLoss(reduction='mean'),
-                        dataloader=loader,
-                        cuda=True
-                    )
-                    results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
+
+        hessian_comp_net = hessian(
+            self.network,
+            nn.CrossEntropyLoss(reduction='mean'),
+            dataloader=loader,
+            cuda=True
+        )
+        results[f"Flatness/nettrace"] = np.mean(hessian_comp_net.trace())
+        del hessian_comp_net
+
+        if self.swa is not None:
+            hessian_comp_swa = hessian(
+                self.swa.network_swa,
+                nn.CrossEntropyLoss(reduction='mean'),
+                dataloader=loader,
+                cuda=True
+            )
+            results[f"Flatness/swatrace"] = np.mean(hessian_comp_swa.trace())
             del hessian_comp_swa
-            hessian_comp_net = hessian(
-                self.network,
+
+        if self.swas is not None:
+            hessian_comp_swa0 = hessian(
+                self.swas[0].network_swa,
                 nn.CrossEntropyLoss(reduction='mean'),
                 dataloader=loader,
                 cuda=True
             )
-            results[f"Flatness/nettrace"] = np.mean(hessian_comp_net.trace())
-            del hessian_comp_net
-        else:
-            hessian_comp_soup = hessian(
-                self.soup.network_soup,
-                nn.CrossEntropyLoss(reduction='mean'),
-                dataloader=loader,
-                cuda=True
-            )
-            results[f"Flatness/souptrace"] = np.mean(hessian_comp_soup.trace())
-            del hessian_comp_soup
-            if self.hparams['swa']:
-                hessian_comp_swa = hessian(
-                    self.swas[0].network_swa,
-                    nn.CrossEntropyLoss(reduction='mean'),
-                    dataloader=loader,
-                    cuda=True
-                )
-                results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
-                del hessian_comp_swa
-            hessian_comp_net = hessian(
-                self.networks[0],
-                nn.CrossEntropyLoss(reduction='mean'),
-                dataloader=loader,
-                cuda=True
-            )
-            results[f"Flatness/net0trace"] = np.mean(hessian_comp_net.trace())
-            del hessian_comp_net
+            results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa0.trace())
+            del hessian_comp_swa0
+
+
         return results
 
 
@@ -763,6 +741,7 @@ class Ensembling(Algorithm):
 
     def _init_swa(self):
         self.swa = None
+        self.swas = None
         if self.hparams['swa']:
             assert self.hparams['swa'] == 1
             self.swas = [
@@ -771,8 +750,7 @@ class Ensembling(Algorithm):
             ]
             self.soupswa = misc.Soup(
                 networks=[swa.network_swa for swa in self.swas])
-        else:
-            self.swas = None
+
 
     def update(self, minibatches, unlabeled=None):
         if self.hparams['specialized'] == 1:
@@ -897,6 +875,39 @@ class Ensembling(Algorithm):
             self.soupswa.network_soup.train(*args)
             for swa in self.swas:
                 swa.network_swa.train(*args)
+
+    def compute_hessian(self, loader):
+        # Flatness metrics
+        results = {}
+        if hessian is None:
+            return {}
+        hessian_comp_soup = hessian(
+            self.soup.network_soup,
+            nn.CrossEntropyLoss(reduction='mean'),
+            dataloader=loader,
+            cuda=True
+        )
+        results[f"Flatness/souptrace"] = np.mean(hessian_comp_soup.trace())
+        del hessian_comp_soup
+        if self.swas is not None:
+            hessian_comp_swa = hessian(
+                self.swas[0].network_swa,
+                nn.CrossEntropyLoss(reduction='mean'),
+                dataloader=loader,
+                cuda=True
+            )
+            results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa.trace())
+            del hessian_comp_swa
+
+        hessian_comp_net = hessian(
+            self.networks[0],
+            nn.CrossEntropyLoss(reduction='mean'),
+            dataloader=loader,
+            cuda=True
+        )
+        results[f"Flatness/net0trace"] = np.mean(hessian_comp_net.trace())
+        del hessian_comp_net
+        return results
 
     def predict(self, x):
         results = {}

@@ -4,10 +4,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-try:
-    from pyhessian import hessian
-except:
-    hessian = None
 from domainbed import networks, algorithms
 from domainbed.lib import misc, diversity_metrics
 from domainbed.lib.diversity_metrics import CudaCKA
@@ -312,35 +308,4 @@ class Soup(algorithms.Ensembling):
 
         del dict_stats
 
-        return results
-
-    def compute_hessian(self, loader):
-        if hessian is None:
-            return {}
-
-        results = {}
-        hessian_comp_soup = hessian(
-            self.soup.network_soup,
-            nn.CrossEntropyLoss(reduction='mean'),
-            dataloader=loader,
-            cuda=True
-        )
-        results[f"Flatness/souptrace"] = np.mean(hessian_comp_soup.trace())
-        del hessian_comp_soup
-        hessian_comp_swa0 = hessian(
-            self.swas[0].network_swa,
-            nn.CrossEntropyLoss(reduction='mean'),
-            dataloader=loader,
-            cuda=True
-        )
-        results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa0.trace())
-        del hessian_comp_swa0
-        hessian_comp_net0 = hessian(
-            self.networks[0],
-            nn.CrossEntropyLoss(reduction='mean'),
-            dataloader=loader,
-            cuda=True
-        )
-        results[f"Flatness/net0trace"] = np.mean(hessian_comp_net0.trace())
-        del hessian_comp_net0
         return results

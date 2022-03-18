@@ -20,6 +20,11 @@ import socket
 import copy
 import random
 try:
+    from pyhessian import hessian
+except:
+    hessian = None
+
+try:
     from torchmetrics import Precision, Recall
 except:
     Precision, Recall = None, None
@@ -35,6 +40,20 @@ def is_dumpable(value):
 
 def get_featurizer(network):
     return nn.Sequential(*list(network.children())[:-1])
+
+
+
+def compute_hessian(network, loader):
+    if hessian is None:
+        return 0
+
+    hessian_comp_soup = hessian(
+        network,
+        nn.CrossEntropyLoss(reduction='mean'),
+        dataloader=loader,
+        cuda=True
+    )
+    return np.mean(hessian_comp_soup.trace())
 
 
 class SWA():

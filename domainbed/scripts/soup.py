@@ -351,8 +351,18 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             device,
             compute_trace=compute_trace
         )
+
         if compute_trace:
-            results.update(ens_algorithm.compute_hessian(loader))
+            del ens_algorithm.soupswa
+            del ens_algorithm.swas[1:]
+            del ens_algorithm.networks[1:]
+            results["Flatness/souptrace"] = misc.compute_hessian(
+                ens_algorithm.soup.network_soup, loader)
+            results[f"Flatness/swa0trace"] = misc.compute_hessian(
+                ens_algorithm.networks[0], loader)
+            results[f"Flatness/net0trace"] = misc.compute_hessian(
+                ens_algorithm.swas[0], loader)
+
         for key in results:
             results[name + "_" + key.split("/")[-1]] = results[key]
 
