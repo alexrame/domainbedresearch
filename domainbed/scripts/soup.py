@@ -353,6 +353,9 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         )
 
         if compute_trace:
+            if os.environ.get("HESSIAN"):
+                loader._length = int(os.environ.get("HESSIAN"))
+
             del ens_algorithm.soupswa
             del ens_algorithm.swas[1:]
             del ens_algorithm.networks[1:]
