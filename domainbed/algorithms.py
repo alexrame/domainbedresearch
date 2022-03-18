@@ -484,6 +484,7 @@ class ERM(Algorithm):
 
     def compute_hessian(self, loader):
         # Flatness metrics
+        self.eval()
         results = {}
         results[f"Flatness/nettrace"] = misc.compute_hessian(self.network, loader)
         if self.swa is not None:
@@ -491,6 +492,7 @@ class ERM(Algorithm):
                 self.swa.network_swa, loader)
         if self.swas is not None:
             results[f"Flatness/swa0trace"] = misc.compute_hessian(self.swas[0].network_swa, loader)
+        self.train()
         return results
 
 
@@ -847,12 +849,14 @@ class Ensembling(Algorithm):
 
     def compute_hessian(self, loader):
         # Flatness metrics
+        self.eval()
         results = {}
         results[f"Flatness/souptrace"] = misc.compute_hessian(self.soup.network_soup, loader)
         if self.swas is not None:
             results[f"Flatness/swa0trace"] = misc.compute_hessian(
                 self.swas[0].network_swa, loader)
         results[f"Flatness/net0trace"] = misc.compute_hessian(self.networks[0].network_swa, loader)
+        self.train()
         return results
 
     def predict(self, x):

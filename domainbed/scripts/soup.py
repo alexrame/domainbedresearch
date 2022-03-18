@@ -331,6 +331,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         del algorithm
 
     ens_algorithm.to(device)
+    ens_algorithm.eval()
     random.seed(train_args.seed)
     np.random.seed(train_args.seed)
     torch.manual_seed(train_args.seed)
