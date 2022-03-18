@@ -34,12 +34,12 @@ def main():
         raise NotImplementedError
 
     # load args
-    found_folders_per_cluster = find_folders(inf_args)
+    found_checkpoints_per_cluster = find_checkpoints(inf_args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    good_folders = []
-    for cluster, found_folders in found_folders_per_cluster.items():
-        print(f"Exploring cluster: {cluster} with {len(found_folders)} checkpoints")
+    good_checkpoints = []
+    for cluster, found_checkpoints in found_checkpoints_per_cluster.items():
+        print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
         if inf_args.mode == "greedy":
             if "trial_seed" in inf_args.cluster:
                 assert inf_args.selection == "train"
@@ -53,15 +53,15 @@ def main():
                 filter="out",
                 trial_seed=trial_seed
             )
-            cluster_good_folders = get_greedy_folders(
-                found_folders, dataset, inf_args, val_names, val_splits, device
+            cluster_good_checkpoints = get_greedy_checkpoints(
+                found_checkpoints, dataset, inf_args, val_names, val_splits, device
             )
         elif inf_args.topk != 0:
-            cluster_good_folders = found_folders[:inf_args.topk]
+            cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
         else:
-            cluster_good_folders = found_folders[:]
-        print(f"Select {len(cluster_good_folders)} checkpoints out of {len(found_folders)}")
-        good_folders.extend(cluster_good_folders)
+            cluster_good_checkpoints = found_checkpoints[:]
+        print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
+        good_checkpoints.extend(cluster_good_checkpoints)
 
     ood_splits, ood_names = create_splits(
         inf_args,
@@ -70,7 +70,7 @@ def main():
         filter="full" if inf_args.selection == "train" else "in",
         trial_seed=inf_args.trial_seed
     )
-    get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device)
+    get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device)
 
 
 def _get_args():
@@ -88,7 +88,7 @@ def _get_args():
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
 
-    # select which folders
+    # select which checkpoints
     parser.add_argument('--mode', type=str, default="ens")  # or "greedy"
     parser.add_argument(
         '--cluster',
@@ -170,14 +170,14 @@ def get_score_run(results, criteriontopk, test_envs):
     return np.mean([results[key] for key in val_env_keys])
 
 
-def find_folders(inf_args, verbose=False):
-    folders = [
+def find_checkpoints(inf_args, verbose=False):
+    checkpoints = [
         os.path.join(output_dir, path)
         for output_dir in inf_args.output_dir.split(",")
         for path in os.listdir(output_dir)
     ]
-    found_folders_per_cluster = {}
-    for folder in folders:
+    found_checkpoints_per_cluster = {}
+    for folder in checkpoints:
         if not os.path.isdir(folder):
             continue
         name_folder = os.path.split(folder)[-1]
@@ -213,22 +213,22 @@ def find_folders(inf_args, verbose=False):
             test_envs=inf_args.test_envs
         )
         cluster = "|".join([str(train_args.__dict__[cluster]) for cluster in inf_args.cluster])
-        if cluster not in found_folders_per_cluster:
-            found_folders_per_cluster[cluster] = {}
-        found_folders_per_cluster[cluster][folder] = score_folder
+        if cluster not in found_checkpoints_per_cluster:
+            found_checkpoints_per_cluster[cluster] = {}
+        found_checkpoints_per_cluster[cluster][folder] = score_folder
 
-    if len(found_folders_per_cluster) == 0:
-        raise ValueError("No folders found")
+    if len(found_checkpoints_per_cluster) == 0:
+        raise ValueError("No checkpoints found")
         return []
 
-    found_folders_per_cluster = {
-        cluster: sorted(found_folders.keys(), key=lambda x: found_folders[x], reverse=True)
-        for cluster, found_folders in found_folders_per_cluster.items()
+    found_checkpoints_per_cluster = {
+        cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)
+        for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
-    return found_folders_per_cluster
+    return found_checkpoints_per_cluster
 
 
-def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, device):
+def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
 
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
     ens_algorithm = ens_algorithm_class(
@@ -238,7 +238,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
     )
     best_results = {}
     good_nums = []
-    for num, folder in enumerate(found_folders):
+    for num, folder in enumerate(found_checkpoints):
         # print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
         save_dict = torch.load(os.path.join(folder, "model.pkl"))
         train_args = NameSpace(save_dict["args"])
@@ -302,19 +302,19 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
             print(f"Add num {num}")
         # print("")
 
-    print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
+    print(f"Best OOD results for {inf_args} with {len(good_nums)} checkpoints")
     print(best_results)
-    return [found_folders[num] for num in good_nums]
+    return [found_checkpoints[num] for num in good_nums]
 
 
-def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device):
+def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device):
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
     ens_algorithm = ens_algorithm_class(
         dataset.input_shape,
         dataset.num_classes,
         len(dataset) - len(inf_args.test_envs),
     )
-    for folder in good_folders:
+    for folder in good_checkpoints:
         print(f"Ingredient from folder: {folder}")
         save_dict = torch.load(os.path.join(folder, "model.pkl"))
         train_args = NameSpace(save_dict["args"])
@@ -345,15 +345,18 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
     results = {}
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
-        acc = ens_algorithm.accuracy(
+        compute_trace = os.environ.get("HESSIAN") != "0"
+        results = ens_algorithm.accuracy(
             loader,
             device,
-            compute_trace=os.environ.get("HESSIAN") != "0",
+            compute_trace=compute_trace
         )
-        for key in acc:
-            results[name + "_" + key.split("/")[-1]] = acc[key]
+        if compute_trace:
+            results.update(ens_algorithm.compute_hessian(loader))
+        for key in results:
+            results[name + "_" + key.split("/")[-1]] = results[key]
 
-    print(f"OOD results for {inf_args} with {len(good_folders)}")
+    print(f"OOD results for {inf_args} with {len(good_checkpoints)}")
     results_keys = sorted(results.keys())
     misc.print_row(results_keys, colwidth=15, latex=True)
     misc.print_row([results[key] for key in results_keys], colwidth=15, latex=True)
