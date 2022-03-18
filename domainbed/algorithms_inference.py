@@ -50,7 +50,8 @@ class ERM(algorithms.ERM):
 class GroupDRO(ERM):
     def __init__(self, *args, **kwargs):
         ERM.__init__(self, *args, **kwargs)
-        self.register_buffer("q", torch.Tensor())
+        self.register_buffer("q", torch.Tensor([0 for _ in range(self.num_domains)]))
+
 
 class Fishr(ERM):
     def __init__(self, *args, **kwargs):
