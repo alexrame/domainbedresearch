@@ -314,7 +314,7 @@ class ERM(Algorithm):
                             "confs": [],
                             "correct": [],
                             "probs": [],
-                            "feats": []
+                            # "feats": []
                             # "confstemp": []
                         }
                     logits = dict_logits[key]
