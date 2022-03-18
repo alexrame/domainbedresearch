@@ -1,8 +1,17 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 2 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/swaensshhpdeoa0316
 
+# Env variables to be considered
+# CUDA_VISIBLE_DEVICES
+# KEYACC
+# PRETRAINED
+# NETMEMBER
+# SWAMEMBER
+
 import argparse
+import itertools
 import os
+import json
 import random
 import numpy as np
 import torch
@@ -36,14 +45,30 @@ def create_splits(inf_args, dataset):
             names.append('env{}_out'.format(env_i))
     return splits, names
 
+def get_testiid_score(results, keyacc, test_envs):
+    if not results:
+        return 0.
+    results = json.loads(results)
+    val_env_keys = []
+    for i in itertools.count():
+        if not keyacc:
+            acc_key = f'env{i}_out_acc'
+        else:
+            acc_key = f'env{i}_out_Accuracies/acc_{keyacc}'
+        if acc_key in results:
+            if i not in test_envs:
+                val_env_keys.append(acc_key)
+        else:
+            break
+    return np.mean([results[key] for key in val_env_keys])
+
 
 class NameSpace(object):
 
     def __init__(self, adict):
         self.__dict__.update(adict)
 
-
-def main():
+def _get_args():
     parser = argparse.ArgumentParser(description='Domain generalization')
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--dataset', type=str)
@@ -59,8 +84,16 @@ def main():
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
     parser.add_argument('--mode', type=str, default="1by1")
-    inf_args = parser.parse_args()
 
+    # select which folders
+    parser.add_argument('--keyacc', type=str, default=None)
+    parser.add_argument('--topk', type=int, default=0)
+
+    return parser.parse_args()
+
+
+def main():
+    inf_args = _get_args()
     if inf_args.data_dir == "default":
         if "DATA" in os.environ:
             inf_args.data_dir = os.path.join(os.environ["DATA"], "data/domainbed/")
@@ -89,7 +122,8 @@ def main():
         if not os.path.exists(model_path):
             print(f"absent: {name_folder}")
             continue
-        train_args = NameSpace(torch.load(model_path)["args"])
+        save_dict = torch.load(model_path)
+        train_args = NameSpace(save_dict["args"])
 
         if (
             train_args.dataset != inf_args.dataset or
@@ -102,11 +136,18 @@ def main():
 
         print(f"good: {name_folder}")
         # TODO
-        proxy_perf = 0
+        proxy_perf = get_testiid_score(
+            save_dict.get("results", ""),
+            keyacc=inf_args.keyacc,
+            test_envs=inf_args.test_envs)
         good_folders[folder] = proxy_perf
 
     if len(good_folders) == 0:
         return
+
+    if inf_args.topk != 0:
+        print(f"Select {inf_args.topk} checkpoints out of {len(good_folders)}")
+        good_folders = sorted(good_folders.keys(), key=lambda x: good_folders[x], reverse=True)[:inf_args.topk]
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -162,7 +203,7 @@ def main():
             len(dataset) - len(inf_args.test_envs),
         )
         for folder in good_folders:
-            print(f"Ingredient from folder: {folder}")
+            print(f"Ingredient from folder: {os.path.split(folder)[-1]}")
             save_dict = torch.load(os.path.join(folder, "model.pkl"))
             train_args = NameSpace(save_dict["args"])
 
@@ -204,7 +245,7 @@ def main():
                 results[name + f'_{key}'] = acc[key]
 
         results_keys = sorted(results.keys())
-        print(f"Results for at {inf_args.trial_seed}")
+        print(f"Results for {inf_args} with {len(good_folders)}")
         misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=12, latex=True)
         misc.print_row([results[key] for key in results_keys], colwidth=12, latex=True)
     else:

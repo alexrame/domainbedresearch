@@ -109,7 +109,7 @@ class IIDAccuracySelectionMethod(SelectionMethod):
                 acc_key = f'env{i}_out_acc'
             else:
                 acc_key = f'env{i}_out_Accuracies/acc_{os.environ.get("KEYACC")}'
-            if acc_key  in record:
+            if acc_key in record:
                 if i != test_env:
                     val_env_keys.append(acc_key)
             else:
