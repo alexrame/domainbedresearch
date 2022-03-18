@@ -161,7 +161,7 @@ def find_folders(inf_args):
             (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1) or
             train_args.holdout_fraction != inf_args.holdout_fraction
         ):
-            # print(f"bad: {name_folder}")
+            print(f"bad: {name_folder}")
             continue
 
         print(f"found: {name_folder}")
@@ -171,7 +171,8 @@ def find_folders(inf_args):
         found_folders[folder] = proxy_perf
 
     if len(found_folders) == 0:
-        return
+        raise ValueError("No folders found")
+        return []
 
     found_folders = sorted(found_folders.keys(), key=lambda x: found_folders[x], reverse=True)
     return found_folders
