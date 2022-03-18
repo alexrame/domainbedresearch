@@ -855,7 +855,8 @@ class Ensembling(Algorithm):
         if self.swas is not None:
             results[f"Flatness/swa0trace"] = misc.compute_hessian(
                 self.swas[0].network_swa, loader)
-        results[f"Flatness/net0trace"] = misc.compute_hessian(self.networks[0].network_swa, loader)
+        results[f"Flatness/net0trace"] = misc.compute_hessian(
+            self.networks[0], loader)
         self.train()
         return results
 

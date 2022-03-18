@@ -2,7 +2,11 @@
 
 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --test_envs 0 --trial_seed -1 --output_dir /data/rame/experiments/domainbed/erm66shhpeoa0317/ --cluster trial_seed --topk 1 --criteriontopk acc_net
 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.train --algorithm Ensembling --dataset ColoredMNIST --test_env 2 --hp swa 1
+
+HESSIAN=100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --test_envs 0 --trial_seed -1 --output_dir /data/rame/experiments/domainbed/erm66shhpeoa0317/ --topk 1 --criteriontopk acc_net --selection oracle --holdout_fraction 0.95
+
 #
+
 
 
 Ingredient from folder: d04d868e36efe8eabb47043317ff7545
