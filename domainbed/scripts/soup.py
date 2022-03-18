@@ -358,10 +358,13 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             del ens_algorithm.networks[1:]
             results["Flatness/souptrace"] = misc.compute_hessian(
                 ens_algorithm.soup.network_soup, loader)
+            del ens_algorithm.soup.network_soup
             results[f"Flatness/swa0trace"] = misc.compute_hessian(
                 ens_algorithm.networks[0], loader)
+            del ens_algorithm.networks[0]
             results[f"Flatness/net0trace"] = misc.compute_hessian(
                 ens_algorithm.swas[0], loader)
+            del ens_algorithm.swas[0]
 
         for key in results:
             results[name + "_" + key.split("/")[-1]] = results[key]
