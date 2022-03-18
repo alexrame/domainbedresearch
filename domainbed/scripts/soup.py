@@ -39,7 +39,7 @@ def main():
 
     good_folders = []
     for cluster, found_folders in found_folders_per_cluster.items():
-        print(f"Exploring cluster: {cluster}")
+        print(f"Exploring cluster: {cluster} with {len(found_folders)} checkpoints")
         if inf_args.mode == "greedy":
             if "trial_seed" in inf_args.cluster:
                 assert inf_args.selection == "train"
@@ -238,7 +238,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
     best_results = {}
     good_nums = []
     for num, folder in enumerate(found_folders):
-        print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
+        # print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
         save_dict = torch.load(os.path.join(folder, "model.pkl"))
         train_args = NameSpace(save_dict["args"])
 
@@ -269,7 +269,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
         val_results = {}
         val_evals = zip(val_names, val_loaders)
         for name, loader in val_evals:
-            print(f"Inference at {name} at num {num}")
+            # print(f"Inference at {name} at num {num}")
             results_of_one_eval = ens_algorithm.accuracy(
                 loader,
                 device,
@@ -281,10 +281,10 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
                 val_results[key] = val_results.get(key,
                                                    0) + results_of_one_eval[key] / len(val_names)
 
-        print(f"Val results for {inf_args} at {num}")
+        # print(f"Val results for {inf_args} at {num}")
         results_keys = sorted(val_results.keys())
-        misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
-        misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
+        # misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
+        # misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
 
         for key in val_results:
             if not key.startswith("Accuracies"):
@@ -299,7 +299,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
             print(f"Skip num {num}")
         else:
             print(f"Add num {num}")
-        print("")
+        # print("")
 
     print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
     print(best_results)
