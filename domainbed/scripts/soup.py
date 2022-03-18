@@ -348,9 +348,7 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
         acc = ens_algorithm.accuracy(
             loader,
             device,
-            compute_trace=False,
-            update_temperature=False,
-            output_temperature=(i == len(ood_names) - 1)
+            compute_trace=os.environ.get("HESSIAN") != "0",
         )
         for key in acc:
             results[name + "_" + key.split("/")[-1]] = acc[key]
