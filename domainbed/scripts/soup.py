@@ -127,6 +127,9 @@ class NameSpace(object):
 def get_testiid_score(results, keyacc, test_envs):
     if not results:
         return 0.
+    if keyacc in ["none", "0"]:
+        return 0.
+
     results = json.loads(results)
     val_env_keys = []
     for i in itertools.count():
@@ -138,7 +141,7 @@ def get_testiid_score(results, keyacc, test_envs):
             break
     return np.mean([results[key] for key in val_env_keys])
 
-def find_folders(inf_args):
+def find_folders(inf_args, verbose=False):
     folders = [
         os.path.join(output_dir, path)
         for output_dir in inf_args.output_dir.split(",")
@@ -157,18 +160,23 @@ def find_folders(inf_args):
         train_args = NameSpace(save_dict["args"])
 
         if train_args.dataset != inf_args.dataset:
-            print(f"bad dataset: {name_folder}")
+            if verbose:
+                print(f"bad dataset: {name_folder}")
             continue
         if train_args.test_envs != inf_args.test_envs:
-            print(f"bad test env: {name_folder}")
+            if verbose:
+                print(f"bad test env: {name_folder}")
             continue
         if (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1):
-            print(f"bad trial seed: {name_folder}")
+            if verbose:
+                print(f"bad trial seed: {name_folder}")
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
-            print(f"Warning different holdout fraction: {name_folder} but keep")
+            if verbose:
+                print(f"Warning different holdout fraction: {name_folder} but keep")
 
-        print(f"found: {name_folder}")
+        if verbose:
+            print(f"found: {name_folder}")
         proxy_perf = get_testiid_score(
             save_dict.get("results", ""), keyacc=inf_args.keyacc, test_envs=inf_args.test_envs
         )

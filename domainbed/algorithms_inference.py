@@ -248,7 +248,7 @@ class Soup(algorithms.Ensembling):
             del results[f"Calibration/ece_swa{key}"]
 
         targets_torch = torch.cat(batch_classes)
-        for regex in ["swanet", "swa0swa1", "net01"]:
+        for regex in ["soupnet", "soupswaswa"]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
