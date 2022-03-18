@@ -311,6 +311,12 @@ def main():
                         compute_trace = False
                     update_temperature = name in ['env{}_out'.format(i) for i in range(len(out_splits)) if i not in args.test_envs]
                     acc = algorithm.accuracy(loader, device, compute_trace, update_temperature=update_temperature)
+                    if compute_trace:
+                        try:
+                            acc.update(algorithm.compute_hessian(loader))
+                        except Exception as exc:
+                            print("failure during computation Hessian")
+                            print(exc)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
                 for key in acc:

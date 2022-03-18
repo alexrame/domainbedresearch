@@ -314,7 +314,7 @@ class Soup(algorithms.Ensembling):
 
         return results
 
-    def compute_trace(self, loader):
+    def compute_hessian(self, loader):
         if hessian is None:
             return {}
 
