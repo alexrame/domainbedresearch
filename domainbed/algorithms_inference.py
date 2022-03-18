@@ -52,6 +52,11 @@ class GroupDRO(ERM):
         ERM.__init__(self, *args, **kwargs)
         self.register_buffer("q", torch.Tensor())
 
+class Fishr(ERM):
+    def __init__(self, *args, **kwargs):
+        ERM.__init__(self, *args, **kwargs)
+        self.register_buffer('update_count', torch.tensor([0]))
+
 
 class Ensembling(algorithms.Ensembling):
 
