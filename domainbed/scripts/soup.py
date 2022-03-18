@@ -183,7 +183,8 @@ def find_folders(inf_args, verbose=False):
         name_folder = os.path.split(folder)[-1]
         model_path = os.path.join(folder, "model.pkl")
         if not os.path.exists(model_path):
-            print(f"absent: {name_folder}")
+            if verbose:
+                print(f"absent: {name_folder}")
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])

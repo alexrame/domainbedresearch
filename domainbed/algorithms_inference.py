@@ -148,7 +148,7 @@ class Soup(algorithms.Ensembling):
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
         if algorithm.swas is not None:
-            for swa in algorithm.swas:
+            for member, swa in enumerate(algorithm.swas):
                 if int(os.environ.get('SWAMEMBER', member)) == member:
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
