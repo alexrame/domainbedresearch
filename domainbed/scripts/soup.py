@@ -156,13 +156,17 @@ def find_folders(inf_args):
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
 
-        if (
-            train_args.dataset != inf_args.dataset or train_args.test_envs != inf_args.test_envs or
-            (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1) or
-            train_args.holdout_fraction != inf_args.holdout_fraction
-        ):
-            print(f"bad: {name_folder}")
+        if train_args.dataset != inf_args.dataset:
+            print(f"bad dataset: {name_folder}")
             continue
+        if train_args.test_envs != inf_args.test_envs:
+            print(f"bad test env: {name_folder}")
+            continue
+        if (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1):
+            print(f"bad trial seed: {name_folder}")
+            continue
+        if train_args.holdout_fraction != inf_args.holdout_fraction:
+            print(f"warning: different holdout fraction: {name_folder}")
 
         print(f"found: {name_folder}")
         proxy_perf = get_testiid_score(
