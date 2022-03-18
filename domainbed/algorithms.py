@@ -497,7 +497,7 @@ class SWA(ERM):
         ERM.__init__(self, input_shape, num_classes, num_domains, hparams)
         # diversifier
         self.features_size = self.featurizer.n_outputs
-        self.register_buffer("update_count", torch.tensor([0]))
+        self.update_count = 0
 
         if self.hparams["diversity_loss"] in [None, "none"]:
             self.member_diversifier = None
@@ -1090,7 +1090,7 @@ class Fishr(ERM):
         )
         self.network = nn.Sequential(self.featurizer, self.classifier)
 
-        self.register_buffer("update_count", torch.tensor([0]))
+        self.update_count = 0
         self.bce_extended = extend(nn.CrossEntropyLoss(reduction='none'))
         self.ema_per_domain = [
             misc.MovingAverage(ema=self.hparams["ema"], oneminusema_correction=True)
