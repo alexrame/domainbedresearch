@@ -86,7 +86,7 @@ def _get_args():
         default=[],
         nargs='+',
     )  # algorithm trial_seed
-    parser.add_argument('--criteriontopk', type=str, default="net")
+    parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
 
@@ -201,6 +201,7 @@ def find_folders(inf_args, verbose=False):
             criteriontopk=inf_args.criteriontopk,
             test_envs=inf_args.test_envs
         )
+        import pdb; pdb.set_trace()
         cluster = "_".join([train_args.__dict__[cluster] for cluster in inf_args.cluster])
         if cluster not in found_folders_per_cluster:
             found_folders_per_cluster[cluster] = {}
