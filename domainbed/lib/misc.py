@@ -33,25 +33,17 @@ def is_dumpable(value):
     return True
 
 
-class SWA:
-    def __init__(self, network, hparams, num=None):
+class SWA():
+    def __init__(self, network, hparams, swa_start_iter=100):
         self.network = network
         self.network_swa = copy.deepcopy(network)
         self.network_swa.eval()
 
         self.global_iter = 0
-        self._classifier_mav = None
-        self._featurizer_mav = None
-        self.layerwise = hparams["layerwise"]
+        self.layerwise = hparams.get("layerwise", "")
         self.hparams = hparams
-        self.num = num
-        if self.hparams.get("split_swa"):
-            assert num is not None
-            self.swa_start_iter = {0: 100, 1: 2500}[num]
-            self.swa_end_iter = {0: 2500, 1: float("inf")}[num]
-        else:
-            self.swa_start_iter = 100
-            self.swa_end_iter = float("inf")
+        self.swa_start_iter = swa_start_iter
+        self.swa_end_iter = float("inf")
         if self.layerwise:
             self.list_layers_count = [0 for _ in self.network.parameters()]
         else:
@@ -61,7 +53,7 @@ class SWA:
         self.global_iter += 1
         if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
             if self.global_iter == self.swa_start_iter:
-                print(f"Begin swa for num: {self.num}")
+                print(f"Begin swa at iter: {self.global_iter}")
             if self.layerwise:
                 self._update_layerwise()
             else:
@@ -102,56 +94,22 @@ class SWA:
             param_k.data = (param_k.data * self.swa_count + param_q.data) / (1. + self.swa_count)
 
     def get_classifier(self):
-        if self._classifier_mav is None:
-            self._classifier_mav = list(self.network_swa.children())[-1]
-        return self._classifier_mav
+        return list(self.network_swa.children())[-1]
 
     def get_featurizer(self):
-        if self._featurizer_mav is None:
-            self._featurizer_mav = nn.Sequential(*list(self.network_swa.children())[:-1])
-        return self._featurizer_mav
+        return nn.Sequential(*list(self.network_swa.children())[:-1])
 
 
-class SWAEns(SWA):
-
-    def __init__(self, networks, hparams):
+class Soup():
+    def __init__(self, networks):
         self.networks = networks
-        self.network_swa = copy.deepcopy(networks[0])
-        self.network_swa.eval()
-        self._classifier_mav = None
-        self._featurizer_mav = None
-        self.global_iter = 0
-        self.hparams = hparams
-        self.swa_start_iter = 100
-        self.swa_end_iter = float("inf")
-        assert not self.hparams.get("split_swa")
-        assert not hparams.get("layerwise")
-        self.swa_count = 0
+        self.network_soup = copy.deepcopy(networks[0])
+        self.update()
 
     def update(self):
-        self.global_iter += 1
-        if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
-            self._update_all()
-        return self.compute_distance_nets()
-
-    def _update_all(self):
-        for param in zip(self.network_swa.parameters(), *[net.parameters() for net in self.networks]):
+        for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
-            param_q = sum(param[1:])
-            param_k.data = (param_k.data * self.swa_count + param_q.data) / (1. + self.swa_count)
-        self.swa_count += 1
-
-    def compute_distance_nets(self):
-        return {}
-        # dist_l2 = 0
-        # cos = 0
-        # count_params = 0
-        # for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
-        #     dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
-        #     num_params = int(param_q.numel())
-        #     count_params += num_params
-        #     cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
-        # return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
+            param_k.data = sum(param[1:]).data / len(self.networks)
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
     """

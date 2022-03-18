@@ -129,9 +129,9 @@ if __name__ == "__main__":
     )
 
     SELECTION_METHODS = [
-        # model_selection.IIDAccuracySelectionMethod,
+        model_selection.IIDAccuracySelectionMethod,
         # model_selection.LeaveOneOutSelectionMethod,
-        model_selection.OracleSelectionMethod,
+        # model_selection.OracleSelectionMethod,
     ]
     # import pdb; pdb.set_trace()
     for selection_method in SELECTION_METHODS:

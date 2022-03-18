@@ -153,7 +153,7 @@ def main():
     for env_i, env in enumerate(dataset):
         uda = []
 
-        if not algorithm_class.CUSTOM_FORWARD and dataset_class.CUSTOM_DATASET:
+        if dataset_class.CUSTOM_DATASET:
             env = misc.CustomToRegularDataset(env)
 
         out, in_ = misc.split_dataset(env, int(len(env)*args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
@@ -223,27 +223,7 @@ def main():
     except:
         pass
     try:
-        algorithm.swa.network_swa.to(device)
-    except:
-        pass
-    try:
         algorithm.hypernet.to(device)
-    except:
-        pass
-    try:
-        for swa in algorithm.swas:
-            swa.network_swa.to(device)
-    except:
-        pass
-    try:
-        algorithm.ts.temperature = algorithm.ts.temperature.to(device)
-        algorithm.ts_swa.temperature = algorithm.ts_swa.temperature.to(device)
-    except:
-        pass
-    try:
-        for i in range(algorithm.hparams['swa']):
-            algorithm.swa_temperatures[i] = algorithm.swa_temperatures[i].to(device)
-            algorithm.t_swa_optimizers[i] = algorithm.t_swa_optimizers[i].to(device)
     except:
         pass
 
@@ -265,17 +245,24 @@ def main():
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
-    def save_checkpoint(filename):
+    def save_checkpoint(filename, results):
         if args.skip_model_save:
             return
         save_dict = {
             "args": vars(args),
+            "results": results,
             "model_input_shape": dataset.input_shape,
             "model_num_classes": dataset.num_classes,
-            "model_num_domains": len(dataset) - len(args.test_envs),
             "model_hparams": hparams,
-            "model_dict": algorithm.cpu().state_dict()
+            "model_dict": algorithm.cpu().state_dict(),
         }
+        if algorithm.hparams.get("swa"):
+            if algorithm.swas is not None:
+                for i, swa in enumerate(algorithm.swas):
+                    save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
+            if algorithm.swa is not None:
+                save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
+
         torch.save(save_dict, os.path.join(args.output_dir, filename))
 
     last_results_keys = None
@@ -316,7 +303,7 @@ def main():
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
-                    if step == n_steps - 1:
+                    if step == n_steps - 1 and os.environ.get("HESSIAN") != "0":
                         traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
                         compute_trace = any([("env" + str(env)) in name for env in traced_envs])
                     # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
@@ -335,7 +322,7 @@ def main():
                     writer.add_scalar(tb_name, acc[key], step)
 
             results_keys = sorted(results.keys())
-            printed_keys = [key for key in results_keys if "Diversity" not in key.lower()]
+            printed_keys = [key for key in results_keys if "diversity" not in key.lower()]
             if results_keys != last_results_keys:
                 misc.print_row([key.split("/")[-1] for key in printed_keys], colwidth=12)
                 last_results_keys = results_keys
@@ -355,19 +342,16 @@ def main():
 
             epochs_path = os.path.join(args.output_dir, 'results.jsonl')
             with open(epochs_path, 'a') as f:
-                try:
-                    f.write(json.dumps(results, sort_keys=True) + "\n")
-                except Exception as e:
-                    results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
-                    results_nodumpable = {key: value for key, value in results.items() if not misc.is_dumpable(value)}
-                    print("fail to dump:", results_nodumpable)
-                    f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
+                results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
+                f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
             algorithm_dict = algorithm.state_dict()
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
             if args.save_model_every_checkpoint:
-                save_checkpoint(f'model_step{step}.pkl')
+                save_checkpoint(
+                    f'model_step{step}.pkl', results=json.dumps(results_dumpable, sort_keys=True)
+                )
 
             for key, value in algorithm.get_tb_dict().items():
                 writer.add_scalar(f'General/{key}', value, step)
@@ -378,13 +362,14 @@ def main():
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
-    save_checkpoint('model.pkl')
+    results_dumpable = {key: value for key, value in results_end.items() if misc.is_dumpable(value)}
+    save_checkpoint('model.pkl', results=json.dumps(results_dumpable, sort_keys=True))
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
 
-    metrics.update({k: v for k, v in results.items() if k not in ["hparams", "args"]})
-    metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
+    metrics.update({k: v for k, v in results_end.items() if k not in ["hparams", "args"]})
+    # metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
     experiments_handler.main_mlflow(run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams)
 
 
