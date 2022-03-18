@@ -451,14 +451,12 @@ class ERM(Algorithm):
             del targets
             # del dict_stats[key0], dict_stats[key1]
 
-        del targets_torch
         for key in dict_stats.keys():
             if "feats" in dict_stats[key]:
                 del dict_stats[key]["feats"]
             del dict_stats[key]["probs"]
             del dict_stats[key]["correct"]
             del dict_stats[key]["preds"]
-
 
         # Flatness metrics
         if compute_trace and hessian is not None:
@@ -533,7 +531,7 @@ class ERM(Algorithm):
                     optimizer.step()
             if output_temperature:
                 results["temp_" + key] = temperature.item()
-
+        del targets_torch
         self.train()
         return results
 
