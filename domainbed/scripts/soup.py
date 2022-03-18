@@ -94,6 +94,7 @@ def _get_args():
 
 def main():
     inf_args = _get_args()
+    print(f"Begin soup for {inf_args}")
     if inf_args.data_dir == "default":
         if "DATA" in os.environ:
             inf_args.data_dir = os.path.join(os.environ["DATA"], "data/domainbed/")

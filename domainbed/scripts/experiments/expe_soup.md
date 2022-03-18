@@ -98,6 +98,18 @@ wait
 
 
 
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoa0317,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66shhpeoa0317
+
+
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup ... &
+echo 0 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup ... &
+echo 1 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup ... &
+echo 2 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup ... &
+echo 3 &
+wait
 
 
 
