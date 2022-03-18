@@ -423,7 +423,7 @@ class ERM(Algorithm):
                     results["temp/" + key] = temperature.item()
 
             targets = targets_torch.cpu().numpy()
-            del targets_torch
+
             preds0 = dict_stats[key0]["preds"].numpy()
             preds1 = dict_stats[key1]["preds"].numpy()
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
@@ -435,7 +435,7 @@ class ERM(Algorithm):
             # results[f"Diversity/{regex}doublefault"] = diversity_metrics.double_fault(targets, preds0, preds1)
             # results[f"Diversity/{regex}singlefault"] = diversity_metrics.single_fault(targets, preds0, preds1)
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(targets, preds0, preds1)
-            del preds0, preds1
+            # del preds0, preds1
 
             # new div metrics
             if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
@@ -448,11 +448,17 @@ class ERM(Algorithm):
             probs1 = dict_stats[key1]["probs"].numpy()
             results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
             results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
-            del probs0, probs1, targets, dict_stats[key0], dict_stats[key1]
+            del targets
+            # del dict_stats[key0], dict_stats[key1]
 
+        del targets_torch
         for key in dict_stats.keys():
             if "feats" in dict_stats[key]:
                 del dict_stats[key]["feats"]
+            del dict_stats[key]["probs"]
+            del dict_stats[key]["correct"]
+            del dict_stats[key]["preds"]
+
 
         # Flatness metrics
         if compute_trace and hessian is not None:
