@@ -256,7 +256,7 @@ def main():
             "model_hparams": hparams,
             "model_dict": algorithm.cpu().state_dict(),
         }
-        if algorithm["swa"]:
+        if algorithm.hparams.get("swa"):
             if algorithm.swas is not None:
                 for i, swa in enumerate(algorithm.swas):
                     save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()

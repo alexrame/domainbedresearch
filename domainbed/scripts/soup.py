@@ -89,9 +89,7 @@ def main():
         if not os.path.exists(model_path):
             print(f"absent: {name_folder}")
             continue
-        save_dict = torch.load(model_path)
-        train_args = NameSpace(save_dict["args"])
-        hparams = save_dict["model_hparams"]
+        train_args = NameSpace(torch.load(model_path)["args"])
 
         if (
             train_args.dataset != inf_args.dataset or
@@ -124,12 +122,11 @@ def main():
             torch.backends.cudnn.benchmark = False
 
             # load model
-            hparams = save_dict["model_hparams"]
             algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
                 len(dataset) - len(inf_args.test_envs),
-                hparams
+                hparams=save_dict["model_hparams"]
             )
             algorithm._init_from_save_dict(save_dict)
             algorithm.to(device)
@@ -170,11 +167,11 @@ def main():
             train_args = NameSpace(save_dict["args"])
 
             # load model
-            hparams = save_dict["model_hparams"]
             algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
             algorithm = algorithm_class(
                 dataset.input_shape, dataset.num_classes,
-                len(dataset) - len(inf_args.test_envs)
+                len(dataset) - len(inf_args.test_envs),
+                hparams=save_dict["model_hparams"]
             )
             algorithm._init_from_save_dict(save_dict)
             ens_algorithm.add_new_algorithm(algorithm)

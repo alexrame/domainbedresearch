@@ -75,10 +75,23 @@ swanetratio: 0.1751700680
 
 python3 -m domainbed.scripts.sweep launch --output_dir=/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/ermshhpeoa0317 --command_launcher multi_gpu --datasets OfficeHome --algorithms ERM --single_test_envs --hp swa 1 --hp shared_init /gpfswork/rech/edr/utr15kn/dataplace/data/domainbed/inits/home_0316 --test_envs 0
 
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 2 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 3 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317 &
+wait
+
+HP=EoA CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m domainbed.scripts.sweep launch --output_dir=/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --command_launcher multi_gpu --datasets OfficeHome --algorithms ERM --single_test_envs --hp swa 1 --hp shared_init /gpfswork/rech/edr/utr15kn/dataplace/data/domainbed/inits/home_0316 --test_envs 0 --n_hparams 6 --n_trials 6 --hp swa 2
 
 
 
 
+
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66shhpeoa0317 &
+PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66shhpeoa0317 &
+wait
 
 
 

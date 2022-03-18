@@ -17,9 +17,9 @@ def set_mlflow_experiment(experiment_name):
 
 def set_experiment_name(args):
     if os.environ.get("USER") in ["rame", "utr15kn"]:
-        VERSION = "v12" if os.environ.get("HP") != "D" else "v12hpd"
         test_env = args["test_envs"][0]
         if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
+            VERSION = "v13_" + os.environ.get("HP", "")
             return args["dataset"] + str(test_env) + VERSION
         elif args["dataset"] == "Spirals":
             return "Spirals"
