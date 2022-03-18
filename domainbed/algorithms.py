@@ -517,6 +517,7 @@ class ERM(Algorithm):
                 temperature = self.get_temperature(key, return_optim=False)
             if temperature is None:
                 continue
+
             if update_temperature:
                 for _ in range(20):
                     logits = dict_stats[key]["logits"].to(device)
@@ -910,6 +911,8 @@ class Ensembling(Algorithm):
     def predict_feat(self, x):
         results = {}
         for num_member in range(self.hparams["num_members"]):
+            if num_member != 0:
+                continue
             feats = self.featurizers[num_member](x)
             results["net" + str(num_member)] = feats
             if self.hparams['swa']:
