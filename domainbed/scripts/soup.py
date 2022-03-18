@@ -45,10 +45,9 @@ def main():
             inf_env="train" if inf_args.selection == "train" else "test",
             filter="out"
         )
-        good_nums = get_greedy_folders(
+        good_folders = get_greedy_folders(
             found_folders, dataset, inf_args, val_names, val_splits, device
         )
-        good_folders = [found_folders[num] for num in good_nums]
     elif inf_args.topk != 0:
         print(f"Select {inf_args.topk} checkpoints out of {len(good_folders)}")
         good_folders = found_folders[:inf_args.topk]
@@ -72,7 +71,7 @@ def _get_args():
         default=-1,
         help='Trial number (used for seeding split_dataset and random_hparams).'
     )
-    parser.add_argument('--holdout_fraction', type=float, default=0.2)
+    parser.add_argument('--holdout_fraction', type=float, default=0.05)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
     parser.add_argument('--mode', type=str, default="1by1")
@@ -189,7 +188,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
     best_results = {}
     good_nums = []
     for num, folder in enumerate(found_folders):
-        print(f"Ingredient from folder: {os.path.split(folder)[-1]}")
+        print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
         save_dict = torch.load(os.path.join(folder, "model.pkl"))
         train_args = NameSpace(save_dict["args"])
 
@@ -219,7 +218,7 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
         ]
         val_results = {}
         val_evals = zip(val_names, val_loaders)
-        for i, (name, loader) in enumerate(val_evals):
+        for name, loader in val_evals:
             print(f"Inference at {name} at num {num}")
             results_of_one_eval = ens_algorithm.accuracy(
                 loader,
@@ -231,21 +230,26 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
             for key in results_of_one_eval:
                 val_results[key] = val_results.get(key, 0) + results_of_one_eval[key] / len(val_names)
 
+        print(f"Val results for {inf_args} at {num}")
+        results_keys = sorted(val_results.keys())
+        misc.print_row(results_keys, colwidth=15, latex=True)
+        misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
+
         for key in val_results:
             if val_results[key] > best_results.get(key, ([], 0.))[1]:
                 if key == f"Accuracies/acc_{inf_args.keyacc}":
                     good_nums.append(num)
                 best_results[key] = (good_nums[:], val_results[key])
 
-        print(f"OOD results for {inf_args} at {num}")
         if num not in good_nums:
             ens_algorithm.delete_last()
+            print(f"Skip num {num}")
         else:
-            print(f"Num {num} was added")
+            print(f"Add num {num}")
 
     print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
     print(best_results)
-    return good_nums
+    return [found_folders[num] for num in good_nums]
 
 
 
@@ -297,8 +301,9 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
         for key in acc:
             results[name + "_" + key.split("/")[-1]] = acc[key]
 
-    results_keys = sorted(results.keys())
+
     print(f"OOD results for {inf_args} with {len(good_folders)}")
+    results_keys = sorted(results.keys())
     misc.print_row(results_keys, colwidth=15, latex=True)
     misc.print_row([results[key] for key in results_keys], colwidth=15, latex=True)
 
