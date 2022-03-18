@@ -21,7 +21,6 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 
 
-
 def main():
     inf_args = _get_args()
     print(f"Begin soup for {inf_args}")
@@ -35,24 +34,28 @@ def main():
         raise NotImplementedError
 
     # load args
-    found_folders = find_folders(inf_args)
+    found_folders_per_cluster = find_folders(inf_args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    if inf_args.mode == "greedy":
-        val_splits, val_names = create_splits(
-            inf_args,
-            dataset,
-            inf_env="train" if inf_args.selection == "train" else "test",
-            filter="out"
-        )
-        good_folders = get_greedy_folders(
-            found_folders, dataset, inf_args, val_names, val_splits, device
-        )
-    elif inf_args.topk != 0:
-        print(f"Select {inf_args.topk} checkpoints out of {len(good_folders)}")
-        good_folders = found_folders[:inf_args.topk]
-    else:
-        good_folders = found_folders[:]
+    good_folders = []
+    for cluster, found_folders in found_folders_per_cluster.items():
+        print(f"Exploring cluster: {cluster}")
+        if inf_args.mode == "greedy":
+            val_splits, val_names = create_splits(
+                inf_args,
+                dataset,
+                inf_env="train" if inf_args.selection == "train" else "test",
+                filter="out"
+            )
+            cluster_good_folders = get_greedy_folders(
+                found_folders, dataset, inf_args, val_names, val_splits, device
+            )
+        elif inf_args.topk != 0:
+            cluster_good_folders = found_folders[:inf_args.topk]
+        else:
+            cluster_good_folders = found_folders[:]
+        print(f"Select {len(cluster_good_folders)} checkpoints out of {len(found_folders)}")
+        good_folders.extend(cluster_good_folders)
 
     ood_splits, ood_names = create_splits(
         inf_args, dataset, inf_env="test", filter="full" if inf_args.selection == "train" else "in"
@@ -74,10 +77,16 @@ def _get_args():
     parser.add_argument('--holdout_fraction', type=float, default=0.05)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
-    parser.add_argument('--mode', type=str, default="1by1")
 
     # select which folders
-    parser.add_argument('--keyacc', type=str, default="net")
+    parser.add_argument('--mode', type=str, default="ens")  # or "greedy"
+    parser.add_argument(
+        '--cluster',
+        type=str,
+        default=[],
+        nargs='+',
+    )  # algorithm trial_seed
+    parser.add_argument('--criteriontopk', type=str, default="net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
 
@@ -119,21 +128,30 @@ def create_splits(inf_args, dataset, inf_env, filter):
 
     return splits, names
 
+
 class NameSpace(object):
 
     def __init__(self, adict):
         self.__dict__.update(adict)
 
-def get_testiid_score(results, keyacc, test_envs):
+
+def get_score_run(results, criteriontopk, test_envs):
     if not results:
         return 0.
-    if keyacc in ["none", "0"]:
+    if criteriontopk in ["none", "0"]:
         return 0.
+
+    if criteriontopk.startswith("acc"):
+        criteriontopk = "Accuracies/{criteriontopk}"
+    elif criteriontopk.startswith("ece"):
+        criteriontopk = "Calibration/{criteriontopk}"
+    else:
+        raise ValueError(f"Unknown criterion {criteriontopk}")
 
     results = json.loads(results)
     val_env_keys = []
     for i in itertools.count():
-        acc_key = f'env{i}_out_Accuracies/acc_{keyacc}'
+        acc_key = f'env{i}_out_{criteriontopk}'
         if acc_key in results:
             if i not in test_envs:
                 val_env_keys.append(acc_key)
@@ -141,13 +159,14 @@ def get_testiid_score(results, keyacc, test_envs):
             break
     return np.mean([results[key] for key in val_env_keys])
 
+
 def find_folders(inf_args, verbose=False):
     folders = [
         os.path.join(output_dir, path)
         for output_dir in inf_args.output_dir.split(",")
         for path in os.listdir(output_dir)
     ]
-    found_folders = {}
+    found_folders_per_cluster = {}
     for folder in folders:
         if not os.path.isdir(folder):
             continue
@@ -177,17 +196,25 @@ def find_folders(inf_args, verbose=False):
 
         if verbose:
             print(f"found: {name_folder}")
-        proxy_perf = get_testiid_score(
-            save_dict.get("results", ""), keyacc=inf_args.keyacc, test_envs=inf_args.test_envs
+        score_folder = get_score_run(
+            save_dict.get("results", ""),
+            criteriontopk=inf_args.criteriontopk,
+            test_envs=inf_args.test_envs
         )
-        found_folders[folder] = proxy_perf
+        cluster = "_".join([train_args.__dict__[cluster] for cluster in inf_args.cluster])
+        if cluster not in found_folders_per_cluster:
+            found_folders_per_cluster[cluster] = {}
+        found_folders_per_cluster[cluster][folder] = score_folder
 
-    if len(found_folders) == 0:
+    if len(found_folders_per_cluster) == 0:
         raise ValueError("No folders found")
         return []
 
-    found_folders = sorted(found_folders.keys(), key=lambda x: found_folders[x], reverse=True)
-    return found_folders
+    found_folders_per_cluster = {
+        cluster: sorted(found_folders.keys(), key=lambda x: found_folders[x], reverse=True)
+        for cluster, found_folders in found_folders_per_cluster.items()
+    }
+    return found_folders_per_cluster
 
 
 def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, device):
@@ -241,7 +268,8 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
                 output_temperature=False
             )
             for key in results_of_one_eval:
-                val_results[key] = val_results.get(key, 0) + results_of_one_eval[key] / len(val_names)
+                val_results[key] = val_results.get(key,
+                                                   0) + results_of_one_eval[key] / len(val_names)
 
         print(f"Val results for {inf_args} at {num}")
         results_keys = sorted(val_results.keys())
@@ -266,7 +294,6 @@ def get_greedy_folders(found_folders, dataset, inf_args, val_names, val_splits, 
     print(f"Best OOD results for {inf_args} with {len(good_nums)} folders")
     print(best_results)
     return [found_folders[num] for num in good_nums]
-
 
 
 def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device):
@@ -321,7 +348,6 @@ def get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_spli
     results_keys = sorted(results.keys())
     misc.print_row(results_keys, colwidth=15, latex=True)
     misc.print_row([results[key] for key in results_keys], colwidth=15, latex=True)
-
 
 
 if __name__ == "__main__":
