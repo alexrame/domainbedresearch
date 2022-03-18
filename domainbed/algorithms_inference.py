@@ -47,6 +47,12 @@ class ERM(algorithms.ERM):
                 for i in range(self.hparams['swa']):
                     self.swas[i].network_swa.load_state_dict(save_dict[f"swa{i}_dict"])
 
+class GroupDRO(ERM):
+    def __init__(self, *args, **kwargs):
+        ERM.__init__(self, *args, **kwargs)
+        self.register_buffer("q", torch.Tensor())
+
+
 class Ensembling(algorithms.Ensembling):
 
     def __init__(self, input_shape, num_classes, num_domains, hparams):
