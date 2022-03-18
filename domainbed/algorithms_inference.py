@@ -66,13 +66,13 @@ class Ensembling(algorithms.Ensembling):
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
 
-        featurizers = [
+        self.featurizers = [
             networks.Featurizer(input_shape, self.hparams)
             for _ in range(self.hparams["num_members"])
         ]
         classifiers = [
             networks.Classifier(
-                featurizers[0].n_outputs,
+                self.featurizers[0].n_outputs,
                 self.num_classes,
                 self.hparams["nonlinear_classifier"],
                 hparams=self.hparams,
@@ -80,7 +80,7 @@ class Ensembling(algorithms.Ensembling):
         ]
         self.networks = nn.ModuleList(
             [
-                nn.Sequential(featurizers[member], classifiers[member])
+                nn.Sequential(self.featurizers[member], classifiers[member])
                 for member in range(self.hparams["num_members"])
             ]
         )

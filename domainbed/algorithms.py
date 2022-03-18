@@ -184,8 +184,9 @@ class ERM(Algorithm):
             if return_optim:
                 return self.swa_temperature, self.t_swa_optimizer
             return self.swa_temperature
-        i = int(key[-1])
-        if key == "swa" + str(i) and self.swas is not None:
+
+        if key == "swa" + str(key[-1]) and self.swas is not None:
+            i = int(key[-1])
             if return_optim:
                 return self.swa_temperatures[i], self.t_swa_optimizers[i]
             return self.swa_temperatures[i]
@@ -403,7 +404,7 @@ class ERM(Algorithm):
             assert self.swa_temperature.requires_grad
             if update_temperature:
                 for _ in range(50):
-                    for key in ["net", "swa", "swa0", "swa1"]:
+                    for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                         if key not in dict_stats:
                             continue
                         logits = dict_stats[key]["logits"].to(device)
