@@ -10,6 +10,7 @@ except:
     hessian = None
 from domainbed import networks, algorithms
 from domainbed.lib import misc, diversity_metrics
+from domainbed.lib.diversity_metrics import CudaCKA
 
 ALGORITHMS = [
     "ERM",
@@ -183,10 +184,21 @@ class Soup(algorithms.Ensembling):
         results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
-
         return results
 
-    def accuracy(self, loader, device, **kwargs):
+    def predict_feat(self, x):
+        results = {}
+        for num_member in range(self.num_members()):
+            if num_member not in [0, 1]:
+                # Do this because memory error otherwise
+                continue
+            results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
+            results["swa" + str(num_member)] = self.swas[num_member].get_featurizer()(x)
+        # results["soup"] = self.soup.get_featurizer()(x)
+        # results["soupswa"] = self.soupswa.get_featurizer()(x)
+        return results
+
+    def accuracy(self, loader, device, compute_trace, **kwargs):
         self.eval()
         batch_classes = []
         dict_stats = {}
@@ -195,6 +207,8 @@ class Soup(algorithms.Ensembling):
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
+                if compute_trace:
+                    dict_feats = self.predict_feat(x)
                 y = y.to(device)
                 batch_classes.append(y)
                 for key in dict_logits.keys():
@@ -215,6 +229,10 @@ class Soup(algorithms.Ensembling):
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
+                    if compute_trace and key in dict_feats:
+                        if "feats" not in dict_stats[key]:
+                            dict_stats[key]["feats"] = []
+                        dict_stats[key]["feats"].append(dict_feats[key])
 
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
@@ -248,7 +266,7 @@ class Soup(algorithms.Ensembling):
             del results[f"Calibration/ece_swa{key}"]
 
         targets_torch = torch.cat(batch_classes)
-        for regex in ["soupnet", "soupswaswa"]:
+        for regex in ["swa0swa1", "net01"]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
@@ -287,5 +305,38 @@ class Soup(algorithms.Ensembling):
             results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
                 targets, preds0, preds1
             )
+            if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
+                feats0 = dict_stats[key0]["feats"]
+                feats1 = dict_stats[key1]["feats"]
+                results[f"Diversity/{regex}CKAC"] = 1 - CudaCKA(device).linear_CKA(feats0, feats1)
+        for key in dict_stats.keys():
+            if "feats" in dict_stats[key]:
+                del dict_stats[key]["feats"]
+            del dict_stats[key]["probs"]
+            del dict_stats[key]["correct"]
+            del dict_stats[key]["preds"]
+
+        if compute_trace and hessian is not None:
+            hessian_comp_soup = hessian(
+                self.soup.network_soup,
+                nn.CrossEntropyLoss(reduction='mean'),
+                dataloader=loader,
+                cuda=True
+            )
+            results[f"Flatness/souptrace"] = np.mean(hessian_comp_soup.trace())
+            del hessian_comp_soup
+            hessian_comp_swa0 = hessian(
+                self.swas[0].network_swa,
+                nn.CrossEntropyLoss(reduction='mean'),
+                dataloader=loader,
+                cuda=True
+            )
+            results[f"Flatness/swa0trace"] = np.mean(hessian_comp_swa0.trace())
+            del hessian_comp_swa0
+            hessian_comp_net0 = hessian(
+                self.networks[0], nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
+            )
+            results[f"Flatness/net0trace"] = np.mean(hessian_comp_net0.trace())
+            del hessian_comp_net0
 
         return results

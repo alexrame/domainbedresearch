@@ -912,6 +912,7 @@ class Ensembling(Algorithm):
         results = {}
         for num_member in range(self.hparams["num_members"]):
             if num_member != 0:
+                # Do this because memory error otherwise
                 continue
             feats = self.featurizers[num_member](x)
             results["net" + str(num_member)] = feats

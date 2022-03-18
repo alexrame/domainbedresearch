@@ -33,6 +33,10 @@ def is_dumpable(value):
     return True
 
 
+def get_featurizer(network):
+    return nn.Sequential(*list(network.children())[:-1])
+
+
 class SWA():
     def __init__(self, network, hparams, swa_start_iter=100):
         self.network = network
@@ -97,7 +101,7 @@ class SWA():
         return list(self.network_swa.children())[-1]
 
     def get_featurizer(self):
-        return nn.Sequential(*list(self.network_swa.children())[:-1])
+        return get_featurizer(self.network_swa)
 
 
 class Soup():
@@ -110,6 +114,10 @@ class Soup():
         for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
+
+    def get_featurizer(self):
+        return get_featurizer(self.network_soup)
+
 
 def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
     """
