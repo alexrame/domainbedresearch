@@ -41,11 +41,17 @@ def main():
     for cluster, found_folders in found_folders_per_cluster.items():
         print(f"Exploring cluster: {cluster}")
         if inf_args.mode == "greedy":
+            if "trial_seed" in inf_args.cluster:
+                assert inf_args.selection == "train"
+                trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
+            else:
+                trial_seed = inf_args.trial_seed
             val_splits, val_names = create_splits(
                 inf_args,
                 dataset,
                 inf_env="train" if inf_args.selection == "train" else "test",
-                filter="out"
+                filter="out",
+                trial_seed=trial_seed
             )
             cluster_good_folders = get_greedy_folders(
                 found_folders, dataset, inf_args, val_names, val_splits, device
@@ -58,7 +64,11 @@ def main():
         good_folders.extend(cluster_good_folders)
 
     ood_splits, ood_names = create_splits(
-        inf_args, dataset, inf_env="test", filter="full" if inf_args.selection == "train" else "in"
+        inf_args,
+        dataset,
+        inf_env="test",
+        filter="full" if inf_args.selection == "train" else "in",
+        trial_seed=inf_args.trial_seed
     )
     get_results_for_folders(good_folders, dataset, inf_args, ood_names, ood_splits, device)
 
@@ -100,7 +110,7 @@ def _get_args():
     return inf_args
 
 
-def create_splits(inf_args, dataset, inf_env, filter):
+def create_splits(inf_args, dataset, inf_env, filter, trial_seed):
     splits = []
     names = []
     for env_i, env in enumerate(dataset):
@@ -115,7 +125,7 @@ def create_splits(inf_args, dataset, inf_env, filter):
         else:
             out_, in_ = misc.split_dataset(
                 env, int(len(env) * inf_args.holdout_fraction),
-                misc.seed_hash(inf_args.trial_seed, env_i)
+                misc.seed_hash(trial_seed, env_i)
             )
             if filter == "in":
                 splits.append(in_)
