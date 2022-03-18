@@ -185,11 +185,11 @@ class ERM(Algorithm):
                 return self.swa_temperature, self.t_swa_optimizer
             return self.swa_temperature
 
+        i = key[-1]
         if key == "swa" + str(key[-1]) and self.swas is not None:
-            i = int(key[-1])
             if return_optim:
-                return self.swa_temperatures[i], self.t_swa_optimizers[i]
-            return self.swa_temperatures[i]
+                return self.swa_temperatures[int(i)], self.t_swa_optimizers[int(i)]
+            return self.swa_temperatures[int(i)]
 
         if not self.hparams.get("num_members"):
             if return_optim:
@@ -207,8 +207,8 @@ class ERM(Algorithm):
 
         if key == "net" + str(i):
             if return_optim:
-                return self.net_temperatures[i], self.t_net_optimizers[i]
-            return self.net_temperatures[i]
+                return self.net_temperatures[int(i)], self.t_net_optimizers[int(i)]
+            return self.net_temperatures[int(i)]
 
         if return_optim:
             return None, None
