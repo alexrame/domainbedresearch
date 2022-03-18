@@ -118,7 +118,7 @@ class ERM(Algorithm):
                 weight_decay=self.hparams["weight_decay"],
             )
         if self.hparams['swa']:
-            if self.swa is not None:
+            if self.swa is not None or self.hparams.get('num_members'):
                 self.swa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
                 if init_optimizers:
                     self.t_swa_optimizer = torch.optim.Adam(
@@ -196,6 +196,11 @@ class ERM(Algorithm):
                 return None, None
             return None
 
+        if key == "net" + str(i):
+            if return_optim:
+                return self.net_temperatures[int(i)], self.t_net_optimizers[int(i)]
+            return self.net_temperatures[int(i)]
+
         if key == "soup":
             if return_optim:
                 return self.soup_temperature, self.t_soup_optimizer
@@ -204,11 +209,6 @@ class ERM(Algorithm):
             if return_optim:
                 return self.soupswa_temperature, self.t_soupswa_optimizer
             return self.soupswa_temperature
-
-        if key == "net" + str(i):
-            if return_optim:
-                return self.net_temperatures[int(i)], self.t_net_optimizers[int(i)]
-            return self.net_temperatures[int(i)]
 
         if return_optim:
             return None, None
