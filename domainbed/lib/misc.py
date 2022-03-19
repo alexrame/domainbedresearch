@@ -141,7 +141,7 @@ class Soup():
         if len(self.networks) == 0:
             return
         sum_temperatures = sum(temperatures)
-        print(f"Weighted soup with temperatures: {temperatures} of sum: {sum_temperatures}")
+        # print(f"Weighted soup with temperatures: {temperatures} of sum: {sum_temperatures}")
         for param in zip(self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]):
             name = param[0][0]
             if name not in ["1.weight", "1.bias"]:

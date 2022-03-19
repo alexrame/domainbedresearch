@@ -208,7 +208,7 @@ class Soup(algorithms.Ensembling):
             results["swa" + str(num_member)] = logits_swa
             if self._t_scaled:
                 batch_logits_tscaled.append(logits / self._t_networks[num_member])
-                batch_logits_swa_tscaled.append(logits / self._t_swas[num_member])
+                batch_logits_swa_tscaled.append(logits_swa / self._t_swas[num_member])
 
         results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
         results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
