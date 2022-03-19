@@ -282,7 +282,7 @@ class Soup(algorithms.Ensembling):
 
         targets = torch.cat(batch_classes).cpu().numpy()
 
-        for regex in ["swa0swa1", "net01"] + self.regexes:
+        for regex in ["swa0swa1", "net01", "soup_soupswa"] + self.regexes:
             if regex == "swa0swa1":
                 key0 = "swa0"
                 key1 = "swa1"
