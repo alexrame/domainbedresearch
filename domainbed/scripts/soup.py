@@ -77,7 +77,7 @@ def main():
 
 def _get_args():
     parser = argparse.ArgumentParser(description='Domain generalization')
-    parser.add_argument('--algorithm', type=str)
+
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--test_envs', type=int, nargs='+')
     parser.add_argument(
@@ -97,10 +97,13 @@ def _get_args():
         type=str,
         default=[],
         nargs='+',
-    )  # algorithm trial_seed
+    ) # algorithm trial_seed
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
+
+    parser.add_argument('--algorithm', type=str)
+    parser.add_argument('--t_scaled', type=str)
 
     inf_args = parser.parse_args()
     if inf_args.data_dir == "default":
@@ -321,9 +324,9 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
 def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device):
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
     ens_algorithm = ens_algorithm_class(
-        dataset.input_shape,
-        dataset.num_classes,
+        dataset.input_shape, dataset.num_classes,
         len(dataset) - len(inf_args.test_envs),
+        t_scaled=inf_args.t_scaled
     )
     for folder in good_checkpoints:
         print(f"Ingredient from folder: {folder}")

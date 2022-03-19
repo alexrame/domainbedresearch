@@ -134,13 +134,9 @@ class Soup(algorithms.Ensembling):
         algorithms.Algorithm.train(self, *args)
         for net in self.networks:
             net.train(*args)
-        for t in self._t_networks:
-            t.train(*args)
         self.soup.network_soup.train(*args)
         for swa in self.swas:
             swa.train(*args)
-        for t in self._t_swas:
-            t.train(*args)
         self.soupswa.network_soup.train(*args)
 
     def _init_memory(self):
