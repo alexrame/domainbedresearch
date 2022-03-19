@@ -339,7 +339,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     torch.backends.cudnn.benchmark = False
 
     ood_loaders = [
-        FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+        FastDataLoader(dataset=split, batch_size=os.environ.get("BS", 64), num_workers=dataset.N_WORKERS)
         for split in ood_splits
     ]
     evals = zip(ood_names, ood_loaders)
@@ -355,9 +355,6 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
 
         if compute_trace:
             assert len(ood_names) ==  1
-            if os.environ.get("HESSIAN"):
-                loader._length = int(os.environ.get("HESSIAN"))
-
             del ens_algorithm.soupswa
             del ens_algorithm.swas[1:]
             del ens_algorithm.networks[1:]
