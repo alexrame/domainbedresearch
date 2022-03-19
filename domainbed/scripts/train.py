@@ -7,7 +7,6 @@ import os
 import random
 import sys
 import time
-import statistics
 import yaml
 import numpy as np
 import PIL
@@ -53,7 +52,6 @@ def main():
     # If we ever want to implement checkpointing, just persist these values
     # every once in a while, and then load them from disk here.
     start_step = 0
-    algorithm_dict = None
 
     print("Environment:")
     print("\tPython: {}".format(sys.version.split(" ")[0]))
@@ -210,9 +208,6 @@ def main():
     algorithm: Algorithm = algorithm_class(
         dataset.input_shape, dataset.num_classes, len(dataset) - len(args.test_envs), hparams)
 
-    if algorithm_dict is not None:
-        algorithm.load_state_dict(algorithm_dict)
-
     algorithm.to(device)
     try:
         algorithm.member_diversifier.to(device)
@@ -306,10 +301,9 @@ def main():
             evals = zip(eval_loader_names, eval_loaders, eval_weights)
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
-                    if step == n_steps - 1 and os.environ.get("HESSIAN") != "0":
+                    if step == n_steps - 1 and os.environ.get("HESSIAN", "0") != "0":
                         traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
                         compute_trace = any([("env" + str(env)) in name for env in traced_envs])
-                    # ((step % (6 * checkpoint_freq) == 0) or (step == n_steps - 1))
                     else:
                         compute_trace = False
                     update_temperature = name in ['env{}_out'.format(i) for i in range(len(out_splits)) if i not in args.test_envs]
@@ -318,7 +312,7 @@ def main():
                         try:
                             acc.update(algorithm.compute_hessian(loader))
                         except Exception as exc:
-                            print("failure during computation Hessian")
+                            print("Failure during Hessian computation")
                             print(exc)
                 else:
                     acc = misc.accuracy(algorithm, loader, weights, device)
@@ -353,7 +347,6 @@ def main():
             with open(epochs_path, 'a') as f:
                 results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
                 f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
-            algorithm_dict = algorithm.state_dict()
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 

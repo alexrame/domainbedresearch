@@ -7,6 +7,8 @@
 # PRETRAINED
 # NETMEMBER
 # SWAMEMBER
+# HESSIAN
+# HESSIANBS
 
 import argparse
 import itertools
@@ -347,20 +349,21 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-    compute_trace = os.environ.get("HESSIAN") != "0"
     ood_loaders = [
         FastDataLoader(
-            dataset=split, batch_size=int(os.environ.get("BS", 64)), num_workers=dataset.N_WORKERS
+            dataset=split, batch_size=64, num_workers=dataset.N_WORKERS
         ) for split in ood_splits
     ]
+    compute_trace = os.environ.get("HESSIAN") != "0"
     if compute_trace:
+        fraction = float(os.environ.get("HESSIAN", 0.1))
         ood_splits_small = [
-            misc.split_dataset(split, int(len(split) * 0.2), 0)[0] for split in ood_splits
+            misc.split_dataset(split, int(len(split) * fraction), 0)[0] for split in ood_splits
         ]
         ood_loaders_small = [
             FastDataLoader(
                 dataset=split,
-                batch_size=int(os.environ.get("HESSIAN", 12)),
+                batch_size=int(os.environ.get("HESSIANBS", 12)),
                 num_workers=dataset.N_WORKERS
             ) for split in ood_splits_small
         ]
