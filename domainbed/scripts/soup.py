@@ -124,8 +124,7 @@ def create_splits(inf_args, dataset, inf_env, filter, trial_seed):
             names.append('e{}'.format(env_i))
         else:
             out_, in_ = misc.split_dataset(
-                env, int(len(env) * inf_args.holdout_fraction),
-                misc.seed_hash(trial_seed, env_i)
+                env, int(len(env) * inf_args.holdout_fraction), misc.seed_hash(trial_seed, env_i)
             )
             if filter == "in":
                 splits.append(in_)
@@ -340,38 +339,44 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
 
     compute_trace = os.environ.get("HESSIAN") != "0"
     ood_loaders = [
-        FastDataLoader(dataset=split, batch_size=int(os.environ.get("BS", 64)), num_workers=dataset.N_WORKERS)
-        for split in ood_splits
+        FastDataLoader(
+            dataset=split, batch_size=int(os.environ.get("BS", 64)), num_workers=dataset.N_WORKERS
+        ) for split in ood_splits
     ]
     if compute_trace:
-        ood_loaders_small = [
-            FastDataLoader(dataset=split, batch_size=int(os.environ.get("HESSIAN", 12)), num_workers=dataset.N_WORKERS)
+        ood_splits_small = [
+            misc.split_dataset(split, int(len(split) * 0.2), 0)[0]
             for split in ood_splits
+        ]
+        ood_loaders_small = [
+            FastDataLoader(
+                dataset=split,
+                batch_size=int(os.environ.get("HESSIAN", 12)),
+                num_workers=dataset.N_WORKERS
+            ) for split in ood_splits_small
         ]
     evals = zip(ood_names, ood_loaders)
     results = {}
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
 
-        results = ens_algorithm.accuracy(
-            loader,
-            device,
-            compute_trace=compute_trace
-        )
+        results = ens_algorithm.accuracy(loader, device, compute_trace=compute_trace)
 
         if compute_trace:
             print("Begin Hessian soup")
-            assert len(ood_names) ==  1
+            assert len(ood_names) == 1
             del ens_algorithm.soupswa
             del ens_algorithm.swas[1:]
             del ens_algorithm.networks[1:]
             loader_small = ood_loaders_small[i]
             results["Flatness/souptrace"] = misc.compute_hessian(
-                ens_algorithm.soup.network_soup, loader_small, maxIter=10)
+                ens_algorithm.soup.network_soup, loader_small, maxIter=10
+            )
             del ens_algorithm.soup.network_soup
             print("Begin Hessian swa0")
             results[f"Flatness/swa0trace"] = misc.compute_hessian(
-                ens_algorithm.swas[0], loader_small, maxIter=10)
+                ens_algorithm.swas[0], loader_small, maxIter=10
+            )
             del ens_algorithm.swas[0]
             print("Begin Hessian net0")
             results[f"Flatness/net0trace"] = misc.compute_hessian(
