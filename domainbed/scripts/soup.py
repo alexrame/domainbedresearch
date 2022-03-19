@@ -98,6 +98,13 @@ def _get_args():
         default=[],
         nargs='+',
     ) # algorithm trial_seed
+    parser.add_argument(
+        '--regexes',
+        type=str,
+        default=[],
+        nargs='+',
+    ) # net0_net1
+
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
@@ -324,9 +331,11 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
 def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device):
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
     ens_algorithm = ens_algorithm_class(
-        dataset.input_shape, dataset.num_classes,
+        dataset.input_shape,
+        dataset.num_classes,
         len(dataset) - len(inf_args.test_envs),
-        t_scaled=inf_args.t_scaled
+        t_scaled=inf_args.t_scaled,
+        regexes=inf_args.regexes,
     )
     for folder in good_checkpoints:
         print(f"Ingredient from folder: {folder}")
@@ -357,8 +366,8 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             dataset=split, batch_size=64, num_workers=dataset.N_WORKERS
         ) for split in ood_splits
     ]
-    compute_trace = os.environ.get("HESSIAN") != "0"
-    if compute_trace:
+    compute_hessian = os.environ.get("HESSIAN") != "0"
+    if compute_hessian:
         fraction = float(os.environ.get("HESSIAN", 0.2))
         ood_splits_small = [
             misc.split_dataset(split, int(len(split) * fraction), 0)[0] for split in ood_splits
@@ -375,10 +384,11 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
 
-        results = ens_algorithm.accuracy(loader, device, compute_trace=compute_trace)
+        results = ens_algorithm.accuracy(
+            loader, device, compute_trace=True)
         print(results)
 
-        if compute_trace:
+        if compute_hessian:
             loader_small = ood_loaders_small[i]
             print(f"Begin Hessian for loaders of len: {len(loader_small)}")
             assert len(ood_names) == 1

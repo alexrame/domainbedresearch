@@ -44,13 +44,16 @@ class ERM(algorithms.ERM):
                 for i in range(self.hparams['swa']):
                     self.swas[i].network_swa.load_state_dict(save_dict[f"swa{i}_dict"])
 
+
 class GroupDRO(ERM):
+
     def __init__(self, *args, **kwargs):
         ERM.__init__(self, *args, **kwargs)
         self.register_buffer("q", torch.Tensor([0 for _ in range(self.num_domains)]))
 
 
 class Fishr(ERM):
+
     def __init__(self, *args, **kwargs):
         ERM.__init__(self, *args, **kwargs)
         self.register_buffer('update_count', torch.tensor([0]))
@@ -95,7 +98,7 @@ class Ensembling(algorithms.Ensembling):
 
 class Soup(algorithms.Ensembling):
 
-    def __init__(self, input_shape, num_classes, num_domains, t_scaled=""):
+    def __init__(self, input_shape, num_classes, num_domains, t_scaled="", regexes=None):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
@@ -110,6 +113,7 @@ class Soup(algorithms.Ensembling):
 
         self.create_soups()
         self._init_memory()
+        self.regexes = [] if regexes is None else regexes
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
@@ -160,8 +164,7 @@ class Soup(algorithms.Ensembling):
                     self.networks.append(copy.deepcopy(network))
                     self.memory["net"] += 1
                     if self._t_scaled:
-                        self._t_networks.append(
-                            algorithm.get_temperature("net" + str(member)))
+                        self._t_networks.append(algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
             self.memory["swa"] += 1
@@ -222,12 +225,25 @@ class Soup(algorithms.Ensembling):
 
     def predict_feat(self, x):
         results = {}
+
+        regexed_nets = [0, 1] + [
+            int(key[3:])
+            for regex in self.regexes
+            for key in regex.split("_")
+            if key.startswith("net")
+        ]
+        regexed_swas = [0, 1] + [
+            int(key[3:])
+            for regex in self.regexes
+            for key in regex.split("_")
+            if key.startswith("swa")
+        ]
+        # Do this stupid thing because memory error otherwise
         for num_member in range(self.num_members()):
-            if num_member not in [0, 1]:
-                # Do this because memory error otherwise
-                continue
-            results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
-            results["swa" + str(num_member)] = misc.get_featurizer(self.swas[num_member])(x)
+            if num_member in regexed_nets:
+                results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
+            if num_member in regexed_swas:
+                results["swa" + str(num_member)] = misc.get_featurizer(self.swas[num_member])(x)
         # results["soup"] = self.soup.get_featurizer()(x)
         # results["soupswa"] = self.soupswa.get_featurizer()(x)
         return results
@@ -235,7 +251,8 @@ class Soup(algorithms.Ensembling):
     def accuracy(self, loader, device, compute_trace, **kwargs):
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_calibration=False)
+            loader, device, compute_trace, do_calibration=False
+        )
 
         results = {}
         for key in dict_stats:
@@ -263,51 +280,45 @@ class Soup(algorithms.Ensembling):
             del results[f"Accuracies/acc_swa{key}"]
             del results[f"Calibration/ece_swa{key}"]
 
-        targets_torch = torch.cat(batch_classes)
-        for regex in ["swa0swa1", "net01"]:
-            if regex == "swanet":
-                key0 = "swa"
-                key1 = "net"
-            elif regex == "swa0net0":
-                key0 = "swa0"
-                key1 = "net0"
-            elif regex == "swa0swa1":
+        targets = torch.cat(batch_classes).cpu().numpy()
+
+        for regex in ["swa0swa1", "net01"] + self.regexes:
+            if regex == "swa0swa1":
                 key0 = "swa0"
                 key1 = "swa1"
             elif regex == "net01":
                 key0 = "net0"
                 key1 = "net1"
-            elif regex == "soupnet":
-                key0 = "soup"
-                key1 = "net"
-            elif regex == "soupswaswa":
-                key0 = "soupswa"
-                key1 = "swa"
-            elif regex == "soupswasoup":
-                key0 = "soupswa"
-                key1 = "soup"
+            elif "_" in regex:
+                key0 = regex.split("_")[0]
+                key1 = regex.split("_")[1]
             else:
                 raise ValueError(regex)
 
-            if key0 not in dict_stats:
-                continue
-            if key1 not in dict_stats:
+            if key0 not in dict_stats or key1 not in dict_stats:
+                print(f"{regex} not found for diversity")
                 continue
 
-            targets = targets_torch.cpu().numpy()
-            preds0 = dict_stats[key0]["preds"].numpy()
-            preds1 = dict_stats[key1]["preds"].numpy()
-            results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
-                targets, preds0, preds1
+            results.update(
+                self._compute_diversity(
+                    targets, dict_stats, regex, key0, key1, compute_trace, device
+                )
             )
-            results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
-                targets, preds0, preds1
-            )
-            if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
-                feats0 = dict_stats[key0]["feats"]
-                feats1 = dict_stats[key1]["feats"]
-                results[f"Diversity/{regex}CKAC"] = 1. - CudaCKA(device).linear_CKA(feats0, feats1).item()
 
         del dict_stats
 
         return results
+
+    def compute_diversity(self, targets, dict_stats, regex, key0, key1, compute_trace, device):
+        results = {}
+        preds0 = dict_stats[key0]["preds"].numpy()
+        preds1 = dict_stats[key1]["preds"].numpy()
+        results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
+        # results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
+        #     targets, preds0, preds1
+        # )
+        if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
+            feats0 = dict_stats[key0]["feats"]
+            feats1 = dict_stats[key1]["feats"]
+            results[f"Diversity/{regex}CKAC"] = 1. - CudaCKA(device).linear_CKA(feats0,
+                                                                                feats1).item()
