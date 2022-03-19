@@ -413,32 +413,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             loader_small = ood_loaders_small[i]
             print(f"Begin Hessian for loaders of len: {len(loader_small)}")
             assert len(ood_names) == 1
-            del ens_algorithm.swas[1:]
-            del ens_algorithm.networks[1:]
-
-            print(f"Begin Hessian soup")
-            results["Flatness/souphess"] = misc.compute_hessian(
-                ens_algorithm.soup.network_soup, loader_small, maxIter=10
-            )
-            del ens_algorithm.soup.network_soup
-
-            # print(f"Begin Hessian soupswa")
-            # results["Flatness/soupswahess"] = misc.compute_hessian(
-            #     ens_algorithm.soupswa.network_soup, loader_small, maxIter=10
-            # )
-            del ens_algorithm.soupswa.network_soup
-
-            print("Begin Hessian swa0")
-            results[f"Flatness/swa0hess"] = misc.compute_hessian(
-                ens_algorithm.swas[0], loader_small, maxIter=10
-            )
-            del ens_algorithm.swas[0]
-
-            print("Begin Hessian net0")
-            results[f"Flatness/net0hess"] = misc.compute_hessian(
-                ens_algorithm.networks[0], loader_small, maxIter=10
-            )
-            del ens_algorithm.networks[0]
+            results.update(ens_algorithm.compute_hessian(loader_small))
 
         for key in results:
             ood_results[name + "_" + key.split("/")[-1]] = results[key]

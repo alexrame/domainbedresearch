@@ -225,3 +225,122 @@ HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.s
 HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 40 &
 HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 50 &
 wait
+--regexes swa0_swa1 swa0_swa2 swa0_swa3 swa0_swa4 swa0_swa5 swa1_swa2 swa1_swa3 swa1_swa4 swa1_swa5 swa2_swa3 swa2_swa4 swa2_swa5 swa3_swa4 swa3_swa5 swa4_swa5 --do_ens 1 &
+
+e0_acc_ens: 0.6848 vs. 0.6840
+e0_acc_net: 0.6527 vs. 0.6572
+e0_acc_netm: 0.6016 vs. 0.6026
+e0_acc_soup: 0.6819 vs. 0.6753
+e0_acc_soupswa: 0.6819 vs. 0.6848
+e0_acc_swa: 0.6724 vs. 0.6786
+e0_acc_swam: 0.6439 vs. 0.6441
+
+
+e0_net0_net1cka: 0.2097 vs. 0.2447
+e0_net2_net3cka: 0.2072 vs. 0.2489
+e0_net4_net5cka: 0.1879 vs. 0.2277
+vs.
+
+e0_net0_net2cka: 0.2723 vs. 0.2301
+e0_net0_net3cka: 0.2466 vs. 0.2292
+e0_net1_net2cka: 0.2323 vs. 0.1912
+e0_net1_net3cka: 0.2294 vs. 0.2694
+l = [0.2723,0.2466,0.2323,0.2294]
+e0_net0_net4cka: 0.3272 vs. 0.3189
+e0_net0_net5cka: 0.3214 vs. 0.3113
+e0_net1_net4cka: 0.3173 vs. 0.3761
+e0_net1_net5cka: 0.3293 vs. 0.3796
+
+e0_net2_net4cka: 0.3919 vs. 0.3586
+e0_net2_net5cka: 0.3895 vs. 0.3525
+e0_net3_net4cka: 0.3511 vs. 0.2977
+e0_net3_net5cka: 0.3570 vs. 0.3083
+
+
+e0_net0_net1rat: 0.5892 vs. 0.6476
+e0_net2_net3rat: 0.5343 vs. 0.5740
+e0_net4_net5rat: 0.5649 vs. 0.6471
+vs.
+e0_net0_net2rat: 0.6005 vs. 0.6200
+e0_net0_net3rat: 0.5499 vs. 0.6150
+e0_net1_net2rat: 0.5589 vs. 0.5607
+e0_net1_net3rat: 0.6200 vs. 0.6108
+
+
+e0_net0_net4rat: 0.6634 vs. 0.6495
+e0_net0_net5rat: 0.6265 vs. 0.6635
+e0_net1_net4rat: 0.6005 vs. 0.6779
+e0_net1_net5rat: 0.6495 vs. 0.6342
+
+e0_net2_net4rat: 0.5339 vs. 0.6463
+e0_net2_net5rat: 0.5820 vs. 0.5758
+e0_net3_net4rat: 0.5801 vs. 0.6302
+e0_net3_net5rat: 0.6463 vs. 0.6404
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
