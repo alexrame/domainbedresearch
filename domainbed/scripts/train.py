@@ -359,7 +359,7 @@ def main():
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
-            if args.save_model_every_checkpoint:
+            if os.path.environ.get("SAVE") or args.save_model_every_checkpoint:
                 save_checkpoint(
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),

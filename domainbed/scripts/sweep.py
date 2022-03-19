@@ -174,7 +174,6 @@ if __name__ == "__main__":
         default=None,
         help='Checkpoint every N steps. Default is dataset-dependent.'
     )
-    parser.add_argument('--save_model_every_checkpoint', action='store_true')
     parser.add_argument('--single_test_envs', action='store_true')
     parser.add_argument('--skip_confirmation', action='store_true')
     parser.add_argument("--test_envs", default=None, nargs="+")
@@ -197,7 +196,6 @@ if __name__ == "__main__":
         uda_holdout_fraction=args.uda_holdout_fraction,
         single_test_envs=args.single_test_envs,
         checkpoint_freq=args.checkpoint_freq,
-        save_model_every_checkpoint=args.save_model_every_checkpoint,
         hparams=args.hparams,
         test_envs=args.test_envs,
         hp=args.hp,
