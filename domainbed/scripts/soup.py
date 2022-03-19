@@ -101,9 +101,9 @@ def _get_args():
     parser.add_argument(
         '--regexes',
         type=str,
-        default=[],
+        default=["swa0_swa1", "net0_net1", "soup_soupswa"],
         nargs='+',
-    ) # net0_net1
+    )
 
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
@@ -182,6 +182,10 @@ def get_score_run(results, criteriontopk, test_envs):
     return np.mean([results[key] for key in val_env_keys])
 
 
+def printv(s, v=True):
+    if v:
+        print(s)
+
 def find_checkpoints(inf_args, verbose=False):
     checkpoints = [
         os.path.join(output_dir, path)
@@ -195,30 +199,24 @@ def find_checkpoints(inf_args, verbose=False):
         name_folder = os.path.split(folder)[-1]
         model_path = os.path.join(folder, "model.pkl")
         if not os.path.exists(model_path):
-            if verbose:
-                print(f"absent: {name_folder}")
+            printv(f"absent: {name_folder}", verbose)
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
 
         if train_args.dataset != inf_args.dataset:
-            if verbose:
-                print(f"bad dataset: {name_folder}")
+            printv(f"bad dataset: {name_folder}", verbose)
             continue
         if train_args.test_envs != inf_args.test_envs:
-            if verbose:
-                print(f"bad test env: {name_folder}")
+            printv(f"bad test env: {name_folder}", verbose)
             continue
         if (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1):
-            if verbose:
-                print(f"bad trial seed: {name_folder}")
+            printv(f"bad trial seed: {name_folder}", verbose)
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
-            if verbose:
-                print(f"Warning different holdout fraction: {name_folder} but keep")
+            printv(f"Warning different holdout fraction: {name_folder} but keep", verbose)
 
-        if verbose:
-            print(f"found: {name_folder}")
+        printv(f"found: {name_folder}", verbose)
         score_folder = get_score_run(
             save_dict.get("results", ""),
             criteriontopk=inf_args.criteriontopk,
@@ -232,12 +230,12 @@ def find_checkpoints(inf_args, verbose=False):
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError("No checkpoints found")
         return []
-    print(found_checkpoints_per_cluster)
+    printv(found_checkpoints_per_cluster, verbose)
     sorted_checkpoints_per_cluster = {
         cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
-    print(sorted_checkpoints_per_cluster)
+    printv(sorted_checkpoints_per_cluster, verbose)
     return sorted_checkpoints_per_cluster
 
 
@@ -306,7 +304,7 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
                                                    0) + results_of_one_eval[key] / len(val_names)
 
         # print(f"Val results for {inf_args} at {num}")
-        results_keys = sorted(val_results.keys())
+        # results_keys = sorted(val_results.keys())
         # misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
         # misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
 

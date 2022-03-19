@@ -228,16 +228,19 @@ class Soup(algorithms.Ensembling):
     def predict_feat(self, x):
         results = {}
 
-        regexed_nets = [0, 1] + [
-            int(key[3:])
+        keys = [
+            key
             for regex in self.regexes
             for key in regex.split("_")
+        ]
+        regexed_nets = [
+            int(key[3:])
+            for key in keys
             if key.startswith("net")
         ]
-        regexed_swas = [0, 1] + [
+        regexed_swas = [
             int(key[3:])
-            for regex in self.regexes
-            for key in regex.split("_")
+            for key in keys
             if key.startswith("swa")
         ]
         # Do this stupid thing because memory error otherwise
@@ -246,8 +249,11 @@ class Soup(algorithms.Ensembling):
                 results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
             if num_member in regexed_swas:
                 results["swa" + str(num_member)] = misc.get_featurizer(self.swas[num_member])(x)
-        # results["soup"] = self.soup.get_featurizer()(x)
-        # results["soupswa"] = self.soupswa.get_featurizer()(x)
+
+        if "soup" in keys:
+            results["soup"] = self.soup.get_featurizer()(x)
+        if "soupswa" in keys:
+            results["soupswa"] = self.soupswa.get_featurizer()(x)
         return results
 
     def accuracy(self, loader, device, compute_trace, **kwargs):
@@ -284,14 +290,8 @@ class Soup(algorithms.Ensembling):
 
         targets = torch.cat(batch_classes).cpu().numpy()
 
-        for regex in ["swa0swa1", "net01", "soup_soupswa"] + self.regexes:
-            if regex == "swa0swa1":
-                key0 = "swa0"
-                key1 = "swa1"
-            elif regex == "net01":
-                key0 = "net0"
-                key1 = "net1"
-            elif "_" in regex:
+        for regex in self.regexes:
+            if "_" in regex:
                 key0 = regex.split("_")[0]
                 key1 = regex.split("_")[1]
             else:
