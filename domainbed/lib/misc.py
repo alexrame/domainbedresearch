@@ -140,10 +140,14 @@ class Soup():
     def update_tscaled(self, temperatures):
         if len(self.networks) == 0:
             return
-        for name_param in zip(self.network_soup.named_parameters(), *[net.named_parameters() for net in self.networks]):
-            import pdb; pdb.set_trace()
-            param_k = param[0]
-            param_k.data = sum(param[1:]).data / len(self.networks)
+        sum_temperatures = sum(temperatures)
+        for param in zip(self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]):
+            name = param[0][0]
+            param_k = param[0][1]
+            weighted_sum = sum([p.data*t for p, t in zip(param[1:], temperatures)])
+            param_k.data = weighted_sum / sum_temperatures
+        print(name)
+        import pdb; pdb.set_trace()
 
     def get_featurizer(self):
         return get_featurizer(self.network_soup)
