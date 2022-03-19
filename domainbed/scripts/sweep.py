@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 """
 Run sweeps
 """
@@ -62,14 +61,11 @@ class Job:
             self.state = Job.NOT_LAUNCHED
 
     def __str__(self):
-        job_info = (self.train_args['dataset'],
-            self.train_args['algorithm'],
-            self.train_args['test_envs'],
-            self.train_args['hparams_seed'])
-        return '{}: {} {}'.format(
-            self.state,
-            self.output_dir,
-            job_info)
+        job_info = (
+            self.train_args['dataset'], self.train_args['algorithm'], self.train_args['test_envs'],
+            self.train_args['hparams_seed']
+        )
+        return '{}: {} {}'.format(self.state, self.output_dir, job_info)
 
     @staticmethod
     def launch(jobs, launcher_fn):
@@ -96,15 +92,16 @@ def all_test_env_combinations(n):
     For a dataset with n >= 3 envs, return all combinations of 1 and 2 test
     envs.
     """
-    assert(n >= 3)
+    assert (n >= 3)
     for i in range(n):
         yield [i]
-        for j in range(i+1, n):
+        for j in range(i + 1, n):
             yield [i, j]
 
 
-def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps, data_dir, task,
-                   holdout_fraction, uda_holdout_fraction, single_test_envs, hparams, test_envs, hp, sweep_id, seed):
+def make_args_list(
+    n_trials, dataset_names, algorithms, n_hparams_from, n_hparams, steps, single_test_envs, hparams, test_envs, hp, seed, **kwargs
+):
     args_list = []
     for trial_seed in range(n_trials):
         trial_seed += seed
@@ -118,8 +115,7 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                 elif single_test_envs:
                     all_test_envs = [[i] for i in range(datasets.num_environments(dataset))]
                 else:
-                    all_test_envs = all_test_env_combinations(
-                        datasets.num_environments(dataset))
+                    all_test_envs = all_test_env_combinations(datasets.num_environments(dataset))
                 print(all_test_envs)
                 for _test_envs in all_test_envs:
                     for _hparams_seed in range(n_hparams_from, n_hparams):
@@ -128,14 +124,12 @@ def make_args_list(n_trials, dataset_names, algorithms, n_hparams_from, n_hparam
                         train_args['dataset'] = dataset
                         train_args['algorithm'] = algorithm
                         train_args['test_envs'] = _test_envs
-                        train_args['holdout_fraction'] = holdout_fraction
-                        train_args['uda_holdout_fraction'] = uda_holdout_fraction
                         train_args['hparams_seed'] = hparams_seed
-                        train_args['data_dir'] = data_dir
-                        train_args['task'] = task
-                        train_args["sweep_id"] = sweep_id
                         train_args['trial_seed'] = trial_seed
-                        train_args['seed'] = misc.seed_hash(dataset, algorithm, _test_envs, hparams_seed, trial_seed)
+                        train_args.update(kwargs)
+                        train_args['seed'] = misc.seed_hash(
+                            dataset, algorithm, _test_envs, hparams_seed, trial_seed
+                        )
                         if steps is not None:
                             train_args['steps'] = steps
                         if hparams is not None:
@@ -154,7 +148,6 @@ def ask_for_confirmation():
 
 
 DATASETS = [d for d in datasets.DATASETS if "Debug" not in d]
-
 
 if __name__ == "__main__":
     #  --n_hparams 20 --n_trials 3
@@ -175,6 +168,13 @@ if __name__ == "__main__":
     parser.add_argument("--hp", nargs=2, action="append")
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--uda_holdout_fraction', type=float, default=0.)
+    parser.add_argument(
+        '--checkpoint_freq',
+        type=int,
+        default=None,
+        help='Checkpoint every N steps. Default is dataset-dependent.'
+    )
+    parser.add_argument('--save_model_every_checkpoint', action='store_true')
     parser.add_argument('--single_test_envs', action='store_true')
     parser.add_argument('--skip_confirmation', action='store_true')
     parser.add_argument("--test_envs", default=None, nargs="+")
@@ -196,6 +196,8 @@ if __name__ == "__main__":
         holdout_fraction=args.holdout_fraction,
         uda_holdout_fraction=args.uda_holdout_fraction,
         single_test_envs=args.single_test_envs,
+        checkpoint_freq=args.checkpoint_freq,
+        save_model_every_checkpoint=args.save_model_every_checkpoint,
         hparams=args.hparams,
         test_envs=args.test_envs,
         hp=args.hp,
@@ -207,11 +209,12 @@ if __name__ == "__main__":
 
     for job in jobs:
         print(job)
-    print("{} jobs: {} done, {} incomplete, {} not launched.".format(
-        len(jobs),
-        len([j for j in jobs if j.state == Job.DONE]),
-        len([j for j in jobs if j.state == Job.INCOMPLETE]),
-        len([j for j in jobs if j.state == Job.NOT_LAUNCHED]))
+    print(
+        "{} jobs: {} done, {} incomplete, {} not launched.".format(
+            len(jobs), len([j for j in jobs if j.state == Job.DONE]),
+            len([j for j in jobs if j.state == Job.INCOMPLETE]),
+            len([j for j in jobs if j.state == Job.NOT_LAUNCHED])
+        )
     )
 
     if args.command == 'launch':

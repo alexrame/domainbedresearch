@@ -40,13 +40,14 @@ def main():
     parser.add_argument('--steps', type=int, default=None, help='Number of steps. Default is dataset-dependent.')
     parser.add_argument('--checkpoint_freq', type=int, default=None,
                         help='Checkpoint every N steps. Default is dataset-dependent.')
+    parser.add_argument('--save_model_every_checkpoint', action='store_true')
+
     parser.add_argument('--test_envs', type=int, nargs='+')
     parser.add_argument('--output_dir', type=str, default="default+name")
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--uda_holdout_fraction', type=float, default=0,
                         help="For domain adaptation, % of test to use unlabeled for training.")
     parser.add_argument('--skip_model_save', action='store_true')
-    parser.add_argument('--save_model_every_checkpoint', action='store_true')
     args = parser.parse_args()
 
     # If we ever want to implement checkpointing, just persist these values
