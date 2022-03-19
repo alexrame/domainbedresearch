@@ -119,14 +119,12 @@ class Soup(algorithms.Ensembling):
         algorithms.Algorithm.to(self, device)
         for net in self.networks:
             net.to(device)
-        for t in self._t_networks:
-            t.to(device)
+        self._t_networks = [t.to(device) for t in self._t_networks]
         if self.soup is not None:
             self.soup.network_soup.to(device)
         for swa in self.swas:
             swa.to(device)
-        for t in self._t_swas:
-            t.to(device)
+        self._t_swas = [t.to(device) for t in self._t_swas]
         if self.soupswa is not None:
             self.soupswa.network_soup.to(device)
 
