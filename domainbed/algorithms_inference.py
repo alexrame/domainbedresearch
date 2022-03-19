@@ -95,23 +95,26 @@ class Ensembling(algorithms.Ensembling):
 
 class Soup(algorithms.Ensembling):
 
-    def __init__(self, input_shape, num_classes, num_domains, t_scaled=False):
+    def __init__(self, input_shape, num_classes, num_domains, t_scaled=""):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
 
         self.networks = []
-        self._t_networks = []
-        self.swas = []
-        self._t_swas = []
         self._t_scaled = t_scaled
+        self.swas = []
+
+        if self._t_scaled:
+            self._t_swas = []
+            self._t_networks = []
+
         self.create_soups()
         self._init_memory()
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)
-        if self._t_scaled:
+        if self._t_scaled == "swa":
             self.soup.update_tscaled(self._t_networks)
             self.soupswa.update_tscaled(self._t_swas)
 
@@ -119,12 +122,15 @@ class Soup(algorithms.Ensembling):
         algorithms.Algorithm.to(self, device)
         for net in self.networks:
             net.to(device)
-        self._t_networks = [t.to(device) for t in self._t_networks]
         if self.soup is not None:
             self.soup.network_soup.to(device)
         for swa in self.swas:
             swa.to(device)
-        self._t_swas = [t.to(device) for t in self._t_swas]
+
+        if self._t_scaled:
+            self._t_networks = [t.to(device) for t in self._t_networks]
+            self._t_swas = [t.to(device) for t in self._t_swas]
+
         if self.soupswa is not None:
             self.soupswa.network_soup.to(device)
 
@@ -144,7 +150,8 @@ class Soup(algorithms.Ensembling):
         self._init_memory()
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
-            self._t_networks.append(algorithm.get_temperature("net"))
+            if self._t_scaled:
+                self._t_networks.append(algorithm.get_temperature("net"))
             self.memory["net"] += 1
         else:
             assert isinstance(algorithm, Ensembling)
@@ -152,26 +159,31 @@ class Soup(algorithms.Ensembling):
                 if int(os.environ.get('NETMEMBER', member)) == member:
                     self.networks.append(copy.deepcopy(network))
                     self.memory["net"] += 1
-                    self._t_networks.append(
-                        algorithm.get_temperature("net" + str(member)))
+                    if self._t_scaled:
+                        self._t_networks.append(
+                            algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
-            self._t_swas.append(algorithm.get_temperature("swa"))
+            if self._t_scaled:
+                self._t_swas.append(algorithm.get_temperature("swa"))
         if algorithm.swas is not None:
             for member, swa in enumerate(algorithm.swas):
                 if int(os.environ.get('SWAMEMBER', member)) == member:
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
-                    self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
+                    if self._t_scaled:
+                        self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
         self.create_soups()
 
     def delete_last(self):
         self.networks = self.networks[:-self.memory["net"]]
-        self._t_networks = self._t_networks[:-self.memory["net"]]
         self.swas = self.swas[:-self.memory["swa"]]
-        self._t_swas = self._t_swas[:-self.memory["swa"]]
+        if self._t_scaled:
+            self._t_networks = self._t_networks[:-self.memory["net"]]
+            self._t_swas = self._t_swas[:-self.memory["swa"]]
+
         self.create_soups()
         self._init_memory()
 
@@ -181,24 +193,29 @@ class Soup(algorithms.Ensembling):
     def predict(self, x):
         results = {}
         batch_logits = []
-        batch_logits_tscaled = []
         batch_logits_swa = []
-        batch_logits_swa_tscaled = []
+
+        if self._t_scaled:
+            batch_logits_tscaled = []
+            batch_logits_swa_tscaled = []
 
         for num_member in range(self.num_members()):
             logits = self.networks[num_member](x)
             batch_logits.append(logits)
-            batch_logits_tscaled.append(logits / self._t_networks[num_member])
             results["net" + str(num_member)] = logits
             logits_swa = self.swas[num_member](x)
             batch_logits_swa.append(logits_swa)
-            batch_logits_swa_tscaled.append(logits / self._t_swas[num_member])
             results["swa" + str(num_member)] = logits_swa
+            if self._t_scaled:
+                batch_logits_tscaled.append(logits / self._t_networks[num_member])
+                batch_logits_swa_tscaled.append(logits / self._t_swas[num_member])
 
         results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
         results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
-        results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
-        results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
+        if self._t_scaled:
+            results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
+            results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
+
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
         return results
