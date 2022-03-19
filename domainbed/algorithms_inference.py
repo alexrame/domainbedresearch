@@ -221,6 +221,8 @@ class Soup(algorithms.Ensembling):
 
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
+
+        results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
         return results
 
     def predict_feat(self, x):
