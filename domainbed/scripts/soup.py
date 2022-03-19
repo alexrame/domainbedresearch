@@ -356,7 +356,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     ]
     compute_trace = os.environ.get("HESSIAN") != "0"
     if compute_trace:
-        fraction = float(os.environ.get("HESSIAN", 0.1))
+        fraction = float(os.environ.get("HESSIAN", 0.2))
         ood_splits_small = [
             misc.split_dataset(split, int(len(split) * fraction), 0)[0] for split in ood_splits
         ]
@@ -388,10 +388,10 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             )
             del ens_algorithm.soup.network_soup
 
-            print(f"Begin Hessian soupswa")
-            results["Flatness/soupswahess"] = misc.compute_hessian(
-                ens_algorithm.soupswa.network_soup, loader_small, maxIter=10
-            )
+            # print(f"Begin Hessian soupswa")
+            # results["Flatness/soupswahess"] = misc.compute_hessian(
+            #     ens_algorithm.soupswa.network_soup, loader_small, maxIter=10
+            # )
             del ens_algorithm.soupswa.network_soup
 
             print("Begin Hessian swa0")

@@ -126,11 +126,21 @@ class SWA():
 class Soup():
     def __init__(self, networks):
         self.networks = networks
-        self.network_soup = copy.deepcopy(networks[0])
-        self.update()
+        if len(networks) != 0:
+            self.network_soup = copy.deepcopy(networks[0])
+            self.update()
+        else:
+            self.network_soup = None
 
     def update(self):
         for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
+            param_k = param[0]
+            param_k.data = sum(param[1:]).data / len(self.networks)
+
+    def update_tscaled(self, temperatures):
+        for name_param in zip(self.network_soup.named_parameters(), *[net.named_parameters() for net in self.networks]):
+            import pdb; pdb.set_trace()
+            if
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
 

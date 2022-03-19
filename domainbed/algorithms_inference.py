@@ -95,16 +95,25 @@ class Ensembling(algorithms.Ensembling):
 
 class Soup(algorithms.Ensembling):
 
-    def __init__(self, input_shape, num_classes, num_domains):
+    def __init__(self, input_shape, num_classes, num_domains, t_scaled=False):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
 
         self.networks = []
+        self._t_networks = []
         self.swas = []
-        self.soup = None
-        self.soupswa = None
+        self._t_swas = []
+        self.create_soups()
         self._init_memory()
+        self._t_scaled = t_scaled
+
+    def create_soups(self):
+        self.soup = misc.Soup(self.networks)
+        self.soupswa = misc.Soup(self.swas)
+        if self._t_scaled:
+            self.soup.update_tscaled(self._t_networks)
+            self.soupswa.update_tscaled(self._t_swas)
 
     def to(self, device):
         algorithms.Algorithm.to(self, device)
@@ -133,6 +142,7 @@ class Soup(algorithms.Ensembling):
         self._init_memory()
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
+            self._t_networks.append(algorithm.get_temperature("net"))
             self.memory["net"] += 1
         else:
             assert isinstance(algorithm, Ensembling)
@@ -140,24 +150,28 @@ class Soup(algorithms.Ensembling):
                 if int(os.environ.get('NETMEMBER', member)) == member:
                     self.networks.append(copy.deepcopy(network))
                     self.memory["net"] += 1
+                    self._t_networks.append(
+                        algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
+            self._t_swas.append(algorithm.get_temperature("swa"))
         if algorithm.swas is not None:
             for member, swa in enumerate(algorithm.swas):
                 if int(os.environ.get('SWAMEMBER', member)) == member:
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
+                    self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
+        self.create_soups()
 
-        self.soup = misc.Soup(self.networks)
-        self.soupswa = misc.Soup(self.swas)
 
     def delete_last(self):
         self.networks = self.networks[:-self.memory["net"]]
+        self._t_networks = self._t_networks[:-self.memory["net"]]
         self.swas = self.swas[:-self.memory["swa"]]
-        self.soup = misc.Soup(self.networks)
-        self.soupswa = misc.Soup(self.swas)
+        self._t_swas = self._t_swas[:-self.memory["swa"]]
+        self.create_soups()
         self._init_memory()
 
     def num_members(self):
@@ -166,18 +180,24 @@ class Soup(algorithms.Ensembling):
     def predict(self, x):
         results = {}
         batch_logits = []
+        batch_logits_tscaled = []
         batch_logits_swa = []
+        batch_logits_swa_tscaled = []
 
         for num_member in range(self.num_members()):
             logits = self.networks[num_member](x)
             batch_logits.append(logits)
+            batch_logits_tscaled.append(logits / self._t_networks[num_member])
             results["net" + str(num_member)] = logits
             logits_swa = self.swas[num_member](x)
             batch_logits_swa.append(logits_swa)
+            batch_logits_swa_tscaled.append(logits / self._t_swas[num_member])
             results["swa" + str(num_member)] = logits_swa
 
         results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
         results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
+        results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
+        results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
         return results
@@ -268,7 +288,7 @@ class Soup(algorithms.Ensembling):
             if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
                 feats0 = dict_stats[key0]["feats"]
                 feats1 = dict_stats[key1]["feats"]
-                results[f"Diversity/{regex}CKAC"] = 1 - CudaCKA(device).linear_CKA(feats0, feats1)
+                results[f"Diversity/{regex}CKAC"] = 1. - CudaCKA(device).linear_CKA(feats0, feats1).item()
 
         del dict_stats
 
