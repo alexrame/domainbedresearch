@@ -288,16 +288,18 @@ class ERM(Algorithm):
             for swa in self.swas:
                 swa.network_swa.train(*args)
 
-    def get_dict_stats(self, loader, device, compute_trace, do_calibration=True):
+    def get_dict_stats(self, loader, device, compute_trace, do_calibration=True, max_feats=float("inf")):
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
-            for batch in loader:
+            for i, batch in enumerate(loader):
                 x, y = batch
                 x = x.to(device)
                 dict_logits = self.predict(x)
-                if compute_trace:
+                if compute_trace and i < max_feats:
                     dict_feats = self.predict_feat(x)
+                else:
+                    dict_feats = {}
                 y = y.to(device)
                 batch_classes.append(y)
                 for key in dict_logits.keys():
@@ -318,7 +320,7 @@ class ERM(Algorithm):
                     dict_stats[key]["preds"].append(preds.cpu())
                     dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
                     dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
-                    if compute_trace and key in dict_feats:
+                    if key in dict_feats:
                         if "feats" not in dict_stats[key]:
                             dict_stats[key]["feats"] = []
                         dict_stats[key]["feats"].append(dict_feats[key])

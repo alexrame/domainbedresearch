@@ -259,7 +259,8 @@ class Soup(algorithms.Ensembling):
     def accuracy(self, loader, device, compute_trace, **kwargs):
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_calibration=False
+            loader, device, compute_trace, do_calibration=False,
+            max_feats=5
         )
 
         results = {}
