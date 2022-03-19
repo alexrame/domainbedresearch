@@ -143,11 +143,11 @@ class Soup():
         sum_temperatures = sum(temperatures)
         for param in zip(self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]):
             name = param[0][0]
+            if name not in ["1.weight", "1.bias"]:
+                continue
             param_k = param[0][1]
             weighted_sum = sum([p.data*t for p, t in zip(param[1:], temperatures)])
             param_k.data = weighted_sum / sum_temperatures
-        print(name)
-        import pdb; pdb.set_trace()
 
     def get_featurizer(self):
         return get_featurizer(self.network_soup)
