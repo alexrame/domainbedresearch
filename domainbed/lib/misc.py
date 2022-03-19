@@ -138,6 +138,8 @@ class Soup():
             param_k.data = sum(param[1:]).data / len(self.networks)
 
     def update_tscaled(self, temperatures):
+        if len(self.networks) == 0:
+            return
         for name_param in zip(self.network_soup.named_parameters(), *[net.named_parameters() for net in self.networks]):
             import pdb; pdb.set_trace()
             param_k = param[0]

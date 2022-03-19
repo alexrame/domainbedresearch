@@ -104,9 +104,9 @@ class Soup(algorithms.Ensembling):
         self._t_networks = []
         self.swas = []
         self._t_swas = []
+        self._t_scaled = t_scaled
         self.create_soups()
         self._init_memory()
-        self._t_scaled = t_scaled
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
