@@ -204,7 +204,7 @@ class Soup(algorithms.Ensembling):
         results["soup"] = self.soup.network_soup(x)
         results["soupswa"] = self.soupswa.network_soup(x)
 
-        results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
+        # results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
         if not self.do_ens:
             return results
 
@@ -312,6 +312,8 @@ class Soup(algorithms.Ensembling):
                 print(f"{regex} not found for diversity")
                 continue
 
+            regex = {"soup_soupswa": "sss", "net0_net1": "net01", "swa0_swa1": "swa01"}.get(regex, regex)
+
             results.update(
                 self._compute_diversity(
                     targets, dict_stats, regex, key0, key1, compute_trace, device
@@ -326,14 +328,14 @@ class Soup(algorithms.Ensembling):
         results = {}
         preds0 = dict_stats[key0]["preds"].numpy()
         preds1 = dict_stats[key1]["preds"].numpy()
-        results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
+        results[f"Diversity/divr_{regex}_ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
         # results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
         #     targets, preds0, preds1
         # )
         if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
             feats0 = dict_stats[key0]["feats"]
             feats1 = dict_stats[key1]["feats"]
-            results[f"Diversity/{regex}ckac"] = 1. - CudaCKA(device).linear_CKA(feats0,
+            results[f"Diversity/divf_{regex}_ckac"] = 1. - CudaCKA(device).linear_CKA(feats0,
                                                                                 feats1).item()
         return results
 

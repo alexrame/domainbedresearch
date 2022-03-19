@@ -1,5 +1,4 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
 """
 Things that don't belong anywhere else
 """
@@ -42,21 +41,18 @@ def get_featurizer(network):
     return nn.Sequential(*list(network.children())[:-1])
 
 
-
 def compute_hessian(network, loader, maxIter=100):
     if hessian is None:
         return 0
 
     hessian_comp_soup = hessian(
-        network,
-        nn.CrossEntropyLoss(reduction='mean'),
-        dataloader=loader,
-        cuda=True
+        network, nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
     )
     return np.mean(hessian_comp_soup.trace(maxIter=maxIter))
 
 
 class SWA():
+
     def __init__(self, network, hparams, swa_start_iter=100):
         self.network = network
         self.network_swa = copy.deepcopy(network)
@@ -94,12 +90,14 @@ class SWA():
             dist_l2 += (param_k.data.reshape(-1) - param_q.data.reshape(-1)).pow(2).sum()
             num_params = int(param_q.numel())
             count_params += num_params
-            cos += (param_k * param_q).sum()/(param_k.norm() * param_q.norm()) * num_params
-        return {"swa_l2": dist_l2/count_params, "swa_cos": cos/count_params}
+            cos += (param_k * param_q).sum() / (param_k.norm() * param_q.norm()) * num_params
+        return {"swa_l2": dist_l2 / count_params, "swa_cos": cos / count_params}
 
     def _update_layerwise(self):
         layerwise_split = self.layerwise.split("-") if isinstance(self.layerwise, str) else []
-        for i, (param_q, param_k) in enumerate(zip(self.network.parameters(), self.network_swa.parameters())):
+        for i, (param_q, param_k) in enumerate(
+            zip(self.network.parameters(), self.network_swa.parameters())
+        ):
             if "bin" in layerwise_split:
                 if random.random() < self.hparams["swa_bin"]:
                     continue
@@ -124,6 +122,7 @@ class SWA():
 
 
 class Soup():
+
     def __init__(self, networks):
         self.networks = networks
         if len(networks) != 0:
@@ -133,7 +132,9 @@ class Soup():
             self.network_soup = None
 
     def update(self):
-        for param in zip(self.network_soup.parameters(), *[net.parameters() for net in self.networks]):
+        for param in zip(
+            self.network_soup.parameters(), *[net.parameters() for net in self.networks]
+        ):
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
 
@@ -142,12 +143,14 @@ class Soup():
             return
         sum_temperatures = sum(temperatures)
         # print(f"Weighted soup with temperatures: {temperatures} of sum: {sum_temperatures}")
-        for param in zip(self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]):
+        for param in zip(
+            self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]
+        ):
             name = param[0][0]
             if name not in ["1.weight", "1.bias"]:
                 continue
             param_k = param[0][1]
-            weighted_sum = sum([p.data*t for p, t in zip(param[1:], temperatures)])
+            weighted_sum = sum([p.data * t for p, t in zip(param[1:], temperatures)])
             param_k.data = weighted_sum / sum_temperatures
 
     def get_featurizer(self):
@@ -184,13 +187,16 @@ def get_ece(proba_pred, accurate, n_bins=15, min_pred=0, verbose=False, **args):
             avg_confs_in_bins.append(avg_confidence_in_bin)
             ece += np.abs(delta) * prop_in_bin
             if verbose:
-                print(f"From {bin_lower:4.5} to {bin_upper:4.5} and mean {avg_confidence_in_bin:3.5}, "
-                      f"{(prop_in_bin * 100):4.5} % samples with accuracy {accuracy_in_bin:4.5}")
+                print(
+                    f"From {bin_lower:4.5} to {bin_upper:4.5} and mean {avg_confidence_in_bin:3.5}, "
+                    f"{(prop_in_bin * 100):4.5} % samples with accuracy {accuracy_in_bin:4.5}"
+                )
         else:
             avg_confs_in_bins.append(None)
             acc_in_bin_list.append(None)
 
-    return ece*100
+    return ece * 100
+
 
 def apply_temperature_on_logits(logits, temperature):
     """
@@ -198,6 +204,7 @@ def apply_temperature_on_logits(logits, temperature):
     """
     reshaped_temperature = temperature.unsqueeze(1).expand(logits.size(0), logits.size(1))
     return logits / reshaped_temperature
+
 
 def l2_between_dicts(dict_1, dict_2):
     assert len(dict_1) == len(dict_2)
@@ -210,6 +217,7 @@ def l2_between_dicts(dict_1, dict_2):
 
 
 class MovingAverage:
+
     def __init__(self, ema, oneminusema_correction=True):
         self.ema = ema
         self.ema_data = {}
@@ -279,6 +287,7 @@ def pdb():
     print("Launching PDB, enter 'n' to step to parent function.")
     pdb.set_trace()
 
+
 def seed_hash(*args):
     """
     Derive an integer hash from all args, for use as a random seed.
@@ -286,8 +295,10 @@ def seed_hash(*args):
     args_str = str(args)
     return int(hashlib.md5(args_str.encode("utf-8")).hexdigest(), 16) % (2**31)
 
+
 def print_separator():
-    print("="*80)
+    print("=" * 80)
+
 
 def print_row(row, colwidth=10, latex=False):
     if latex:
@@ -300,20 +311,26 @@ def print_row(row, colwidth=10, latex=False):
 
     def format_val(x):
         if np.issubdtype(type(x), np.floating):
-            x = "{:.4f}".format(x)
+            x = "{:.3f}".format(x)
         return str(x).ljust(colwidth)[:colwidth]
+
     print(sep.join([format_val(x) for x in row]), end_)
+
 
 class _SplitDataset(torch.utils.data.Dataset):
     """Used by split_dataset"""
+
     def __init__(self, underlying_dataset, keys):
         super(_SplitDataset, self).__init__()
         self.underlying_dataset = underlying_dataset
         self.keys = keys
+
     def __getitem__(self, key):
         return self.underlying_dataset[self.keys[key]]
+
     def __len__(self):
         return len(self.keys)
+
 
 def split_dataset(dataset, n, seed=0):
     """
@@ -321,12 +338,13 @@ def split_dataset(dataset, n, seed=0):
     dataset, with n datapoints in the first dataset and the rest in the last,
     using the given random seed
     """
-    assert(n <= len(dataset))
+    assert (n <= len(dataset))
     keys = list(range(len(dataset)))
     np.random.RandomState(seed).shuffle(keys)
     keys_1 = keys[:n]
     keys_2 = keys[n:]
     return _SplitDataset(dataset, keys_1), _SplitDataset(dataset, keys_2)
+
 
 def random_pairs_of_minibatches(minibatches):
     perm = torch.randperm(len(minibatches)).tolist()
@@ -354,7 +372,7 @@ def compute_correct_batch(predictions, weights, y, device):
     if weights is None:
         batch_weights = torch.ones(len(y))
     else:
-        batch_weights = weights[weights_offset : weights_offset + len(y)]
+        batch_weights = weights[weights_offset:weights_offset + len(y)]
         weights_offset += len(y)
     batch_weights = batch_weights.to(device)
     if p.size(1) == 1:
@@ -369,7 +387,7 @@ def accuracy(network, loader, weights, device):
     network.eval()
 
     corrects = defaultdict(int)  # key -> int
-    totals = defaultdict(int)    # key -> int
+    totals = defaultdict(int)  # key -> int
 
     with torch.no_grad():
         for batch in loader:
@@ -399,6 +417,7 @@ def accuracy(network, loader, weights, device):
 
 
 class Tee:
+
     def __init__(self, fname, mode="a"):
         self.stdout = sys.stdout
         self.file = open(fname, mode)
@@ -451,6 +470,7 @@ class ParamDict(OrderedDict):
 
 
 class CustomToRegularDataset(Dataset):
+
     def __init__(self, dataset):
         self.dataset = dataset
 
@@ -472,6 +492,7 @@ def dict_batch_to_device(batch, device):
 
 
 class DictDataset(Dataset):
+
     def __init__(self, dict):
         keys = list(dict.keys())
         self.keys = keys
@@ -479,10 +500,7 @@ class DictDataset(Dataset):
         self.dict = dict
 
     def __getitem__(self, index):
-        return {
-            key: self.dict[key][index]
-            for key in self.keys
-        }
+        return {key: self.dict[key][index] for key in self.keys}
 
     def __len__(self):
         return len(self.dict[self.keys[0]])
@@ -508,6 +526,7 @@ def one_hot_embedding(labels, num_classes):
 
 def count_param(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 def set_requires_grad(module, tf=False):
     module.requires_grad = tf

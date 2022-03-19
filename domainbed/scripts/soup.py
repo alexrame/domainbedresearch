@@ -117,7 +117,7 @@ def _get_args():
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
     parser.add_argument('--zipf_a', type=float, default=3.)
 
-    parser.add_argument('--algorithm', type=str)
+    parser.add_argument('--algorithm', type=str, default="Soup")
     parser.add_argument('--t_scaled', type=str)
     parser.add_argument('--do_ens', type=int, default=0)
 
@@ -387,7 +387,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             dataset=split, batch_size=64, num_workers=dataset.N_WORKERS
         ) for split in ood_splits
     ]
-    compute_hessian = os.environ.get("HESSIAN") != "0"
+    compute_hessian = os.environ.get("HESSIAN", "0") != "0"
     if compute_hessian:
         fraction = float(os.environ.get("HESSIAN", 0.2))
         ood_splits_small = [

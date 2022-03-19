@@ -216,9 +216,16 @@ wait
 
 
 
-HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 2 --cluster algorithm --regexes net0_net1 net0_net2 net0_net3 net0_net4 net0_net5 net1_net2 net1_net3 net1_net4 net1_net5 net2_net3 net2_net4 net2_net5 net3_net4 net3_net5 net4_net5
+HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --topk 2 --cluster algorithm --regexes net0_net1 net0_net2 net0_net3 net0_net4 net0_net5 net0_net6 net0_net7 net0_net8 net0_net9 net1_net2 net1_net3 net1_net4 net1_net5 net1_net6 net1_net7 net1_net8 net1_net9 net2_net3 net2_net4 net2_net5 net2_net6 net2_net7 net2_net8 net2_net9 net3_net4 net3_net5 net3_net6 net3_net7 net3_net8 net3_net9 net4_net5 net4_net6 net4_net7 net4_net8 net4_net9 net5_net6 net5_net7 net5_net8 net5_net9 net6_net7 net6_net8 net6_net9 net7_net8 net7_net9 net8_net9 --do_ens 1 &
+HESSIAN=0 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --topk 2 --cluster algorithm --regexes swa0_swa1 swa0_swa2 swa0_swa3 swa0_swa4 swa0_swa5 swa0_swa6 swa0_swa7 swa0_swa8 swa0_swa9 swa1_swa2 swa1_swa3 swa1_swa4 swa1_swa5 swa1_swa6 swa1_swa7 swa1_swa8 swa1_swa9 swa2_swa3 swa2_swa4 swa2_swa5 swa2_swa6 swa2_swa7 swa2_swa8 swa2_swa9 swa3_swa4 swa3_swa5 swa3_swa6 swa3_swa7 swa3_swa8 swa3_swa9 swa4_swa5 swa4_swa6 swa4_swa7 swa4_swa8 swa4_swa9 swa5_swa6 swa5_swa7 swa5_swa8 swa5_swa9 swa6_swa7 swa6_swa8 swa6_swa9 swa7_swa8 swa7_swa9 swa8_swa9 --do_ens 1 &
+HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --topk 2 --cluster algorithm --regexes swa0_swa1 swa0_swa2 swa0_swa3 swa0_swa4 swa0_swa5 swa0_swa6 swa0_swa7 swa0_swa8 swa0_swa9 swa1_swa2 swa1_swa3 swa1_swa4 swa1_swa5 swa1_swa6 swa1_swa7 swa1_swa8 swa1_swa9 swa2_swa3 swa2_swa4 swa2_swa5 swa2_swa6 swa2_swa7 swa2_swa8 swa2_swa9 swa3_swa4 swa3_swa5 swa3_swa6 swa3_swa7 swa3_swa8 swa3_swa9 swa4_swa5 swa4_swa6 swa4_swa7 swa4_swa8 swa4_swa9 swa5_swa6 swa5_swa7 swa5_swa8 swa5_swa9 swa6_swa7 swa6_swa8 swa6_swa9 swa7_swa8 swa7_swa9 swa8_swa9 --do_ens 1 &
+wait
 
 
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318 --criteriontopk acc_net --topk 20 &
+
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318 --criteriontopk acc_net --topk 20 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318 --criteriontopk acc_net --topk 20 &
 
 HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 25 &
 HESSIAN=0 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 30 &
@@ -236,111 +243,10 @@ e0_acc_swa: 0.6724 vs. 0.6786
 e0_acc_swam: 0.6439 vs. 0.6441
 
 
-e0_net0_net1cka: 0.2097 vs. 0.2447
-e0_net2_net3cka: 0.2072 vs. 0.2489
-e0_net4_net5cka: 0.1879 vs. 0.2277
-vs.
-
-e0_net0_net2cka: 0.2723 vs. 0.2301
-e0_net0_net3cka: 0.2466 vs. 0.2292
-e0_net1_net2cka: 0.2323 vs. 0.1912
-e0_net1_net3cka: 0.2294 vs. 0.2694
-l = [0.2723,0.2466,0.2323,0.2294]
-e0_net0_net4cka: 0.3272 vs. 0.3189
-e0_net0_net5cka: 0.3214 vs. 0.3113
-e0_net1_net4cka: 0.3173 vs. 0.3761
-e0_net1_net5cka: 0.3293 vs. 0.3796
-
-e0_net2_net4cka: 0.3919 vs. 0.3586
-e0_net2_net5cka: 0.3895 vs. 0.3525
-e0_net3_net4cka: 0.3511 vs. 0.2977
-e0_net3_net5cka: 0.3570 vs. 0.3083
-
-
-e0_net0_net1rat: 0.5892 vs. 0.6476
-e0_net2_net3rat: 0.5343 vs. 0.5740
-e0_net4_net5rat: 0.5649 vs. 0.6471
-vs.
-e0_net0_net2rat: 0.6005 vs. 0.6200
-e0_net0_net3rat: 0.5499 vs. 0.6150
-e0_net1_net2rat: 0.5589 vs. 0.5607
-e0_net1_net3rat: 0.6200 vs. 0.6108
-
-
-e0_net0_net4rat: 0.6634 vs. 0.6495
-e0_net0_net5rat: 0.6265 vs. 0.6635
-e0_net1_net4rat: 0.6005 vs. 0.6779
-e0_net1_net5rat: 0.6495 vs. 0.6342
-
-e0_net2_net4rat: 0.5339 vs. 0.6463
-e0_net2_net5rat: 0.5820 vs. 0.5758
-e0_net3_net4rat: 0.5801 vs. 0.6302
-e0_net3_net5rat: 0.6463 vs. 0.6404
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 2 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 10 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 20 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 40 &
+wait
 
 
