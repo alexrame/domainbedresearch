@@ -899,6 +899,9 @@ class Ensembling(Algorithm):
     def accuracy(self, *args, **kwargs):
         return ERM.accuracy(self, *args, **kwargs)
 
+    def get_dict_stats(self, *args, **kwargs):
+        return ERM.get_dict_stats(self, *args, **kwargs)
+
     def _init_temperature(self, *args, **kwargs):
         return ERM._init_temperature(self, *args, **kwargs)
 
