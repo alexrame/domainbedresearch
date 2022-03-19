@@ -345,8 +345,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     ]
     if compute_trace:
         ood_splits_small = [
-            misc.split_dataset(split, int(len(split) * 0.2), 0)[0]
-            for split in ood_splits
+            misc.split_dataset(split, int(len(split) * 0.2), 0)[0] for split in ood_splits
         ]
         ood_loaders_small = [
             FastDataLoader(
@@ -356,41 +355,51 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
             ) for split in ood_splits_small
         ]
     evals = zip(ood_names, ood_loaders)
-    results = {}
+    ood_results = {}
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
 
         results = ens_algorithm.accuracy(loader, device, compute_trace=compute_trace)
+        print(results)
 
         if compute_trace:
-            print("Begin Hessian soup")
+            loader_small = ood_loaders_small[i]
+            print(f"Begin Hessian for loaders of len: {len(loader_small)}")
             assert len(ood_names) == 1
-            del ens_algorithm.soupswa
             del ens_algorithm.swas[1:]
             del ens_algorithm.networks[1:]
-            loader_small = ood_loaders_small[i]
-            results["Flatness/souptrace"] = misc.compute_hessian(
+
+            print(f"Begin Hessian soup")
+            results["Flatness/souphess"] = misc.compute_hessian(
                 ens_algorithm.soup.network_soup, loader_small, maxIter=10
             )
             del ens_algorithm.soup.network_soup
+
+            print(f"Begin Hessian soupswa")
+            results["Flatness/soupswahess"] = misc.compute_hessian(
+                ens_algorithm.soupswa.network_soup, loader_small, maxIter=10
+            )
+            del ens_algorithm.soupswa.network_soup
+
             print("Begin Hessian swa0")
-            results[f"Flatness/swa0trace"] = misc.compute_hessian(
+            results[f"Flatness/swa0hess"] = misc.compute_hessian(
                 ens_algorithm.swas[0], loader_small, maxIter=10
             )
             del ens_algorithm.swas[0]
+
             print("Begin Hessian net0")
-            results[f"Flatness/net0trace"] = misc.compute_hessian(
+            results[f"Flatness/net0hess"] = misc.compute_hessian(
                 ens_algorithm.networks[0], loader_small, maxIter=10
             )
             del ens_algorithm.networks[0]
 
         for key in results:
-            results[name + "_" + key.split("/")[-1]] = results[key]
+            ood_results[name + "_" + key.split("/")[-1]] = results[key]
 
     print(f"OOD results for {inf_args} with {len(good_checkpoints)}")
-    results_keys = sorted(results.keys())
-    misc.print_row(results_keys, colwidth=15, latex=True)
-    misc.print_row([results[key] for key in results_keys], colwidth=15, latex=True)
+    ood_results_keys = sorted(ood_results.keys())
+    misc.print_row(ood_results_keys, colwidth=15, latex=True)
+    misc.print_row([ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)
 
 
 if __name__ == "__main__":

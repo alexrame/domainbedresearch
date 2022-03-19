@@ -308,7 +308,6 @@ class ERM(Algorithm):
                             "confs": [],
                             "correct": [],
                             "probs": [],
-
                         }
                     logits = dict_logits[key]
 
