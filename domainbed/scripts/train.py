@@ -245,7 +245,7 @@ def main():
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
-    def save_checkpoint(filename, results):
+    def save_checkpoint(filename, results, filename_light=None):
         if args.skip_model_save:
             return
         save_dict = {
@@ -254,8 +254,12 @@ def main():
             "model_input_shape": dataset.input_shape,
             "model_num_classes": dataset.num_classes,
             "model_hparams": hparams,
-            "model_dict": algorithm.cpu().state_dict(),
         }
+        if filename_light is not None:
+            # save only light information
+            torch.save(save_dict, os.path.join(args.output_dir, filename_light))
+
+        save_dict["model_dict"] = algorithm.cpu().state_dict()
         if algorithm.hparams.get("swa"):
             if algorithm.swas is not None:
                 for i, swa in enumerate(algorithm.swas):
@@ -369,7 +373,9 @@ def main():
         dataset.after_training(algorithm, args.output_dir, device=device)
 
     results_dumpable = {key: value for key, value in results_end.items() if misc.is_dumpable(value)}
-    save_checkpoint('model.pkl', results=json.dumps(results_dumpable, sort_keys=True))
+    save_checkpoint(
+        'model.pkl', results=json.dumps(results_dumpable, sort_keys=True),
+        filename_light='params.pkl')
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
