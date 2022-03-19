@@ -163,9 +163,9 @@ def get_score_run(results, criteriontopk, test_envs):
         return 0.
 
     if criteriontopk.startswith("acc"):
-        criteriontopk = "Accuracies/{criteriontopk}"
+        criteriontopk = f"Accuracies/{criteriontopk}"
     elif criteriontopk.startswith("ece"):
-        criteriontopk = "Calibration/{criteriontopk}"
+        criteriontopk = f"Calibration/{criteriontopk}"
     else:
         raise ValueError(f"Unknown criterion {criteriontopk}")
 
@@ -178,7 +178,7 @@ def get_score_run(results, criteriontopk, test_envs):
                 val_env_keys.append(acc_key)
         else:
             break
-    import pdb; pdb.set_trace()
+    assert i > 0
     return np.mean([results[key] for key in val_env_keys])
 
 
