@@ -119,6 +119,7 @@ def _get_args():
 
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--t_scaled', type=str)
+    parser.add_argument('--do_ens', type=int, default=0)
 
     inf_args = parser.parse_args()
     if inf_args.data_dir == "default":
@@ -355,6 +356,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         len(dataset) - len(inf_args.test_envs),
         t_scaled=inf_args.t_scaled,
         regexes=inf_args.regexes,
+        do_ens=inf_args.do_ens
     )
     for folder in good_checkpoints:
         print(f"Ingredient from folder: {folder}")

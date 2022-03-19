@@ -98,7 +98,7 @@ class Ensembling(algorithms.Ensembling):
 
 class Soup(algorithms.Ensembling):
 
-    def __init__(self, input_shape, num_classes, num_domains, t_scaled="", regexes=None):
+    def __init__(self, input_shape, num_classes, num_domains, t_scaled="", regexes=None, do_ens=1):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
@@ -110,6 +110,8 @@ class Soup(algorithms.Ensembling):
         if self._t_scaled:
             self._t_swas = []
             self._t_networks = []
+
+        self.do_ens = do_ens
 
         self.create_soups()
         self._init_memory()
@@ -124,28 +126,31 @@ class Soup(algorithms.Ensembling):
 
     def to(self, device):
         algorithms.Algorithm.to(self, device)
-        for net in self.networks:
-            net.to(device)
         if self.soup is not None:
             self.soup.network_soup.to(device)
+        if self.soupswa is not None:
+            self.soupswa.network_soup.to(device)
+
+        if not self.do_ens:
+            return
+        for net in self.networks:
+            net.to(device)
         for swa in self.swas:
             swa.to(device)
-
         if self._t_scaled:
             self._t_networks = [t.to(device) for t in self._t_networks]
             self._t_swas = [t.to(device) for t in self._t_swas]
 
-        if self.soupswa is not None:
-            self.soupswa.network_soup.to(device)
-
     def train(self, *args):
         algorithms.Algorithm.train(self, *args)
+        self.soup.network_soup.train(*args)
+        self.soupswa.network_soup.train(*args)
+        if not self.do_ens:
+            return
         for net in self.networks:
             net.train(*args)
-        self.soup.network_soup.train(*args)
         for swa in self.swas:
             swa.train(*args)
-        self.soupswa.network_soup.train(*args)
 
     def _init_memory(self):
         self.memory = {"net": 0, "swa": 0}
@@ -195,6 +200,14 @@ class Soup(algorithms.Ensembling):
 
     def predict(self, x):
         results = {}
+
+        results["soup"] = self.soup.network_soup(x)
+        results["soupswa"] = self.soupswa.network_soup(x)
+
+        results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
+        if not self.do_ens:
+            return results
+
         batch_logits = []
         batch_logits_swa = []
 
@@ -219,10 +232,6 @@ class Soup(algorithms.Ensembling):
             results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
             results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
 
-        results["soup"] = self.soup.network_soup(x)
-        results["soupswa"] = self.soupswa.network_soup(x)
-
-        results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
         return results
 
     def predict_feat(self, x):
@@ -260,7 +269,7 @@ class Soup(algorithms.Ensembling):
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
             loader, device, compute_trace, do_calibration=False,
-            max_feats=5
+            max_feats=10
         )
 
         results = {}
