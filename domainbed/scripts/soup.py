@@ -43,6 +43,7 @@ def main():
     for cluster, found_checkpoints in found_checkpoints_per_cluster.items():
         print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
         if inf_args.mode == "greedy":
+            print(f"Select from greedy")
             if "trial_seed" in inf_args.cluster:
                 assert inf_args.selection == "train"
                 trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
@@ -58,12 +59,15 @@ def main():
             cluster_good_checkpoints = get_greedy_checkpoints(
                 found_checkpoints, dataset, inf_args, val_names, val_splits, device
             )
-        if inf_args.mode == "zipf":
+        elif inf_args.mode == "zipf":
+            print(f"Select from zipf")
             cluster_good_checkpoints = get_from_zipf(
                 found_checkpoints, inf_args.topk, a=inf_args.zipf_a)
         elif inf_args.topk != 0:
+            print(f"Select best")
             cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
         else:
+            print(f"Select all")
             cluster_good_checkpoints = found_checkpoints[:]
         print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
         good_checkpoints.extend(cluster_good_checkpoints)
