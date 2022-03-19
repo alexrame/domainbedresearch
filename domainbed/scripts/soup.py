@@ -338,15 +338,21 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    compute_trace = os.environ.get("HESSIAN") != "0"
     ood_loaders = [
         FastDataLoader(dataset=split, batch_size=int(os.environ.get("BS", 64)), num_workers=dataset.N_WORKERS)
         for split in ood_splits
     ]
+    if compute_trace:
+        ood_loaders_small = [
+            FastDataLoader(dataset=split, batch_size=int(os.environ.get("HESSIAN", 12)), num_workers=dataset.N_WORKERS)
+            for split in ood_splits
+        ]
     evals = zip(ood_names, ood_loaders)
     results = {}
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
-        compute_trace = os.environ.get("HESSIAN") != "0"
+
         results = ens_algorithm.accuracy(
             loader,
             device,
@@ -354,18 +360,22 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         )
 
         if compute_trace:
+            print("Begin Hessian soup")
             assert len(ood_names) ==  1
             del ens_algorithm.soupswa
             del ens_algorithm.swas[1:]
             del ens_algorithm.networks[1:]
-            # results["Flatness/souptrace"] = misc.compute_hessian(
-            #     ens_algorithm.soup.network_soup, loader, maxIter=10)
-            # del ens_algorithm.soup.network_soup
+            loader_small = ood_loaders_small[i]
+            results["Flatness/souptrace"] = misc.compute_hessian(
+                ens_algorithm.soup.network_soup, loader_small, maxIter=10)
+            del ens_algorithm.soup.network_soup
+            print("Begin Hessian swa0")
             results[f"Flatness/swa0trace"] = misc.compute_hessian(
-                ens_algorithm.swas[0], loader, maxIter=10)
+                ens_algorithm.swas[0], loader_small, maxIter=10)
             del ens_algorithm.swas[0]
+            print("Begin Hessian net0")
             results[f"Flatness/net0trace"] = misc.compute_hessian(
-                ens_algorithm.networks[0], loader, maxIter=10
+                ens_algorithm.networks[0], loader_small, maxIter=10
             )
             del ens_algorithm.networks[0]
 

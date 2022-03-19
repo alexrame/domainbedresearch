@@ -288,9 +288,7 @@ class ERM(Algorithm):
             for swa in self.swas:
                 swa.network_swa.train(*args)
 
-    def accuracy(self, loader, device, compute_trace=False, update_temperature=False, output_temperature=False):
-        self.eval()
-
+    def get_dict_stats(self, loader, device, compute_trace, do_calibration=True):
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
@@ -310,8 +308,7 @@ class ERM(Algorithm):
                             "confs": [],
                             "correct": [],
                             "probs": [],
-                            # "feats": []
-                            # "confstemp": []
+
                         }
                     logits = dict_logits[key]
 
@@ -327,7 +324,7 @@ class ERM(Algorithm):
                             dict_stats[key]["feats"] = []
                         dict_stats[key]["feats"].append(dict_feats[key])
 
-                    if key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
+                    if do_calibration and key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                         temperature = self.get_temperature(key)
                         if temperature is None:
                             continue
@@ -342,6 +339,12 @@ class ERM(Algorithm):
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
                 dict_stats[key0][key1] = torch.cat(dict_stats[key0][key1])
+        return dict_stats, batch_classes
+
+    def accuracy(self, loader, device, compute_trace=False, update_temperature=False, output_temperature=False):
+        self.eval()
+
+        dict_stats, batch_classes = self.get_dict_stats(loader, device, compute_trace)
 
         results = {}
         for key in dict_stats:

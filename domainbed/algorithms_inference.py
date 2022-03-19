@@ -196,46 +196,10 @@ class Soup(algorithms.Ensembling):
 
     def accuracy(self, loader, device, compute_trace, **kwargs):
         self.eval()
-        batch_classes = []
-        dict_stats = {}
-        with torch.no_grad():
-            for batch in loader:
-                x, y = batch
-                x = x.to(device)
-                dict_logits = self.predict(x)
-                if compute_trace:
-                    dict_feats = self.predict_feat(x)
-                y = y.to(device)
-                batch_classes.append(y)
-                for key in dict_logits.keys():
-                    if key not in dict_stats:
-                        dict_stats[key] = {
-                            "logits": [],
-                            "preds": [],
-                            "confs": [],
-                            "correct": [],
-                            "probs": [],
-                        }
-                    logits = dict_logits[key]
-
-                    preds = logits.argmax(1)
-                    probs = torch.softmax(logits, dim=1)
-                    dict_stats[key]["logits"].append(logits.cpu())
-                    dict_stats[key]["probs"].append(probs.cpu())
-                    dict_stats[key]["preds"].append(preds.cpu())
-                    dict_stats[key]["correct"].append(preds.eq(y).float().cpu())
-                    dict_stats[key]["confs"].append(probs.max(dim=1)[0].cpu())
-                    if compute_trace and key in dict_feats:
-                        if "feats" not in dict_stats[key]:
-                            dict_stats[key]["feats"] = []
-                        dict_stats[key]["feats"].append(dict_feats[key])
-
-        for key0 in dict_stats:
-            for key1 in dict_stats[key0]:
-                dict_stats[key0][key1] = torch.cat(dict_stats[key0][key1])
+        dict_stats, batch_classes = self.get_dict_stats(
+            loader, device, compute_trace, do_calibration=False)
 
         results = {}
-
         for key in dict_stats:
             results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()
                                                   ) / len(dict_stats[key]["correct"].numpy())
