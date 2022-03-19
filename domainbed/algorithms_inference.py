@@ -119,10 +119,14 @@ class Soup(algorithms.Ensembling):
         algorithms.Algorithm.to(self, device)
         for net in self.networks:
             net.to(device)
+        for t in self._t_networks:
+            t.to(device)
         if self.soup is not None:
             self.soup.network_soup.to(device)
         for swa in self.swas:
             swa.to(device)
+        for t in self._t_swas:
+            t.to(device)
         if self.soupswa is not None:
             self.soupswa.network_soup.to(device)
 
@@ -130,9 +134,13 @@ class Soup(algorithms.Ensembling):
         algorithms.Algorithm.train(self, *args)
         for net in self.networks:
             net.train(*args)
+        for t in self._t_networks:
+            t.train(*args)
         self.soup.network_soup.train(*args)
         for swa in self.swas:
             swa.train(*args)
+        for t in self._t_swas:
+            t.train(*args)
         self.soupswa.network_soup.train(*args)
 
     def _init_memory(self):
@@ -164,7 +172,6 @@ class Soup(algorithms.Ensembling):
                     self.memory["swa"] += 1
                     self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
         self.create_soups()
-
 
     def delete_last(self):
         self.networks = self.networks[:-self.memory["net"]]
