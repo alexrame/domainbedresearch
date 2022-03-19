@@ -240,7 +240,7 @@ def main():
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
-    def save_checkpoint(filename, results, filename_heavy=None):
+    def save_checkpoint(filename, results, filename_heavy=None, **kwargs):
         if args.skip_model_save:
             return
         save_dict = {
@@ -250,7 +250,12 @@ def main():
             "model_num_classes": dataset.num_classes,
             "model_hparams": hparams,
         }
-        torch.save(save_dict, os.path.join(args.output_dir, filename))
+        save_dict.update(kwargs)
+        file_path = os.path.join(args.output_dir, filename)
+        directory = os.path.dirname(file_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        torch.save(save_dict, file_path)
 
         if filename_heavy:
             save_dict["model_dict"] = algorithm.cpu().state_dict()
@@ -260,8 +265,11 @@ def main():
                         save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
                 if algorithm.swa is not None:
                     save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
-
-            torch.save(save_dict, os.path.join(args.output_dir, filename_heavy))
+            file_path_heavy = os.path.join(args.output_dir, filename_heavy)
+            directory = os.path.dirname(file_path_heavy)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            torch.save(save_dict, file_path_heavy)
 
     last_results_keys = None
     metrics = {}
@@ -352,7 +360,10 @@ def main():
 
             if args.save_model_every_checkpoint:
                 save_checkpoint(
-                    f'model_step{step}.pkl', results=json.dumps(results_dumpable, sort_keys=True)
+                    f'{step}/model.pkl',
+                    results=json.dumps(results_dumpable, sort_keys=True),
+                    filename_heavy=f'{step}/model_with_weights.pkl',
+                    step=step
                 )
 
             for key, value in algorithm.get_tb_dict().items():
