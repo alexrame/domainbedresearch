@@ -245,7 +245,7 @@ def main():
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
 
-    def save_checkpoint(filename, results, filename_light=None):
+    def save_checkpoint(filename, results, filename_heavy=None):
         if args.skip_model_save:
             return
         save_dict = {
@@ -255,19 +255,18 @@ def main():
             "model_num_classes": dataset.num_classes,
             "model_hparams": hparams,
         }
-        if filename_light is not None:
-            # save only light information
-            torch.save(save_dict, os.path.join(args.output_dir, filename_light))
-
-        save_dict["model_dict"] = algorithm.cpu().state_dict()
-        if algorithm.hparams.get("swa"):
-            if algorithm.swas is not None:
-                for i, swa in enumerate(algorithm.swas):
-                    save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
-            if algorithm.swa is not None:
-                save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
-
         torch.save(save_dict, os.path.join(args.output_dir, filename))
+
+        if filename_heavy:
+            save_dict["model_dict"] = algorithm.cpu().state_dict()
+            if algorithm.hparams.get("swa"):
+                if algorithm.swas is not None:
+                    for i, swa in enumerate(algorithm.swas):
+                        save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
+                if algorithm.swa is not None:
+                    save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
+
+            torch.save(save_dict, os.path.join(args.output_dir, filename_heavy))
 
     last_results_keys = None
     metrics = {}
@@ -374,8 +373,9 @@ def main():
 
     results_dumpable = {key: value for key, value in results_end.items() if misc.is_dumpable(value)}
     save_checkpoint(
-        'model.pkl', results=json.dumps(results_dumpable, sort_keys=True),
-        filename_light='params.pkl')
+        'model.pkl',
+        results=json.dumps(results_dumpable, sort_keys=True),
+        filename_heavy='model_with_weights.pkl')
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')

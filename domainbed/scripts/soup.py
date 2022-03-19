@@ -227,6 +227,15 @@ def find_checkpoints(inf_args, verbose=False):
     return found_checkpoints_per_cluster
 
 
+def file_with_weights(folder):
+    filename = os.path.join(folder, "model.pkl")
+    filename_heavy = os.path.join(folder, "model_with_weights.pkl")
+    if os.path.exists(filename_heavy):
+        filename = filename_heavy
+    else:
+        assert os.path.exists(filename)
+    return filename
+
 def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
 
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
@@ -239,7 +248,8 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
     good_nums = []
     for num, folder in enumerate(found_checkpoints):
         # print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
-        save_dict = torch.load(os.path.join(folder, "model.pkl"))
+
+        save_dict = torch.load(file_with_weights(folder))
         train_args = NameSpace(save_dict["args"])
 
         # load model
@@ -315,7 +325,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     )
     for folder in good_checkpoints:
         print(f"Ingredient from folder: {folder}")
-        save_dict = torch.load(os.path.join(folder, "model.pkl"))
+        save_dict = torch.load(file_with_weights(folder))
         train_args = NameSpace(save_dict["args"])
 
         # load model
