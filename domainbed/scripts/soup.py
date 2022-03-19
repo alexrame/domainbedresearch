@@ -91,7 +91,7 @@ def _get_args():
     parser.add_argument('--data_dir', type=str, default="default")
 
     # select which checkpoints
-    parser.add_argument('--mode', type=str, default="ens")  # or "greedy"
+    parser.add_argument('--mode', type=str, default="")  # "" or "greedy"
     parser.add_argument(
         '--cluster',
         type=str,
@@ -233,12 +233,12 @@ def find_checkpoints(inf_args, verbose=False):
         raise ValueError("No checkpoints found")
         return []
     print(found_checkpoints_per_cluster)
-
-    found_checkpoints_per_cluster = {
+    sorted_checkpoints_per_cluster = {
         cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
-    return found_checkpoints_per_cluster
+    print(sorted_checkpoints_per_cluster)
+    return sorted_checkpoints_per_cluster
 
 
 def file_with_weights(folder):
