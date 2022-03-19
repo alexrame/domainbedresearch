@@ -178,6 +178,7 @@ def get_score_run(results, criteriontopk, test_envs):
                 val_env_keys.append(acc_key)
         else:
             break
+    import pdb; pdb.set_trace()
     return np.mean([results[key] for key in val_env_keys])
 
 
