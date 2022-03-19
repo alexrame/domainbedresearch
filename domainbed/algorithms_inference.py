@@ -280,23 +280,24 @@ class Soup(algorithms.Ensembling):
             #     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
             # )
 
-        results["Accuracies/acc_netm"] = np.mean(
-            [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
-        )
-        # results["Calibration/ece_netm"] = np.mean(
-        #     [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
-        # )
-        results["Accuracies/acc_swam"] = np.mean(
-            [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
-        )
-        # results["Calibration/ece_swam"] = np.mean(
-        #     [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
-        # )
-        for key in range(self.num_members()):
-            del results[f"Accuracies/acc_net{key}"]
-            # del results[f"Calibration/ece_net{key}"]
-            del results[f"Accuracies/acc_swa{key}"]
-            # del results[f"Calibration/ece_swa{key}"]
+        if self.do_ens:
+            results["Accuracies/acc_netm"] = np.mean(
+                [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
+            )
+            # results["Calibration/ece_netm"] = np.mean(
+            #     [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
+            # )
+            results["Accuracies/acc_swam"] = np.mean(
+                [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
+            )
+            # results["Calibration/ece_swam"] = np.mean(
+            #     [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
+            # )
+            for key in range(self.num_members()):
+                del results[f"Accuracies/acc_net{key}"]
+                # del results[f"Calibration/ece_net{key}"]
+                del results[f"Accuracies/acc_swa{key}"]
+                # del results[f"Calibration/ece_swa{key}"]
 
         targets = torch.cat(batch_classes).cpu().numpy()
 

@@ -108,7 +108,7 @@ def _get_args():
     parser.add_argument(
         '--regexes',
         type=str,
-        default=["swa0_swa1", "net0_net1", "soup_soupswa"],
+        default=["soup_soupswa"],
         nargs='+',
     )
 
