@@ -258,27 +258,27 @@ class Soup(algorithms.Ensembling):
         for key in dict_stats:
             results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()
                                                   ) / len(dict_stats[key]["correct"].numpy())
-            results[f"Calibration/ece_{key}"] = misc.get_ece(
-                dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
-            )
+            # results[f"Calibration/ece_{key}"] = misc.get_ece(
+            #     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
+            # )
 
         results["Accuracies/acc_netm"] = np.mean(
             [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
         )
-        results["Calibration/ece_netm"] = np.mean(
-            [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
-        )
+        # results["Calibration/ece_netm"] = np.mean(
+        #     [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
+        # )
         results["Accuracies/acc_swam"] = np.mean(
             [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
         )
-        results["Calibration/ece_swam"] = np.mean(
-            [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
-        )
+        # results["Calibration/ece_swam"] = np.mean(
+        #     [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
+        # )
         for key in range(self.num_members()):
             del results[f"Accuracies/acc_net{key}"]
-            del results[f"Calibration/ece_net{key}"]
+            # del results[f"Calibration/ece_net{key}"]
             del results[f"Accuracies/acc_swa{key}"]
-            del results[f"Calibration/ece_swa{key}"]
+            # del results[f"Calibration/ece_swa{key}"]
 
         targets = torch.cat(batch_classes).cpu().numpy()
 
@@ -309,7 +309,7 @@ class Soup(algorithms.Ensembling):
 
         return results
 
-    def compute_diversity(self, targets, dict_stats, regex, key0, key1, compute_trace, device):
+    def _compute_diversity(self, targets, dict_stats, regex, key0, key1, compute_trace, device):
         results = {}
         preds0 = dict_stats[key0]["preds"].numpy()
         preds1 = dict_stats[key1]["preds"].numpy()
@@ -320,5 +320,5 @@ class Soup(algorithms.Ensembling):
         if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
             feats0 = dict_stats[key0]["feats"]
             feats1 = dict_stats[key1]["feats"]
-            results[f"Diversity/{regex}CKAC"] = 1. - CudaCKA(device).linear_CKA(feats0,
+            results[f"Diversity/{regex}ckac"] = 1. - CudaCKA(device).linear_CKA(feats0,
                                                                                 feats1).item()

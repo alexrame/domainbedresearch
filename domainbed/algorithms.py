@@ -439,13 +439,13 @@ class ERM(Algorithm):
             if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
                 feats0 = dict_stats[key0]["feats"]
                 feats1 = dict_stats[key1]["feats"]
-                results[f"Diversity/{regex}CKAC"] = 1. - CudaCKA(device).linear_CKA(feats0, feats1).item()
+                results[f"Diversity/{regex}ckac"] = 1. - CudaCKA(device).linear_CKA(feats0, feats1).item()
                 # del feats0, feats1
 
-            probs0 = dict_stats[key0]["probs"].numpy()
-            probs1 = dict_stats[key1]["probs"].numpy()
-            results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
-            results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
+            # probs0 = dict_stats[key0]["probs"].numpy()
+            # probs1 = dict_stats[key1]["probs"].numpy()
+            # results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
+            # results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
             del targets
             # del dict_stats[key0], dict_stats[key1]
 
