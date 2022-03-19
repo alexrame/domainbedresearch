@@ -231,6 +231,7 @@ def find_checkpoints(inf_args, verbose=False):
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError("No checkpoints found")
         return []
+    print(found_checkpoints_per_cluster)
 
     found_checkpoints_per_cluster = {
         cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)

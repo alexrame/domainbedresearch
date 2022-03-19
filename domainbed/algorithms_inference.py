@@ -322,3 +322,4 @@ class Soup(algorithms.Ensembling):
             feats1 = dict_stats[key1]["feats"]
             results[f"Diversity/{regex}ckac"] = 1. - CudaCKA(device).linear_CKA(feats0,
                                                                                 feats1).item()
+        return results
