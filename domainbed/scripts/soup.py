@@ -58,6 +58,9 @@ def main():
             cluster_good_checkpoints = get_greedy_checkpoints(
                 found_checkpoints, dataset, inf_args, val_names, val_splits, device
             )
+        if inf_args.mode == "zipf":
+            cluster_good_checkpoints = get_from_zipf(
+                found_checkpoints, inf_args.topk, a=inf_args.zipf_a)
         elif inf_args.topk != 0:
             cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
         else:
@@ -108,6 +111,7 @@ def _get_args():
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection', type=str, default="train")  # or "oracle"
+    parser.add_argument('--zipf_a', type=float, default=3.)
 
     parser.add_argument('--algorithm', type=str)
     parser.add_argument('--t_scaled', type=str)
@@ -326,6 +330,17 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
     print(f"Best OOD results for {inf_args} with {len(good_nums)} checkpoints")
     print(best_results)
     return [found_checkpoints[num] for num in good_nums]
+
+
+
+def get_from_zipf(found_checkpoints, topk, a=3):
+    n = len(found_checkpoints)
+    nums = set([])
+    while len(nums) != topk:
+        z = np.random.zipf(a, 1)[0]
+        if z < n:
+            nums.add(z)
+    return [checkpoint for i, checkpoint in enumerate(found_checkpoints) if i in nums]
 
 
 def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device):
