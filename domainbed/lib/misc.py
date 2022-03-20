@@ -329,7 +329,7 @@ def print_rows(row1, row2, colwidth=10, latex=False):
             x = "{:.3f}".format(x)
         return str(x).ljust(colwidth)[:colwidth]
 
-    print(sep.join([format_val(x1) + ": " + format_val(x2) for x1, x2 in zip(row1, row2)]), end_)
+    print(sep.join([format_val(x1) + ":" + format_val(x2) for x1, x2 in zip(row1, row2)]), end_)
 
 
 class _SplitDataset(torch.utils.data.Dataset):

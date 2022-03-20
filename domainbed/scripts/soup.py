@@ -295,6 +295,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
         elif inf_args.topk != 0:
             print(f"Select best")
             cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
+            print(cluster_good_checkpoints)
         else:
             print(f"Select all")
             cluster_good_checkpoints = found_checkpoints[:]
