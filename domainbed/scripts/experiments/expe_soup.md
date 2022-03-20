@@ -249,4 +249,62 @@ SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.sou
 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --criteriontopk acc_net --topk 40 &
 wait
 
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318
+
+swa0_swa1: 0.050
+swa2_swa3: 0.121
+swa4_swa5: 0.111
+swa6_swa7: 0.082
+swa8_swa9: 0.069
+
+swa0_swa2: 0.280
+swa0_swa3: 0.293
+swa1_swa2: 0.283
+swa1_swa3: 0.296
+
+swa0_swa4: 0.077
+swa0_swa5: 0.098
+swa1_swa4: 0.081
+swa1_swa5: 0.100
+
+swa0_swa6: 0.063
+swa0_swa7: 0.084
+swa1_swa6: 0.057
+swa1_swa7: 0.085
+
+swa0_swa8: 0.219
+swa0_swa9: 0.227
+swa1_swa8: 0.219
+swa1_swa9: 0.230
+
+swa2_swa4: 0.266
+swa2_swa5: 0.344
+swa3_swa4: 0.278
+swa3_swa5: 0.366
+
+swa2_swa6: 0.295
+swa2_swa7: 0.336
+swa3_swa6: 0.308
+swa3_swa7: 0.368
+
+swa2_swa8: 0.212
+swa2_swa9: 0.211
+swa3_swa8: 0.205
+swa3_swa9: 0.201
+
+
+swa4_swa6: 0.099
+swa4_swa7: 0.112
+swa5_swa6: 0.108
+swa5_swa7: 0.069
+
+swa4_swa8: 0.230
+swa4_swa9: 0.238
+swa5_swa8: 0.298
+swa5_swa9: 0.312
+
+swa6_swa8: 0.225
+swa6_swa9: 0.233
+swa7_swa8: 0.287
+swa7_swa9: 0.300
 

@@ -312,7 +312,7 @@ class Soup(algorithms.Ensembling):
                 print(f"{regex} not found for diversity")
                 continue
 
-            regex = {"soup_soupswa": "sss", "net0_net1": "net01", "swa0_swa1": "swa01"}.get(regex, regex)
+            regex = regex.replace("swa", "s").replace("net", "n").replace("_", "")
 
             results.update(
                 self._compute_diversity(
