@@ -260,6 +260,7 @@ def file_with_weights(folder):
     if os.path.exists(filename_heavy):
         filename = filename_heavy
     else:
+        print(f"missing {filename_heavy}")
         assert os.path.exists(filename)
     return filename
 
