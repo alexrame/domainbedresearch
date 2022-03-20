@@ -168,6 +168,7 @@ class NameSpace(object):
 def get_score_run(results, criteriontopk, test_envs):
     if not results:
         return 0.
+    results = json.loads(results)
     if criteriontopk in ["none", "0"]:
         return 0.
     if criteriontopk in ["step"]:
@@ -180,7 +181,6 @@ def get_score_run(results, criteriontopk, test_envs):
     else:
         raise ValueError(f"Unknown criterion {criteriontopk}")
 
-    results = json.loads(results)
     val_env_keys = []
     for i in itertools.count():
         acc_key = f'env{i}_out_{criteriontopk}'
@@ -204,9 +204,7 @@ def find_checkpoints(inf_args, verbose=False):
         for path in os.listdir(output_dir)
     ]
     if os.environ.get("SAVE"):
-        print("checkpoints", checkpoints)
         checkpoints = [os.path.join(checkpoint, path) for checkpoint in checkpoints for path in os.listdir(checkpoint)]
-        print("checkpoints", checkpoints)
 
     found_checkpoints_per_cluster = {}
     for folder in checkpoints:
