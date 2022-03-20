@@ -27,26 +27,48 @@ def main():
     parser.add_argument('--data_dir', type=str, default="default")
     parser.add_argument('--dataset', type=str, default="ColoredMNIST")
     parser.add_argument('--algorithm', type=str, default="Ensembling")
-    parser.add_argument('--task', type=str, default="domain_generalization",
-                        choices=["domain_generalization", "domain_adaptation"])
+    parser.add_argument(
+        '--task',
+        type=str,
+        default="domain_generalization",
+        choices=["domain_generalization", "domain_adaptation"]
+    )
     parser.add_argument('--hparams', type=str, help='JSON-serialized hparams dict')
     parser.add_argument('--sweep_id', type=str, help='', default="single")
     parser.add_argument("--hp", nargs=2, action="append")
-    parser.add_argument('--hparams_seed', type=int, default=0,
-                        help='Seed for random hparams (0 means "default hparams")')
-    parser.add_argument('--trial_seed', type=int, default=0,
-                        help='Trial number (used for seeding split_dataset and random_hparams).')
+    parser.add_argument(
+        '--hparams_seed',
+        type=int,
+        default=0,
+        help='Seed for random hparams (0 means "default hparams")'
+    )
+    parser.add_argument(
+        '--trial_seed',
+        type=int,
+        default=0,
+        help='Trial number (used for seeding split_dataset and random_hparams).'
+    )
     parser.add_argument('--seed', type=int, default=0, help='Seed for everything else')
-    parser.add_argument('--steps', type=int, default=None, help='Number of steps. Default is dataset-dependent.')
-    parser.add_argument('--checkpoint_freq', type=int, default=None,
-                        help='Checkpoint every N steps. Default is dataset-dependent.')
+    parser.add_argument(
+        '--steps', type=int, default=None, help='Number of steps. Default is dataset-dependent.'
+    )
+    parser.add_argument(
+        '--checkpoint_freq',
+        type=int,
+        default=None,
+        help='Checkpoint every N steps. Default is dataset-dependent.'
+    )
     parser.add_argument('--save_model_every_checkpoint', action='store_true')
 
     parser.add_argument('--test_envs', type=int, nargs='+')
     parser.add_argument('--output_dir', type=str, default="default+name")
     parser.add_argument('--holdout_fraction', type=float, default=0.2)
-    parser.add_argument('--uda_holdout_fraction', type=float, default=0,
-                        help="For domain adaptation, % of test to use unlabeled for training.")
+    parser.add_argument(
+        '--uda_holdout_fraction',
+        type=float,
+        default=0,
+        help="For domain adaptation, % of test to use unlabeled for training."
+    )
     parser.add_argument('--skip_model_save', action='store_true')
     args = parser.parse_args()
 
@@ -71,8 +93,9 @@ def main():
     if args.hparams_seed == 0:
         hparams = hparams_registry.default_hparams(args.algorithm, args.dataset)
     else:
-        hparams = hparams_registry.random_hparams(args.algorithm, args.dataset,
-                                                  misc.seed_hash(args.hparams_seed, args.trial_seed))
+        hparams = hparams_registry.random_hparams(
+            args.algorithm, args.dataset, misc.seed_hash(args.hparams_seed, args.trial_seed)
+        )
     if args.hparams:
         hparams.update(json.loads(args.hparams))
     if args.hp:
@@ -98,7 +121,9 @@ def main():
 
     if args.output_dir == "default+name":
         if "DATA" in os.environ:
-            args.output_dir = os.path.join(os.environ["DATA"], f"experiments/domainbed/singleruns/{args.dataset}", run_name)
+            args.output_dir = os.path.join(
+                os.environ["DATA"], f"experiments/domainbed/singleruns/{args.dataset}", run_name
+            )
         else:
             args.output_dir = os.path.join(f"logs/singleruns/{args.dataset}", run_name)
 
@@ -155,11 +180,15 @@ def main():
         if dataset_class.CUSTOM_DATASET:
             env = misc.CustomToRegularDataset(env)
 
-        out, in_ = misc.split_dataset(env, int(len(env)*args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i))
+        out, in_ = misc.split_dataset(
+            env, int(len(env) * args.holdout_fraction), misc.seed_hash(args.trial_seed, env_i)
+        )
 
         if env_i in args.test_envs:
-            uda, in_ = misc.split_dataset(in_, int(len(in_)*args.uda_holdout_fraction),
-                                          misc.seed_hash(args.trial_seed, env_i))
+            uda, in_ = misc.split_dataset(
+                in_, int(len(in_) * args.uda_holdout_fraction),
+                misc.seed_hash(args.trial_seed, env_i)
+            )
             # uda, out = misc.split_dataset(out, int(len(out)*args.uda_holdout_fraction),
             #                               misc.seed_hash(args.trial_seed, env_i))
 
@@ -180,41 +209,42 @@ def main():
 
     print("Train Envs:", [i for (i, _) in enumerate(in_splits) if i not in args.test_envs])
 
-    train_loaders = [InfiniteDataLoader(
-        dataset=env,
-        weights=env_weights,
-        batch_size=hparams['batch_size'],
-        num_workers=dataset.N_WORKERS)
-        for i, (env, env_weights) in enumerate(in_splits)
-        if i not in args.test_envs]
+    train_loaders = [
+        InfiniteDataLoader(
+            dataset=env,
+            weights=env_weights,
+            batch_size=hparams['batch_size'],
+            num_workers=dataset.N_WORKERS
+        ) for i, (env, env_weights) in enumerate(in_splits) if i not in args.test_envs
+    ]
 
-    uda_loaders = [InfiniteDataLoader(
-        dataset=env,
-        weights=env_weights,
-        batch_size=hparams['batch_size'],
-        num_workers=dataset.N_WORKERS)
-        for i, (env, env_weights) in enumerate(uda_splits)
-        if i in args.test_envs]
+    uda_loaders = [
+        InfiniteDataLoader(
+            dataset=env,
+            weights=env_weights,
+            batch_size=hparams['batch_size'],
+            num_workers=dataset.N_WORKERS
+        ) for i, (env, env_weights) in enumerate(uda_splits) if i in args.test_envs
+    ]
 
-    eval_loaders = [FastDataLoader(
-        dataset=env,
-        batch_size=64,
-        num_workers=dataset.N_WORKERS)
-        for env, _ in (in_splits + out_splits + uda_splits)]
+    eval_loaders = [
+        FastDataLoader(dataset=env, batch_size=64, num_workers=dataset.N_WORKERS)
+        for env, _ in (in_splits + out_splits + uda_splits)
+    ]
     eval_weights = [None for _, weights in (in_splits + out_splits + uda_splits)]
     eval_loader_names = ['env{}_in'.format(i) for i in range(len(in_splits))]
     eval_loader_names += ['env{}_out'.format(i) for i in range(len(out_splits))]
     eval_loader_names += ['env{}_uda'.format(i) for i in range(len(uda_splits))]
 
     algorithm: Algorithm = algorithm_class(
-        dataset.input_shape, dataset.num_classes, len(dataset) - len(args.test_envs), hparams)
+        dataset.input_shape, dataset.num_classes,
+        len(dataset) - len(args.test_envs), hparams
+    )
 
     algorithm.to(device)
 
     if hparams.get("lrdecay"):
-        scheduler = ExponentialLR(
-            algorithm.optimizer,
-            gamma=float(hparams.get("lrdecay")))
+        scheduler = ExponentialLR(algorithm.optimizer, gamma=float(hparams.get("lrdecay")))
     else:
         scheduler = None
 
@@ -224,10 +254,18 @@ def main():
 
     n_steps = args.steps or dataset.N_STEPS
     checkpoint_freq = args.checkpoint_freq or dataset.CHECKPOINT_FREQ
-    steps_per_epoch = min([len(env)/hparams['batch_size'] for i, (env, _) in enumerate(in_splits) if i not in args.test_envs])
+    steps_per_epoch = min(
+        [
+            len(env) / hparams['batch_size']
+            for i, (env, _) in enumerate(in_splits)
+            if i not in args.test_envs
+        ]
+    )
     # print([len(env)/hparams['batch_size'] for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
     # print([len(env) for i, (env,_) in enumerate(in_splits) if i not in args.test_envs])
-    print(f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}")
+    print(
+        f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}"
+    )
 
     def save_checkpoint(filename, results, filename_heavy=None, **kwargs):
         if args.skip_model_save:
@@ -270,7 +308,7 @@ def main():
             uda_batch = next(uda_minibatches_iterator)
         else:
             uda_batch = None
-        minibatches_device = [(x.to(device), y.to(device)) for x,y in batches]
+        minibatches_device = [(x.to(device), y.to(device)) for x, y in batches]
         if args.task == "domain_adaptation":
             uda_device = [x.to(device) for x, _ in uda_batch]
         else:
@@ -283,7 +321,9 @@ def main():
             checkpoint_vals[key].append(val)
 
         do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
-        do_metrics |= os.environ.get("SAVE", False) and checkpoint_freq>=10 and step % (checkpoint_freq//10)
+        if os.environ.get("SAVE", False):
+            do_metrics |= step <= 100 and step % 10 == 0
+            do_metrics |= step <= 10 and step % 2 == 0
 
         if do_metrics:
             epoch = step / steps_per_epoch
@@ -303,12 +343,19 @@ def main():
             for name, loader, weights in evals:
                 if hasattr(algorithm, "accuracy"):
                     if step == n_steps - 1 and os.environ.get("HESSIAN", "0") != "0":
-                        traced_envs = [args.test_envs[0], args.test_envs[0] + 1] if args.test_envs[0] != 3 else [1, 3]
+                        traced_envs = [args.test_envs[0], args.test_envs[0] +
+                                       1] if args.test_envs[0] != 3 else [1, 3]
                         compute_trace = any([("env" + str(env)) in name for env in traced_envs])
                     else:
                         compute_trace = False
-                    update_temperature = name in ['env{}_out'.format(i) for i in range(len(out_splits)) if i not in args.test_envs]
-                    acc = algorithm.accuracy(loader, device, compute_trace, update_temperature=update_temperature)
+                    update_temperature = name in [
+                        'env{}_out'.format(i)
+                        for i in range(len(out_splits))
+                        if i not in args.test_envs
+                    ]
+                    acc = algorithm.accuracy(
+                        loader, device, compute_trace, update_temperature=update_temperature
+                    )
                     if compute_trace:
                         try:
                             acc.update(algorithm.compute_hessian(loader))
@@ -339,14 +386,16 @@ def main():
                         print(results_end)
                         print(results)
                 for key in results:
-                    results_end[key] = results_end.get(key, 0.) + results[key]/10.
+                    results_end[key] = results_end.get(key, 0.) + results[key] / 10.
                 misc.print_row([results_end[key] for key in printed_keys], colwidth=12)
 
             results.update({'hparams': hparams, 'args': vars(args)})
 
             epochs_path = os.path.join(args.output_dir, 'results.jsonl')
             with open(epochs_path, 'a') as f:
-                results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
+                results_dumpable = {
+                    key: value for key, value in results.items() if misc.is_dumpable(value)
+                }
                 f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
@@ -355,8 +404,7 @@ def main():
                 save_checkpoint(
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
-                    filename_heavy=f'{step}/model_with_weights.pkl',
-                    step=step
+                    filename_heavy=f'{step}/model_with_weights.pkl'
                 )
                 algorithm.to(device)
 
@@ -373,14 +421,17 @@ def main():
     save_checkpoint(
         'model.pkl',
         results=json.dumps(results_dumpable, sort_keys=True),
-        filename_heavy='model_with_weights.pkl')
+        filename_heavy='model_with_weights.pkl'
+    )
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
 
     metrics.update({k: v for k, v in results_end.items() if k not in ["hparams", "args"]})
     # metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
-    experiments_handler.main_mlflow(run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams)
+    experiments_handler.main_mlflow(
+        run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams
+    )
 
 
 if __name__ == "__main__":

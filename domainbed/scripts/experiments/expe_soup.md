@@ -312,3 +312,4 @@ net7_net9: 0.568
 
 
 
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 10 --criteriontopk step --cluster dir --trial_seed 0 --regexes net0_net1
