@@ -210,18 +210,18 @@ def main():
         dataset.input_shape, dataset.num_classes, len(dataset) - len(args.test_envs), hparams)
 
     algorithm.to(device)
-    try:
-        algorithm.member_diversifier.to(device)
-    except:
-        pass
-    try:
-        algorithm.member_diversifier.q = algorithm.member_diversifier.q.to(device)
-    except:
-        pass
-    try:
-        algorithm.hypernet.to(device)
-    except:
-        pass
+    # try:
+    #     algorithm.member_diversifier.to(device)
+    # except:
+    #     pass
+    # try:
+    #     algorithm.member_diversifier.q = algorithm.member_diversifier.q.to(device)
+    # except:
+    #     pass
+    # try:
+    #     algorithm.hypernet.to(device)
+    # except:
+    #     pass
 
     if hparams.get("lrdecay"):
         scheduler = ExponentialLR(
@@ -287,6 +287,7 @@ def main():
             uda_device = [x.to(device) for x, _ in uda_batch]
         else:
             uda_device = None
+        import pdb; pdb.set_trace()
         step_vals = algorithm.update(minibatches_device, uda_device)
         checkpoint_vals['step_time'].append(time.time() - step_start_time)
 

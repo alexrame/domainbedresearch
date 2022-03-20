@@ -837,7 +837,7 @@ class Ensembling(Algorithm):
     def to(self, device):
         Algorithm.to(self, device)
         self.soup.network_soup.to(device)
-        if self.hparams['swa']:
+        if self.swas is not None:
             self.soupswa.network_soup.to(device)
             for swa in self.swas:
                 swa.network_swa.to(device)
@@ -845,7 +845,7 @@ class Ensembling(Algorithm):
     def train(self, *args):
         Algorithm.train(self, *args)
         self.soup.network_soup.train(*args)
-        if self.hparams['swa']:
+        if self.swas is not None:
             self.soupswa.network_soup.train(*args)
             for swa in self.swas:
                 swa.network_swa.train(*args)
