@@ -293,7 +293,10 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        if (step % checkpoint_freq == 0) or (step >= n_steps - 10):
+        do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
+        do_metrics |= os.environ.get("SAVE") and step % (checkpoint_freq//10)
+
+        if do_metrics:
             epoch = step / steps_per_epoch
             results = {'step': step, 'epoch': epoch}
             if scheduler is not None:
@@ -359,7 +362,7 @@ def main():
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
-            if os.path.environ.get("SAVE") or args.save_model_every_checkpoint:
+            if os.environ.get("SAVE") or args.save_model_every_checkpoint:
                 save_checkpoint(
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),

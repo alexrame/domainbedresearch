@@ -418,7 +418,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         for key in results:
             ood_results[name + "_" + key.split("/")[-1]] = results[key]
 
-    print(f"OOD results for {inf_args} with {len(good_checkpoints)}")
+    print(f"OOD results for {inf_args} with {len(good_checkpoints)} and environ: {os.environ}")
     ood_results_keys = sorted(ood_results.keys())
     misc.print_row(ood_results_keys, colwidth=15, latex=True)
     misc.print_row([ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)

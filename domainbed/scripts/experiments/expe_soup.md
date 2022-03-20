@@ -251,60 +251,64 @@ wait
 
 /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/coral66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/fishr66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318
 
-swa0_swa1: 0.050
-swa2_swa3: 0.121
-swa4_swa5: 0.111
-swa6_swa7: 0.082
-swa8_swa9: 0.069
 
-swa0_swa2: 0.280
-swa0_swa3: 0.293
-swa1_swa2: 0.283
-swa1_swa3: 0.296
+net0_net1: 0.197
+net2_net3: 0.284
+net4_net5: 0.192
+net6_net7: 0.240
+net8_net9: 0.216
 
-swa0_swa4: 0.077
-swa0_swa5: 0.098
-swa1_swa4: 0.081
-swa1_swa5: 0.100
+net0_net2: 0.413
+net0_net3: 0.390
+net1_net2: 0.422
+net1_net3: 0.382
 
-swa0_swa6: 0.063
-swa0_swa7: 0.084
-swa1_swa6: 0.057
-swa1_swa7: 0.085
+net0_net4: 0.257
+net0_net5: 0.229
+net1_net4: 0.225
+net1_net5: 0.214
 
-swa0_swa8: 0.219
-swa0_swa9: 0.227
-swa1_swa8: 0.219
-swa1_swa9: 0.230
+net0_net6: 0.211
+net0_net7: 0.314
+net1_net6: 0.190
+net1_net7: 0.295
 
-swa2_swa4: 0.266
-swa2_swa5: 0.344
-swa3_swa4: 0.278
-swa3_swa5: 0.366
-
-swa2_swa6: 0.295
-swa2_swa7: 0.336
-swa3_swa6: 0.308
-swa3_swa7: 0.368
-
-swa2_swa8: 0.212
-swa2_swa9: 0.211
-swa3_swa8: 0.205
-swa3_swa9: 0.201
+net0_net8: 0.367
+net0_net9: 0.360
+net1_net8: 0.359
+net1_net9: 0.371
 
 
-swa4_swa6: 0.099
-swa4_swa7: 0.112
-swa5_swa6: 0.108
-swa5_swa7: 0.069
+net2_net4: 0.484
+net2_net5: 0.410
+net3_net4: 0.458
+net3_net5: 0.401
 
-swa4_swa8: 0.230
-swa4_swa9: 0.238
-swa5_swa8: 0.298
-swa5_swa9: 0.312
+net2_net6: 0.460
+net2_net7: 0.614
+net3_net6: 0.434
+net3_net7: 0.590
 
-swa6_swa8: 0.225
-swa6_swa9: 0.233
-swa7_swa8: 0.287
-swa7_swa9: 0.300
+net2_net8: 0.394
+net2_net9: 0.390
+net3_net8: 0.355
+net3_net9: 0.361
+
+=
+net4_net6: 0.220
+net4_net7: 0.183
+net5_net6: 0.206
+net5_net7: 0.231
+
+net4_net8: 0.460
+net4_net9: 0.452
+net5_net8: 0.397
+net5_net9: 0.399
+
+net6_net8: 0.392
+net6_net9: 0.399
+net7_net8: 0.571
+net7_net9: 0.568
+
+
 
