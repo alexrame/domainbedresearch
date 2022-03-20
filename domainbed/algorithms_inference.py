@@ -98,7 +98,7 @@ class Ensembling(algorithms.Ensembling):
 
 class Soup(algorithms.Ensembling):
 
-    def __init__(self, input_shape, num_classes, num_domains, t_scaled="", regexes=None, do_ens=1):
+    def __init__(self, input_shape, num_classes, num_domains, t_scaled="", regexes=None, do_ens=[]):
         """
         """
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams={})
@@ -131,26 +131,28 @@ class Soup(algorithms.Ensembling):
         if self.soupswa is not None:
             self.soupswa.network_soup.to(device)
 
-        if not self.do_ens:
-            return
-        for net in self.networks:
-            net.to(device)
-        for swa in self.swas:
-            swa.to(device)
-        if self._t_scaled:
-            self._t_networks = [t.to(device) for t in self._t_networks]
-            self._t_swas = [t.to(device) for t in self._t_swas]
+        if "net" in self.do_ens:
+            for net in self.networks:
+                net.to(device)
+            if self._t_scaled:
+                self._t_networks = [t.to(device) for t in self._t_networks]
+
+        if "swa" in self.do_ens:
+            for swa in self.swas:
+                swa.to(device)
+            if self._t_scaled:
+                self._t_swas = [t.to(device) for t in self._t_swas]
 
     def train(self, *args):
         algorithms.Algorithm.train(self, *args)
         self.soup.network_soup.train(*args)
         self.soupswa.network_soup.train(*args)
-        if not self.do_ens:
-            return
-        for net in self.networks:
-            net.train(*args)
-        for swa in self.swas:
-            swa.train(*args)
+        if "net" in self.do_ens:
+            for net in self.networks:
+                net.train(*args)
+        if "swa" in self.do_ens:
+            for swa in self.swas:
+                swa.train(*args)
 
     def _init_memory(self):
         self.memory = {"net": 0, "swa": 0}
@@ -216,47 +218,44 @@ class Soup(algorithms.Ensembling):
             batch_logits_swa_tscaled = []
 
         for num_member in range(self.num_members()):
-            logits = self.networks[num_member](x)
-            batch_logits.append(logits)
-            results["net" + str(num_member)] = logits
-            logits_swa = self.swas[num_member](x)
-            batch_logits_swa.append(logits_swa)
-            results["swa" + str(num_member)] = logits_swa
-            if self._t_scaled:
-                batch_logits_tscaled.append(logits / self._t_networks[num_member])
-                batch_logits_swa_tscaled.append(logits_swa / self._t_swas[num_member])
+            if "net" in self.do_ens:
+                logits = self.networks[num_member](x)
+                batch_logits.append(logits)
+                results["net" + str(num_member)] = logits
+                if self._t_scaled:
+                    batch_logits_tscaled.append(logits / self._t_networks[num_member])
+            if "swa" in self.do_ens:
+                logits_swa = self.swas[num_member](x)
+                batch_logits_swa.append(logits_swa)
+                results["swa" + str(num_member)] = logits_swa
+                if self._t_scaled:
+                    batch_logits_swa_tscaled.append(logits_swa / self._t_swas[num_member])
 
-        results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
-        results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
-        if self._t_scaled:
-            results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
-            results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
+        if "net" in self.do_ens:
+            results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
+            if self._t_scaled:
+                results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
+
+        if "swa" in self.do_ens:
+            results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
+            if self._t_scaled:
+                results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
 
         return results
 
     def predict_feat(self, x):
         results = {}
 
-        keys = [
-            key
-            for regex in self.regexes
-            for key in regex.split("_")
-        ]
-        regexed_nets = [
-            int(key[3:])
-            for key in keys
-            if key.startswith("net")
-        ]
-        regexed_swas = [
-            int(key[3:])
-            for key in keys
-            if key.startswith("swa")
-        ]
+        keys = [key for regex in self.regexes for key in regex.split("_")]
+        regexed_nets = [int(key[3:]) for key in keys if key.startswith("net")]
+        regexed_swas = [int(key[3:]) for key in keys if key.startswith("swa")]
         # Do this stupid thing because memory error otherwise
         for num_member in range(self.num_members()):
             if num_member in regexed_nets:
+                assert "net" in self.do_ens
                 results["net" + str(num_member)] = misc.get_featurizer(self.networks[num_member])(x)
             if num_member in regexed_swas:
+                assert "swa" in self.do_ens
                 results["swa" + str(num_member)] = misc.get_featurizer(self.swas[num_member])(x)
 
         if "soup" in keys:
@@ -268,8 +267,7 @@ class Soup(algorithms.Ensembling):
     def accuracy(self, loader, device, compute_trace, **kwargs):
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_calibration=False,
-            max_feats=10
+            loader, device, compute_trace, do_calibration=False, max_feats=10
         )
 
         results = {}
@@ -280,13 +278,18 @@ class Soup(algorithms.Ensembling):
             #     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
             # )
 
-        if self.do_ens:
+        if "net" in self.do_ens:
             results["Accuracies/acc_netm"] = np.mean(
                 [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
             )
             # results["Calibration/ece_netm"] = np.mean(
             #     [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
             # )
+            # )
+            for key in range(self.num_members()):
+                del results[f"Accuracies/acc_net{key}"]
+                # del results[f"Calibration/ece_net{key}"]
+        if "swa" in self.do_ens:
             results["Accuracies/acc_swam"] = np.mean(
                 [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
             )
@@ -294,8 +297,6 @@ class Soup(algorithms.Ensembling):
             #     [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
             # )
             for key in range(self.num_members()):
-                del results[f"Accuracies/acc_net{key}"]
-                # del results[f"Calibration/ece_net{key}"]
                 del results[f"Accuracies/acc_swa{key}"]
                 # del results[f"Calibration/ece_swa{key}"]
 
@@ -328,15 +329,15 @@ class Soup(algorithms.Ensembling):
         results = {}
         preds0 = dict_stats[key0]["preds"].numpy()
         preds1 = dict_stats[key1]["preds"].numpy()
-        results[f"Diversity/divr_{regex}_ratio"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
+        results[f"Diversity/dr_{regex}"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
         # results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
         #     targets, preds0, preds1
         # )
         if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
             feats0 = dict_stats[key0]["feats"]
             feats1 = dict_stats[key1]["feats"]
-            results[f"Diversity/divf_{regex}_ckac"] = 1. - CudaCKA(device).linear_CKA(feats0,
-                                                                                feats1).item()
+            results[f"Diversity/df_{regex}"] = 1. - CudaCKA(device).linear_CKA(
+                feats0, feats1).item()
         return results
 
     def compute_hessian(self, loader):
@@ -355,17 +356,16 @@ class Soup(algorithms.Ensembling):
         #     self.soupswa.network_soup, loader, maxIter=10
         # )
         del self.soupswa.network_soup
-
-        if self.do_ens:
-            print("Begin Hessian swa0")
-            results[f"Flatness/swa0hess"] = misc.compute_hessian(
-                self.swas[0], loader, maxIter=10
-            )
-            del self.swas[0]
-
+        if "net" in self.do_ens:
             print("Begin Hessian net0")
             results[f"Flatness/net0hess"] = misc.compute_hessian(
                 self.networks[0], loader, maxIter=10
             )
             del self.networks[0]
+
+        if "swa" in self.do_ens:
+            print("Begin Hessian swa0")
+            results[f"Flatness/swa0hess"] = misc.compute_hessian(self.swas[0], loader, maxIter=10)
+            del self.swas[0]
+
         return results

@@ -313,3 +313,34 @@ net7_net9: 0.568
 
 
 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 10 --criteriontopk step --cluster dir --trial_seed 0 --regexes net0_net1
+
+
+
+e0_divf_n0n1_ck: 0.085
+e0_divf_n2n3_ck: 0.110
+
+
+e0_divf_n0n2_ck: 0.045
+e0_divf_n0n3_ck: 0.166
+e0_divf_n1n2_ck: 0.137
+e0_divf_n1n3_ck: 0.142
+
+
+e0_divr_n0n1_ra: 0.028
+e0_divr_n0n2_ra: 0.022
+e0_divr_n0n3_ra: 0.032
+e0_divr_n1n2_ra: 0.033
+e0_divr_n1n3_ra: 0.033
+e0_divr_n2n3_ra: 0.019
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 2 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/swaensshhpdeoa0316
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --test_envs 0 --trial_seed 2 --output_dir /data/rame/experiments/domainbed/erm66shhpeoa0317/ --mode ens
+# SAVE=1 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk minus_step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens 1
 
 # Env variables to be considered
 # CUDA_VISIBLE_DEVICES
@@ -119,7 +120,7 @@ def _get_args():
 
     parser.add_argument('--algorithm', type=str, default="Soup")
     parser.add_argument('--t_scaled', type=str)
-    parser.add_argument('--do_ens', type=int, default=0)
+    parser.add_argument('--do_ens', type=str, default="")
 
     inf_args = parser.parse_args()
     if inf_args.data_dir == "default":
@@ -127,7 +128,12 @@ def _get_args():
             inf_args.data_dir = os.path.join(os.environ["DATA"], "data/domainbed/")
         else:
             inf_args.data_dir = "domainbed/data"
-
+    if inf_args.do_ens == "1":
+        inf_args.do_ens = ["swa", "net"]
+    elif inf_args.do_ens in ["0", ""]:
+        inf_args.do_ens = []
+    else:
+        inf_args.do_ens = inf_args.do_ens.split(",")
     return inf_args
 
 
@@ -427,8 +433,8 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         for key in results:
             ood_results[name + "_" + key.split("/")[-1]] = results[key]
 
-    print(f"OOD results for {inf_args} with {len(good_checkpoints)} and environ: {os.environ}")
     ood_results_keys = sorted(ood_results.keys())
+    print(f"OOD results for {inf_args} with {len(good_checkpoints)} and gpu: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
     misc.print_row(ood_results_keys, colwidth=15, latex=True)
     misc.print_row([ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)
 

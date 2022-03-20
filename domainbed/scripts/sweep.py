@@ -171,7 +171,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--checkpoint_freq',
         type=int,
-        default=None,
+        default=0,
         help='Checkpoint every N steps. Default is dataset-dependent.'
     )
     parser.add_argument('--single_test_envs', action='store_true')
