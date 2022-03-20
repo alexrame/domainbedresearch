@@ -283,7 +283,7 @@ def main():
         if not os.path.exists(directory):
             os.makedirs(directory)
         torch.save(save_dict, file_path)
-
+        print(f"Model saved to: {file_path}")
         if filename_heavy:
             save_dict["model_dict"] = algorithm.cpu().state_dict()
             if algorithm.hparams.get("swa"):
@@ -321,7 +321,7 @@ def main():
             checkpoint_vals[key].append(val)
 
         do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
-        if os.environ.get("SAVE", False):
+        if os.environ.get("SAVE"):
             do_metrics |= step <= 100 and step % 10 == 0
             do_metrics |= step <= 10 and step % 2 == 0
 
