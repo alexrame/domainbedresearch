@@ -401,7 +401,6 @@ class ERM(Algorithm):
             if key1 not in dict_stats:
                 continue
 
-            assert self.swa_temperature.requires_grad
             if update_temperature:
                 for _ in range(50):
                     for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:

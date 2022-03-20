@@ -231,6 +231,7 @@ def find_checkpoints(inf_args, verbose=False):
             criteriontopk=inf_args.criteriontopk,
             test_envs=inf_args.test_envs
         )
+        train_args.dir = os.path.split(os.path.split(folder)[0])[-1]
         cluster = "|".join([str(train_args.__dict__[cluster]) for cluster in inf_args.cluster])
         if cluster not in found_checkpoints_per_cluster:
             found_checkpoints_per_cluster[cluster] = {}
