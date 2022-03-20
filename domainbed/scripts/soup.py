@@ -173,6 +173,8 @@ def get_score_run(results, criteriontopk, test_envs):
         return 0.
     if criteriontopk in ["step"]:
         return results[criteriontopk]
+    if criteriontopk in ["minusstep"]:
+        return - results[criteriontopk]
 
     if criteriontopk.startswith("acc"):
         criteriontopk = f"Accuracies/{criteriontopk}"
