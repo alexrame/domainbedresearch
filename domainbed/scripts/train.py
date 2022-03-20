@@ -400,7 +400,11 @@ def main():
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
-            if os.environ.get("SAVE") or args.save_model_every_checkpoint:
+            save_epoch = os.environ.get("SAVE") or args.save_model_every_checkpoint
+            save_epoch |= os.environ.get("SCORES") is not None and step in [
+                int(s) for s in os.environ.get("SCORES").split("_")
+            ]
+            if save_epoch:
                 save_checkpoint(
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
