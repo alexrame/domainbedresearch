@@ -109,6 +109,12 @@ class Subspace(ERM):
         set_requires_grad(self.network, False)
         self._init_swa()
 
+    def to(self, device):
+        # self.member_diversifier.to(device)
+        # self.member_diversifier.q = self.member_diversifier.q.to(device)
+        ERM.to(self, device)
+        self.hypernet.to(device)
+
     def update(self, minibatches, unlabeled=None):
         all_x = torch.cat([x for x, y in minibatches])
         all_classes = torch.cat([y for x, y in minibatches])

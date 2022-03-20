@@ -520,6 +520,11 @@ class SWA(ERM):
                     num_domains=num_domains,
                     num_members=2
                 )
+    def to(self, device):
+        ERM.to(self, device)
+        if self.member_diversifier is not None:
+            self.member_diversifier.to(device)
+            self.member_diversifier.q = self.member_diversifier.q.to(device)
 
     def update(self, minibatches, unlabeled=None):
 
