@@ -40,47 +40,34 @@ def main():
     found_checkpoints_per_cluster = find_checkpoints(inf_args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    good_checkpoints = []
-    for cluster, found_checkpoints in found_checkpoints_per_cluster.items():
-        print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
-        if inf_args.mode == "greedy":
-            print(f"Select from greedy")
-            if "trial_seed" in inf_args.cluster:
-                assert inf_args.selection == "train"
-                trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
-            else:
-                trial_seed = inf_args.trial_seed
-            val_splits, val_names = create_splits(
-                inf_args,
-                dataset,
-                inf_env="train" if inf_args.selection == "train" else "test",
-                filter="out",
-                trial_seed=trial_seed
-            )
-            cluster_good_checkpoints = get_greedy_checkpoints(
-                found_checkpoints, dataset, inf_args, val_names, val_splits, device
-            )
-        elif inf_args.mode == "zipf":
-            print(f"Select from zipf")
-            cluster_good_checkpoints = get_from_zipf(
-                found_checkpoints, inf_args.topk, a=inf_args.zipf_a)
-        elif inf_args.topk != 0:
-            print(f"Select best")
-            cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
-        else:
-            print(f"Select all")
-            cluster_good_checkpoints = found_checkpoints[:]
-        print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
-        good_checkpoints.extend(cluster_good_checkpoints)
+    if inf_args.mode != "all":
+        good_checkpoints = get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, device)
 
-    ood_splits, ood_names = create_splits(
-        inf_args,
-        dataset,
-        inf_env="test",
-        filter="full" if inf_args.selection == "train" else "in",
-        trial_seed=inf_args.trial_seed
-    )
-    get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device)
+        ood_splits, ood_names = create_splits(
+            inf_args,
+            dataset,
+            inf_env="test",
+            filter="full" if inf_args.selection == "train" else "in",
+            trial_seed=inf_args.trial_seed
+        )
+
+        get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device)
+    else:
+        ood_splits, ood_names = create_splits(
+            inf_args,
+            dataset,
+            inf_env="test",
+            filter="full" if inf_args.selection == "train" else "in",
+            trial_seed=inf_args.trial_seed
+        )
+        assert len(found_checkpoints_per_cluster) == 1
+        found_checkpoints = found_checkpoints_per_cluster.values()[0]
+        for good_checkpoints in itertools.combinations(found_checkpoints, inf_args.topk):
+            print(good_checkpoints)
+            get_results_for_checkpoints(
+                good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+            )
+            print("\n")
 
 
 def _get_args():
@@ -99,7 +86,7 @@ def _get_args():
     parser.add_argument('--data_dir', type=str, default="default")
 
     # select which checkpoints
-    parser.add_argument('--mode', type=str, default="")  # "" or "greedy"
+    parser.add_argument('--mode', type=str, default="")  # "" or "greedy", "random", "zipf"
     parser.add_argument(
         '--cluster',
         type=str,
@@ -272,6 +259,46 @@ def file_with_weights(folder):
         assert os.path.exists(filename)
     return filename
 
+
+def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, device):
+    good_checkpoints = []
+    for cluster, found_checkpoints in found_checkpoints_per_cluster.items():
+        print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
+        if inf_args.mode == "greedy":
+            print(f"Select from greedy")
+            if "trial_seed" in inf_args.cluster:
+                assert inf_args.selection == "train"
+                trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
+            else:
+                trial_seed = inf_args.trial_seed
+            val_splits, val_names = create_splits(
+                inf_args,
+                dataset,
+                inf_env="train" if inf_args.selection == "train" else "test",
+                filter="out",
+                trial_seed=trial_seed
+            )
+            cluster_good_checkpoints = get_greedy_checkpoints(
+                found_checkpoints, dataset, inf_args, val_names, val_splits, device
+            )
+        elif inf_args.mode == "zipf":
+            print(f"Select from zipf")
+            cluster_good_checkpoints = get_from_zipf(
+                found_checkpoints, inf_args.topk, a=inf_args.zipf_a)
+        elif inf_args.mode == "random":
+            print(f"Select random")
+            rand_nums = random.sample(range(len(found_checkpoints)), inf_args.topk)
+            cluster_good_checkpoints = [found_checkpoints[i] for i in rand_nums]
+        elif inf_args.topk != 0:
+            print(f"Select best")
+            cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
+        else:
+            print(f"Select all")
+            cluster_good_checkpoints = found_checkpoints[:]
+        print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
+        good_checkpoints.extend(cluster_good_checkpoints)
+    return good_checkpoints
+
 def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
 
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
@@ -435,9 +462,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
 
     ood_results_keys = sorted(ood_results.keys())
     print(f"OOD results for {inf_args} with {len(good_checkpoints)} and gpu: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
-    misc.print_row(ood_results_keys, colwidth=15, latex=True)
-    misc.print_row([ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)
-
+    misc.print_rows(row1=ood_results_keys, row2=[ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)
 
 if __name__ == "__main__":
     main()
