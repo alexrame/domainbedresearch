@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 2 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/swaensshhpdeoa0316
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --test_envs 0 --trial_seed 2 --output_dir /data/rame/experiments/domainbed/erm66shhpeoa0317/ --mode ens
-# SAVE=1 SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk minus_step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens 1
+# SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk minus_step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens net
 
 # Env variables to be considered
 # CUDA_VISIBLE_DEVICES
@@ -60,8 +60,8 @@ def main():
             filter="full" if inf_args.selection == "train" else "in",
             trial_seed=inf_args.trial_seed
         )
-        assert len(found_checkpoints_per_cluster) == 1
-        found_checkpoints = found_checkpoints_per_cluster.values()[0]
+        # assert len(found_checkpoints_per_cluster) == 1
+        found_checkpoints = list(found_checkpoints_per_cluster.values())[0]
         for good_checkpoints in itertools.combinations(found_checkpoints, inf_args.topk):
             print(good_checkpoints)
             get_results_for_checkpoints(
