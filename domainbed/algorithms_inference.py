@@ -349,23 +349,23 @@ class Soup(algorithms.Ensembling):
         results["Flatness/souphess"] = misc.compute_hessian(
             self.soup.network_soup, loader, maxIter=10
         )
-        del self.soup.network_soup
+        # del self.soup.network_soup
 
-        # print(f"Begin Hessian soupswa")
-        # results["Flatness/soupswahess"] = misc.compute_hessian(
-        #     self.soupswa.network_soup, loader, maxIter=10
-        # )
-        del self.soupswa.network_soup
-        if "net" in self.do_ens:
-            print("Begin Hessian net0")
-            results[f"Flatness/net0hess"] = misc.compute_hessian(
-                self.networks[0], loader, maxIter=10
-            )
-            del self.networks[0]
+        # # print(f"Begin Hessian soupswa")
+        # # results["Flatness/soupswahess"] = misc.compute_hessian(
+        # #     self.soupswa.network_soup, loader, maxIter=10
+        # # )
+        # del self.soupswa.network_soup
+        # if "net" in self.do_ens:
+        #     print("Begin Hessian net0")
+        #     results[f"Flatness/net0hess"] = misc.compute_hessian(
+        #         self.networks[0], loader, maxIter=10
+        #     )
+        #     del self.networks[0]
 
-        if "swa" in self.do_ens:
-            print("Begin Hessian swa0")
-            results[f"Flatness/swa0hess"] = misc.compute_hessian(self.swas[0], loader, maxIter=10)
-            del self.swas[0]
+        # if "swa" in self.do_ens:
+        #     print("Begin Hessian swa0")
+        #     results[f"Flatness/swa0hess"] = misc.compute_hessian(self.swas[0], loader, maxIter=10)
+        #     del self.swas[0]
 
         return results
