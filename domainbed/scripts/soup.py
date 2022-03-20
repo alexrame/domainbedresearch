@@ -62,7 +62,8 @@ def main():
         )
         # assert len(found_checkpoints_per_cluster) == 1
         found_checkpoints = list(found_checkpoints_per_cluster.values())[0]
-        for good_checkpoints in itertools.combinations(found_checkpoints, inf_args.topk):
+        found_checkpoints = found_checkpoints[:inf_args.topk]
+        for good_checkpoints in itertools.combinations(found_checkpoints, 2):
             print(good_checkpoints)
             get_results_for_checkpoints(
                 good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
