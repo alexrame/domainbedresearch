@@ -237,8 +237,55 @@ wait
 
 
 
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319 --criteriontopk acc_net --topk 20 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 1 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319 --criteriontopk acc_net --topk 20 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 2 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319 --criteriontopk acc_net --topk 20 &
+SWAMEMBER=4 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 3 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --criteriontopk acc_net --topk 20 &
+wait
 
 
+
+SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --criteriontopk acc_net --topk 20 --do_ens 1 &
+SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 1 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --criteriontopk acc_net --topk 20 --do_ens 1 &
+SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 2 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --criteriontopk acc_net --topk 20 --do_ens 1 &
+SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 3 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66shhpeoaswa20317 --criteriontopk acc_net --topk 20 --do_ens 1 &
+wait
+
+
+
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/5000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4800
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/5000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4500
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/5000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/5000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/3000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4800
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4500
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4800
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4800
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/3000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4500
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4500
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/3000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/4000
+Ingredient from folder: /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a/3000
+
+
+
+l.append({"net":0.606, "netm":0.572, "soup":0.615, "soupswa" :0.666, "df" :0.127, "dr":0.508, "hess": 19077.772, "d": 200})
+l.append({"net":0.612, "netm":0.578, "soup":0.619, "soupswa" :0.665, "df" :0.153, "dr":0.476, "hess": 17534.173, "d": 500})
+l.append({"net":0.622, "netm":0.589, "soup":0.635, "soupswa" :0.663, "df" :0.141, "dr":0.466, "hess": 18118.590, "d": 1000})
+l.append({"net":0.624, "netm":0.590, "soup":0.640, "soupswa" :0.661, "df" :0.154, "dr":0.584, "hess": 17994.414, "d": 2000})
+l.append({"net":0.603, "netm":0.577, "soup":0.613, "soupswa" :0.664, "df" :0.144, "dr":0.482, "hess": 25000.919, "d": 300})
+l.append({"net":0.614, "netm":0.588, "soup":0.621, "soupswa" :0.663, "df" :0.117, "dr":0.494, "hess": 21223.235, "d": 800})
+l.append({"net":0.615, "netm":0.589, "soup":0.625, "soupswa" :0.660, "df" :0.182, "dr":0.544, "hess": 20945.467, "d": 1800})
+l.append({"net":0.616, "netm":0.594, "soup":0.626, "soupswa" :0.661, "df" :0.169, "dr":0.434, "hess": 22047.766, "d": 500})
+l.append({"net":0.619, "netm":0.595, "soup":0.628, "soupswa" :0.661, "df" :0.161, "dr":0.521, "hess": 19676.541, "d": 1500})
+l.append({"net":0.630, "netm":0.606, "soup":0.641, "soupswa" :0.660, "df" :0.165, "dr":0.481, "hess": 22340.328, "d": 1000})
 
 
 
