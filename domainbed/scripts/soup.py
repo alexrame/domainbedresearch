@@ -204,8 +204,9 @@ def find_checkpoints(inf_args, verbose=False):
         for path in os.listdir(output_dir)
     ]
     if os.environ.get("SAVE"):
+        print("checkpoints", checkpoints)
         checkpoints = [os.path.join(checkpoint, path) for checkpoint in checkpoints for path in os.listdir(checkpoint)]
-        print(checkpoints)
+        print("checkpoints", checkpoints)
 
     found_checkpoints_per_cluster = {}
     for folder in checkpoints:
