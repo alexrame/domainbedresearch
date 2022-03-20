@@ -295,7 +295,7 @@ def main():
             checkpoint_vals[key].append(val)
 
         do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
-        do_metrics |= os.environ.get("SAVE") and step % (checkpoint_freq//10)
+        do_metrics |= os.environ.get("SAVE", False) and step % (checkpoint_freq//10)
 
         if do_metrics:
             epoch = step / steps_per_epoch
