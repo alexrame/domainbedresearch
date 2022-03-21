@@ -51,6 +51,17 @@ def main():
         filter="full" if inf_args.selection == "train" else "in",
         trial_seed=inf_args.trial_seed[0]
     )
+    if os.environ.get("HESSIAN", "-1") != "-1":
+        hessian_splits, hessian_names = create_splits(
+                inf_args,
+                dataset,
+                inf_env=os.environ.get("HESSIAN").split(","),
+                filter="in",
+                trial_seed=inf_args.trial_seed[0],
+                holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
+            )
+    else:
+        hessian_splits, hessian_names = None, None
 
     if inf_args.mode in ["all"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
@@ -69,7 +80,8 @@ def main():
                 ood_results = {}
             else:
                 ood_results = get_results_for_checkpoints(
-                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits,
+                    hessian_names, hessian_splits, device
                 )
 
             step0 = str(dict_checkpoints[checkpoint0]["step"])
@@ -105,15 +117,18 @@ def main():
                 ood_results = {}
             else:
                 ood_results = get_results_for_checkpoints(
-                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+                    hessian_splits, device
                 )
             ood_results["length"] = i
             print_results(inf_args, ood_results, i)
     else:
         ood_results = get_results_for_checkpoints(
-            good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+            good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+            hessian_splits, device
         )
         print_results(inf_args, ood_results, len(good_checkpoints))
+
 
 def _get_args():
     parser = argparse.ArgumentParser(description='Domain generalization')
@@ -172,21 +187,24 @@ def _get_args():
     return inf_args
 
 
-def create_splits(inf_args, dataset, inf_env, filter, trial_seed):
+def create_splits(inf_args, dataset, inf_env, filter, trial_seed, holdout_fraction=None):
     splits = []
     names = []
     for env_i, env in enumerate(dataset):
         if inf_env == "test" and env_i not in inf_args.test_envs:
             continue
-        if inf_env == "train" and env_i in inf_args.test_envs:
+        elif inf_env == "train" and env_i in inf_args.test_envs:
+            continue
+        elif isinstance(inf_env, list) and str(env_i) not in inf_env:
             continue
 
         if filter == "full":
             splits.append(env)
             names.append('e{}'.format(env_i))
         else:
+            holdout_fraction = holdout_fraction or inf_args.holdout_fraction
             out_, in_ = misc.split_dataset(
-                env, int(len(env) * inf_args.holdout_fraction), misc.seed_hash(trial_seed, env_i)
+                env, int(len(env) * holdout_fraction), misc.seed_hash(trial_seed, env_i)
             )
             if filter == "in":
                 splits.append(in_)
@@ -453,7 +471,10 @@ def get_from_zipf(found_checkpoints, topk, a=3):
     return [checkpoint for i, checkpoint in enumerate(found_checkpoints) if i in nums]
 
 
-def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device):
+def get_results_for_checkpoints(
+    good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names, hessian_splits,
+    device
+):
     ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
     ens_algorithm = ens_algorithm_class(
         dataset.input_shape,
@@ -491,35 +512,32 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
         for split in ood_splits
     ]
-    compute_hessian = os.environ.get("HESSIAN", "0") != "0"
-    if compute_hessian:
-        fraction = float(os.environ.get("HESSIANFRAC", 0.2))
-        ood_splits_small = [
-            misc.split_dataset(split, int(len(split) * fraction), 0)[0] for split in ood_splits
-        ]
-        ood_loaders_small = [
-            FastDataLoader(
-                dataset=split,
-                batch_size=int(os.environ.get("HESSIANBS", 12)),
-                num_workers=dataset.N_WORKERS
-            ) for split in ood_splits_small
-        ]
-    evals = zip(ood_names, ood_loaders)
-    ood_results = {}
-    for i, (name, loader) in enumerate(evals):
-        print(f"Inference at {name}")
 
+    ood_evals = zip(ood_names, ood_loaders)
+    ood_results = {}
+    for name, loader in ood_evals:
+        print(f"Inference at {name}")
         results = ens_algorithm.accuracy(loader, device, compute_trace=True)
         print(results)
-
-        if compute_hessian:
-            loader_small = ood_loaders_small[i]
-            print(f"Begin Hessian for loaders of len: {len(loader_small)}")
-            assert len(ood_names) == 1
-            results.update(ens_algorithm.compute_hessian(loader_small))
-
         for key in results:
-            ood_results[name + "_" + key.split("/")[-1]] = results[key]
+            clean_key = key.split("/")[-1]
+            ood_results[name + "_" + clean_key] = results[key]
+
+    if hessian_splits is not None:
+        hessian_loaders = [
+            FastDataLoader(
+                dataset=split, batch_size=int(os.environ.get("HESSIANBS", 12)), num_workers=dataset.N_WORKERS)
+            for split in hessian_splits
+        ]
+        hessian_evals = zip(hessian_names, hessian_loaders)
+        for i, (name, loader) in enumerate(hessian_evals):
+            print(f"Hessian at {name}")
+            results.update(ens_algorithm.compute_hessian(loader))
+            for key in results:
+                clean_key = key.split("/")[-1]
+                ood_results[name + "_" + clean_key] = results[key]
+                ood_results[clean_key] = ood_results.get(
+                    clean_key, 0) + results[key] / len(hessian_names)
 
     return ood_results
 

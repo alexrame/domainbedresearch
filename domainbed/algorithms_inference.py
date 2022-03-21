@@ -341,8 +341,8 @@ class Soup(algorithms.Ensembling):
         return results
 
     def compute_hessian(self, loader):
-        del self.swas[1:]
-        del self.networks[1:]
+        # del self.swas[1:]
+        # del self.networks[1:]
 
         print(f"Begin Hessian soup")
         results = {}
