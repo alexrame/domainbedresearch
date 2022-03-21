@@ -90,8 +90,8 @@ def main():
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
                 )
 
-            step0 = str(dict_checkpoints[checkpoint0]["results"]["step"])
-            step1 = str(dict_checkpoints[checkpoint1]["results"]["step"])
+            step0 = str(dict_checkpoints[checkpoint0]["step"])
+            step1 = str(dict_checkpoints[checkpoint1]["step"])
 
             if step0 == step1 == "5000":
                 ood_results["l"] = "l55"
