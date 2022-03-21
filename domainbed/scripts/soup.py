@@ -8,6 +8,11 @@
 # HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 # SCORES=5000_4000_3000_2000_1000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 5 --criteriontopk step --cluster dir --trial_seed 0 --regexes net0_net1 --do_ens net --mode all
 
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 0 --regexes net0_net1 --do_ens net --mode all
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 1 --regexes net0_net1 --do_ens net --mode all
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 2 --regexes net0_net1 --do_ens net --mode all
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
+
 # Env variables to be considered
 # CUDA_VISIBLE_DEVICES
 # PRETRAINED
@@ -28,6 +33,7 @@ import torch.utils.data
 from domainbed import datasets, algorithms_inference
 from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
+from domainbed.lib import misc, experiments_handler
 
 
 def main():
@@ -43,10 +49,12 @@ def main():
         raise NotImplementedError
 
     # load args
-    found_checkpoints_per_cluster = find_checkpoints(inf_args)
+    found_checkpoints_per_cluster, dict_checkpoints = find_checkpoints(inf_args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    good_checkpoints = get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, device)
+    good_checkpoints = get_good_checkpoints(
+        found_checkpoints_per_cluster, inf_args, dataset, device
+    )
 
     ood_splits, ood_names = create_splits(
         inf_args,
@@ -57,13 +65,46 @@ def main():
     )
 
     if inf_args.mode != "all":
-        get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, ood_splits, device)
+        ood_results = get_results_for_checkpoints(
+            good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+        )
+        print_results(inf_args, ood_results, good_checkpoints)
     else:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
             print(good_checkpoints)
-            get_results_for_checkpoints(
+            checkpoint0 = sub_good_checkpoints[0]
+            checkpoint1 = sub_good_checkpoints[1]
+
+            if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0]["trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
+                print("Skip because same seeds")
+                continue
+
+            ood_results = get_results_for_checkpoints(
                 sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
             )
+
+            step0 = str(dict_checkpoints[checkpoint0]["results"]["step"])
+            step1 = str(dict_checkpoints[checkpoint1]["results"]["step"])
+
+            if step0 == step1 == "5000":
+                ood_results["l"] = "l55"
+            elif step0 == step1 == "3000":
+                ood_results["l"] = "l33"
+            elif dict_checkpoints[checkpoint0]["dir"] == dict_checkpoints[checkpoint1]["dir"]:
+                ood_results["l"] = "l"
+            else:
+                ood_results["l"] = "l53"
+
+            # run_name = experiments_handler.get_run_name(inf_args.__dict__, {}, {})
+            # experiments_handler.main_mlflow(
+            #     run_name,
+            #     ood_results,
+            #     args=inf_args.__dict__,
+            #     output_dir=None,
+            #     hparams=None,
+            #     version="soup"
+            # )
+            print_results(inf_args, ood_results, sub_good_checkpoints)
             print("\n")
 
 
@@ -89,7 +130,7 @@ def _get_args():
         type=str,
         default=[],
         nargs='+',
-    ) # algorithm trial_seed
+    )  # algorithm trial_seed
     parser.add_argument(
         '--regexes',
         type=str,
@@ -164,7 +205,7 @@ def get_score_run(results, criteriontopk, test_envs):
     if criteriontopk in ["step"]:
         return results[criteriontopk]
     if criteriontopk in ["minus_step"]:
-        return - results[criteriontopk.split("_")[-1]]
+        return -results[criteriontopk.split("_")[-1]]
 
     if criteriontopk.startswith("acc"):
         criteriontopk = f"Accuracies/{criteriontopk}"
@@ -189,6 +230,7 @@ def printv(s, v=True):
     if v:
         print(s)
 
+
 def find_checkpoints(inf_args, verbose=False):
     checkpoints = [
         os.path.join(output_dir, path)
@@ -197,13 +239,12 @@ def find_checkpoints(inf_args, verbose=False):
     ]
     if os.environ.get("SAVE"):
         checkpoints = [
-            os.path.join(checkpoint, path)
-            for checkpoint in checkpoints
-            if os.path.isdir(checkpoint)
-            for path in os.listdir(checkpoint)
+            os.path.join(checkpoint, path) for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
         ]
 
     found_checkpoints_per_cluster = {}
+    dict_checkpoints = {}
     for folder in checkpoints:
         if not os.path.isdir(folder):
             continue
@@ -233,13 +274,16 @@ def find_checkpoints(inf_args, verbose=False):
             criteriontopk=inf_args.criteriontopk,
             test_envs=inf_args.test_envs
         )
-        if os.environ.get("SCORES") and score_folder not in [int(s) for s in os.environ.get("SCORES").split("_")]:
+        if os.environ.get("SCORES") and score_folder not in [
+            int(s) for s in os.environ.get("SCORES").split("_")
+        ]:
             continue
-        train_args.dir = os.path.split(os.path.split(folder)[0])[-1]
+        train_args.__dict__["dir"] = os.path.split(os.path.split(folder)[0])[-1]
         cluster = "|".join([str(train_args.__dict__[cluster]) for cluster in inf_args.cluster])
         if cluster not in found_checkpoints_per_cluster:
             found_checkpoints_per_cluster[cluster] = {}
         found_checkpoints_per_cluster[cluster][folder] = score_folder
+        dict_checkpoints[folder] = train_args.__dict__
 
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError("No checkpoints found")
@@ -250,7 +294,7 @@ def find_checkpoints(inf_args, verbose=False):
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
     printv(sorted_checkpoints_per_cluster, verbose)
-    return sorted_checkpoints_per_cluster
+    return sorted_checkpoints_per_cluster, dict_checkpoints
 
 
 def file_with_weights(folder):
@@ -288,7 +332,8 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
         elif inf_args.mode == "zipf":
             print(f"Select from zipf")
             cluster_good_checkpoints = get_from_zipf(
-                found_checkpoints, inf_args.topk, a=inf_args.zipf_a)
+                found_checkpoints, inf_args.topk, a=inf_args.zipf_a
+            )
         elif inf_args.mode == "random":
             print(f"Select random")
             rand_nums = random.sample(range(len(found_checkpoints)), inf_args.topk)
@@ -302,6 +347,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
         print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
         good_checkpoints.extend(cluster_good_checkpoints)
     return good_checkpoints
+
 
 def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
 
@@ -383,7 +429,6 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
     return [found_checkpoints[num] for num in good_nums]
 
 
-
 def get_from_zipf(found_checkpoints, topk, a=3):
     n = len(found_checkpoints)
     nums = set([])
@@ -429,9 +474,8 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     torch.backends.cudnn.benchmark = False
 
     ood_loaders = [
-        FastDataLoader(
-            dataset=split, batch_size=64, num_workers=dataset.N_WORKERS
-        ) for split in ood_splits
+        FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+        for split in ood_splits
     ]
     compute_hessian = os.environ.get("HESSIAN", "0") != "0"
     if compute_hessian:
@@ -451,8 +495,7 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
     for i, (name, loader) in enumerate(evals):
         print(f"Inference at {name}")
 
-        results = ens_algorithm.accuracy(
-            loader, device, compute_trace=True)
+        results = ens_algorithm.accuracy(loader, device, compute_trace=True)
         print(results)
 
         if compute_hessian:
@@ -464,9 +507,21 @@ def get_results_for_checkpoints(good_checkpoints, dataset, inf_args, ood_names, 
         for key in results:
             ood_results[name + "_" + key.split("/")[-1]] = results[key]
 
+    return ood_results
+
+
+def print_results(inf_args, ood_results, good_checkpoints):
     ood_results_keys = sorted(ood_results.keys())
-    print(f"OOD results for {inf_args} with {len(good_checkpoints)} and gpu: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
-    misc.print_rows(row1=ood_results_keys, row2=[ood_results[key] for key in ood_results_keys], colwidth=15, latex=True)
+    print(
+        f"OOD results for {inf_args} with {len(good_checkpoints)} and gpu: {os.environ.get('CUDA_VISIBLE_DEVICES')}"
+    )
+    misc.print_rows(
+        row1=ood_results_keys,
+        row2=[ood_results[key] for key in ood_results_keys],
+        colwidth=15,
+        latex=True
+    )
+
 
 if __name__ == "__main__":
     main()

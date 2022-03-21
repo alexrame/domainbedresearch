@@ -14,12 +14,13 @@ def set_mlflow_experiment(experiment_name):
     assert mlflow.get_tracking_uri() == TRACKING_URI
 
 
-def set_experiment_name(args):
+def set_experiment_name(args, version=None):
     if os.environ.get("USER") in ["rame", "utr15kn"]:
         test_env = args["test_envs"][0]
         if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
-            VERSION = "v13_" + os.environ.get("HP", "")
-            return args["dataset"] + str(test_env) + VERSION
+            if version is None:
+                version = "v13_" + os.environ.get("HP", "")
+            return args["dataset"] + str(test_env) + version
         elif args["dataset"] == "Spirals":
             return "Spirals"
         elif args["dataset"] == "CelebA_Blond":
@@ -28,13 +29,13 @@ def set_experiment_name(args):
             return "tmp"
 
     elif os.environ.get("USER") in ["m.kirchmeyer"]:
-        VERSION = "v9" if os.environ.get("HP") != "D" else "v8"
+        version = "v9" if os.environ.get("HP") != "D" else "v8"
         test_env = args["test_envs"][0]
         if args["dataset"] in [
             "ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome",
             "DomainNet"
         ]:
-            return args["dataset"] + str(test_env) + VERSION + "cka_f"
+            return args["dataset"] + str(test_env) + version + "cka_f"
         elif args["dataset"] == "Spirals":
             return "Spirals"
         elif args["dataset"] == "CelebA_Blond":
@@ -69,6 +70,8 @@ def get_run_name(args, hparams, hp):
         "dataset",
         "algorithm",
         ]])
+
+    name += "_".join(args["test_envs"])
 
     if args["algorithm"] in ["FisherMMD", "IRMAdv"]:
         keys = [
@@ -177,8 +180,10 @@ def add_artifact_to_run(output_folder):
 BAD_PARAMS = []
 
 
-def main_mlflow(run_name, metrics, args, output_dir, hparams, move_artifacts=True):
-    set_mlflow_experiment(experiment_name=set_experiment_name(args))
+def main_mlflow(run_name, metrics, args, output_dir, hparams, move_artifacts=True, version=None):
+    experiment_name = set_experiment_name(args, version=version)
+    set_mlflow_experiment(experiment_name)
+
     dict_tags, new_params = split_args_between_tags_and_params(args)
     new_params.update({k: v for k, v in hparams.items()})
     metrics = clean_metrics(metrics)
