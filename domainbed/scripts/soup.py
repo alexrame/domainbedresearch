@@ -8,12 +8,14 @@
 # HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 # SCORES=5000_4000_3000_2000_1000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 5 --criteriontopk step --cluster dir --trial_seed 0 --regexes net0_net1 --do_ens net --mode all
 
-# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 0 --regexes net0_net1 --do_ens net --mode all
-# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 1 --regexes net0_net1 --do_ens net --mode all
-# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 2 --regexes net0_net1 --do_ens net --mode all
-# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 0 --regexes net0_net1 --do_ens net --mode all &
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 1 --regexes net0_net1 --do_ens net --mode all &
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 2 --regexes net0_net1 --do_ens net --mode all &
+# HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 60 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all &
+# wait
 
-
+# HESSIAN=1 SCORES=3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 60 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all &
+# HESSIAN=1 SCORES=5000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 60 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all &
 # SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 10 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 
 # Env variables to be considered
@@ -67,7 +69,7 @@ def main():
         trial_seed=inf_args.trial_seed
     )
 
-    if inf_args.mode != "all":
+    if inf_args.mode not in ["all", "randomall"]:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
         )
@@ -78,7 +80,8 @@ def main():
             checkpoint0 = sub_good_checkpoints[0]
             checkpoint1 = sub_good_checkpoints[1]
 
-            if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0]["trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
+            if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0][
+                "trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
                 print(f"Skip f{sub_good_checkpoints} because same seeds")
                 continue
             else:
@@ -277,14 +280,13 @@ def find_checkpoints(inf_args, verbose=False):
         printv(f"found: {name_folder}", verbose)
         run_results = json.loads(save_dict.get("results", ""))
         score_folder = get_score_run(
-            run_results,
-            criteriontopk=inf_args.criteriontopk,
-            test_envs=inf_args.test_envs
+            run_results, criteriontopk=inf_args.criteriontopk, test_envs=inf_args.test_envs
         )
-        if os.environ.get("SCORES") and score_folder not in [
-            int(s) for s in os.environ.get("SCORES").split("_")
+        if os.environ.get("STEPS") and run_results.get("step", 5000) not in [
+            int(s) for s in os.environ.get("STEPS").split("_")
         ]:
             continue
+
         train_args.__dict__["dir"] = os.path.split(os.path.split(folder)[0])[-1]
         cluster = "|".join([str(train_args.__dict__[cluster]) for cluster in inf_args.cluster])
         if cluster not in found_checkpoints_per_cluster:
@@ -342,7 +344,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
             cluster_good_checkpoints = get_from_zipf(
                 found_checkpoints, inf_args.topk, a=inf_args.zipf_a
             )
-        elif inf_args.mode == "random":
+        elif inf_args.mode in ["random", "randomall"]:
             print(f"Select random")
             rand_nums = random.sample(range(len(found_checkpoints)), inf_args.topk)
             cluster_good_checkpoints = [found_checkpoints[i] for i in rand_nums]
