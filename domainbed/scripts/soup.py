@@ -206,7 +206,6 @@ class NameSpace(object):
 def get_score_run(results, criteriontopk, test_envs):
     if not results:
         return 0.
-    results = json.loads(results)
     if criteriontopk in ["none", "0"]:
         return 0.
     if criteriontopk in ["step"]:
@@ -276,8 +275,9 @@ def find_checkpoints(inf_args, verbose=False):
             printv(f"Warning different holdout fraction: {name_folder} but keep", verbose)
 
         printv(f"found: {name_folder}", verbose)
+        run_results = json.loads(save_dict.get("results", ""))
         score_folder = get_score_run(
-            save_dict.get("results", ""),
+            run_results,
             criteriontopk=inf_args.criteriontopk,
             test_envs=inf_args.test_envs
         )
@@ -291,6 +291,7 @@ def find_checkpoints(inf_args, verbose=False):
             found_checkpoints_per_cluster[cluster] = {}
         found_checkpoints_per_cluster[cluster][folder] = score_folder
         dict_checkpoints[folder] = train_args.__dict__
+        dict_checkpoints[folder]["step"] = run_results.get("step", 5000)
 
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError("No checkpoints found")
