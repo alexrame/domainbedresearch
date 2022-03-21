@@ -74,6 +74,7 @@ def main():
         print_results(inf_args, ood_results, good_checkpoints)
     else:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
+            print("")
             checkpoint0 = sub_good_checkpoints[0]
             checkpoint1 = sub_good_checkpoints[1]
 
@@ -98,7 +99,7 @@ def main():
             elif step0 == step1 == "3000":
                 ood_results["l"] = "l33"
             elif dict_checkpoints[checkpoint0]["dir"] == dict_checkpoints[checkpoint1]["dir"]:
-                ood_results["l"] = "l"
+                ood_results["l"] = "ls"
             else:
                 ood_results["l"] = "l53"
 
@@ -112,7 +113,6 @@ def main():
             #     version="soup"
             # )
             print_results(inf_args, ood_results, sub_good_checkpoints)
-            print("\n")
 
 
 def _get_args():
