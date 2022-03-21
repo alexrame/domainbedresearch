@@ -54,7 +54,8 @@ def main():
         raise NotImplementedError
 
     # load args
-    found_checkpoints_per_cluster, dict_checkpoints = find_checkpoints(inf_args)
+    found_checkpoints_per_cluster, dict_checkpoints = find_checkpoints(
+        inf_args, verbose=os.environ.get("VERBOSE"))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     good_checkpoints = get_good_checkpoints(
