@@ -109,8 +109,8 @@ def main():
                     ood_results = get_results_for_checkpoints(
                         sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
                     )
-                    for key, value in ood_results.items():
-                        results_at_i[key] = results_at_i.get(key, 0) + value/len(combinations)
+                for key, value in ood_results.items():
+                    results_at_i[key] = results_at_i.get(key, 0) + value/len(combinations)
 
             results_at_i["length"] = i
             print_results(inf_args, results_at_i, i)
