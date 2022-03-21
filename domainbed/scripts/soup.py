@@ -95,25 +95,20 @@ def main():
             # )
             print_results(inf_args, ood_results, len(sub_good_checkpoints))
     elif inf_args.mode.startswith("iter_"):
-        start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
-        for i in range(start, end):
-            combinations = list(itertools.combinations(good_checkpoints, i))
-            random.shuffle(combinations)
-            combinations = combinations[:top]
-            results_at_i = {}
-            for sub_good_checkpoints in combinations:
-                print(f"Process {sub_good_checkpoints}")
-                if os.environ.get("DEBUG"):
-                    ood_results = {"acc": 0.7}
-                else:
-                    ood_results = get_results_for_checkpoints(
-                        sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
-                    )
-                for key, value in ood_results.items():
-                    results_at_i[key] = results_at_i.get(key, 0) + value/len(combinations)
+        start, end = [int(s) for s in inf_args.mode.split("_")[1:]]
+        if end > len(good_checkpoints):
+            raise ValueError(f"{end} too big")
 
-            results_at_i["length"] = i
-            print_results(inf_args, results_at_i, i)
+        for i in range(start, end):
+            sub_good_checkpoints = good_checkpoints[:i]
+            if os.environ.get("DEBUG", "0") != "0":
+                ood_results = {}
+            else:
+                ood_results = get_results_for_checkpoints(
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+                )
+            ood_results["length"] = i
+            print_results(inf_args, ood_results, i)
     else:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
