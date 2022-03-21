@@ -137,7 +137,7 @@ def _get_args():
 
     # select which checkpoints
     parser.add_argument('--mode', type=str, default="")  # "" or "all",
-    parser.add_argument('--select_strategy', type=str, default="")  # "greedy", "random", "zipf""
+    parser.add_argument('--selection_strategy', type=str, default="")  # "greedy", "random", "zipf""
     parser.add_argument(
         '--cluster',
         type=str,
