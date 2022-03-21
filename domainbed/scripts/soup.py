@@ -96,7 +96,7 @@ def main():
             print_results(inf_args, ood_results, len(sub_good_checkpoints))
     elif inf_args.mode.startswith("iter_"):
         start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
-        for i in range(start, end + 1):
+        for i in range(start, end):
             combinations = list(itertools.combinations(good_checkpoints, i))
             random.shuffle(combinations)
             combinations = combinations[:top]
