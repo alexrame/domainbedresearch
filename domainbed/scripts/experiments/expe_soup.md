@@ -377,3 +377,47 @@ PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --algorith
 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/mixup66swa5sheoa0318 --topk 40 &
 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed -1 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319,/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/gdro66swa5sheoa0318 --topk 40 &
 wait
+
+len(accs): 6 for test_env: 0 and trial_seed: 4 for dataset: OfficeHome
+len(accs): 6 for test_env: 0 and trial_seed: 0 for dataset: OfficeHome
+len(accs): 6 for test_env: 0 and trial_seed: 1 for dataset: OfficeHome
+len(accs): 6 for test_env: 0 and trial_seed: 5 for dataset: OfficeHome
+len(accs): 6 for test_env: 0 and trial_seed: 2 for dataset: OfficeHome
+len(accs): 6 for test_env: 0 and trial_seed: 3 for dataset: OfficeHome
+
+
+
+\subsection{Model selection: training-domain validation set}
+len(accs): 6 for test_env: 2 and trial_seed: 0 for dataset: OfficeHome
+len(accs): 6 for test_env: 2 and trial_seed: 4 for dataset: OfficeHome
+len(accs): 6 for test_env: 2 and trial_seed: 2 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 3 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 4 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 4 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 0 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 0 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 2 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 3 for dataset: OfficeHome
+len(accs): 6 for test_env: 2 and trial_seed: 1 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 2 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 5 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 5 for dataset: OfficeHome
+len(accs): 6 for test_env: 2 and trial_seed: 3 for dataset: OfficeHome
+len(accs): 6 for test_env: 2 and trial_seed: 5 for dataset: OfficeHome
+len(accs): 6 for test_env: 3 and trial_seed: 1 for dataset: OfficeHome
+len(accs): 6 for test_env: 1 and trial_seed: 1 for dataset: OfficeHome
+
+
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/b14e9d652a6afb0dc99eb7d3f903fbc5
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/9f575d673abcd472add57aecbf773e98
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/26a5d2ee460f68e77b1f6bce95f1ecc9
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/76c8e21c393a6a6ecf4ede0324213b30
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/f9112dbfe3ec0778e2bb88b1031c99c5
+/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm66sh0319/860d143231d85730b21622125130f2d9
+
+
+HESSIAN=1 STEPS=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 0,1,2,3,4 --regexes net0_net1 --do_ens net --mode all &
+HESSIAN=1 STEPS=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 5,6,7,8,9 --regexes net0_net1 --do_ens net --mode all &
+HESSIAN=1 STEPS=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 10,11,12,13,14 --regexes net0_net1 --do_ens net --mode all &
+HESSIAN=1 STEPS=5000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 60 --trial_seed 15,16,17,18,19 --regexes net0_net1 --do_ens net --mode all &
+wait

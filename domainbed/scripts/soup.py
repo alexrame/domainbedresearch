@@ -67,7 +67,7 @@ def main():
         dataset,
         inf_env="test",
         filter="full" if inf_args.selection == "train" else "in",
-        trial_seed=inf_args.trial_seed
+        trial_seed=inf_args.trial_seed[0]
     )
 
     if inf_args.mode not in ["all", "randomall"]:
@@ -81,7 +81,7 @@ def main():
             checkpoint0 = sub_good_checkpoints[0]
             checkpoint1 = sub_good_checkpoints[1]
 
-            if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0][
+            if -1 in inf_args.trial_seed  and dict_checkpoints[checkpoint0][
                 "trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
                 print(f"Skip f{sub_good_checkpoints} because same seeds")
                 continue
@@ -126,8 +126,8 @@ def _get_args():
     parser.add_argument('--test_envs', type=int, nargs='+')
     parser.add_argument(
         '--trial_seed',
-        type=int,
-        default=-1,
+        type=str,
+        default="-1",
         help='Trial number (used for seeding split_dataset and random_hparams).'
     )
     parser.add_argument('--holdout_fraction', type=float, default=0.05)
@@ -170,6 +170,8 @@ def _get_args():
         inf_args.do_ens = []
     else:
         inf_args.do_ens = inf_args.do_ens.split(",")
+
+    inf_args.trial_seed = [int(t) for t in inf_args.trial_seed.split(",")]
     return inf_args
 
 
@@ -272,7 +274,7 @@ def find_checkpoints(inf_args, verbose=False):
         if train_args.test_envs != inf_args.test_envs:
             printv(f"bad test env: {name_folder}", verbose)
             continue
-        if (train_args.trial_seed != inf_args.trial_seed and inf_args.trial_seed != -1):
+        if (train_args.trial_seed not in inf_args.trial_seed and -1 not in inf_args.trial_seed):
             printv(f"bad trial seed: {name_folder}", verbose)
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
@@ -329,7 +331,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
                 assert inf_args.selection == "train"
                 trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
             else:
-                trial_seed = inf_args.trial_seed
+                trial_seed = inf_args.trial_seed[0]
             val_splits, val_names = create_splits(
                 inf_args,
                 dataset,
