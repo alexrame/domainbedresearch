@@ -14,7 +14,7 @@
 # HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 
 
-SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 10 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
+# SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 10 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 
 # Env variables to be considered
 # CUDA_VISIBLE_DEVICES
