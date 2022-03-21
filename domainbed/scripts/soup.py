@@ -13,6 +13,9 @@
 # HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed 2 --regexes net0_net1 --do_ens net --mode all
 # HESSIAN=1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
 
+
+SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319 --topk 10 --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
+
 # Env variables to be considered
 # CUDA_VISIBLE_DEVICES
 # PRETRAINED
@@ -71,17 +74,21 @@ def main():
         print_results(inf_args, ood_results, good_checkpoints)
     else:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
-            print(good_checkpoints)
             checkpoint0 = sub_good_checkpoints[0]
             checkpoint1 = sub_good_checkpoints[1]
 
             if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0]["trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
-                print("Skip because same seeds")
+                print(f"Skip f{good_checkpoints} because same seeds")
                 continue
+            else:
+                print(f"Process {good_checkpoints}")
 
-            ood_results = get_results_for_checkpoints(
-                sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
-            )
+            if os.environ.get("DEBUG"):
+                ood_results = {}
+            else:
+                ood_results = get_results_for_checkpoints(
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, device
+                )
 
             step0 = str(dict_checkpoints[checkpoint0]["results"]["step"])
             step1 = str(dict_checkpoints[checkpoint1]["results"]["step"])
