@@ -342,6 +342,24 @@ class _SplitDataset(torch.utils.data.Dataset):
         return len(self.keys)
 
 
+class MergeDataset(torch.utils.data.Dataset):
+    def __init__(self, datasets):
+        super(MergeDataset, self).__init__()
+        self.datasets = datasets
+
+    def __getitem__(self, key):
+        count = 0
+        for d in self.datasets:
+            if key - count >= len(d):
+                count += len(d)
+            else:
+                return d[key - count]
+        raise ValueError(key)
+
+    def __len__(self):
+        return sum([len(d) for d in self.datasets])
+
+
 def split_dataset(dataset, n, seed=0):
     """
     Return a pair of datasets corresponding to a random split of the given

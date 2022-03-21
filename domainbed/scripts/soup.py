@@ -53,13 +53,15 @@ def main():
     )
     if os.environ.get("HESSIAN", "-1") != "-1":
         hessian_splits, hessian_names = create_splits(
-                inf_args,
-                dataset,
-                inf_env=os.environ.get("HESSIAN").split(","),
-                filter="in",
-                trial_seed=inf_args.trial_seed[0],
-                holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
-            )
+            inf_args,
+            dataset,
+            inf_env=os.environ.get("HESSIAN").split(","),
+            filter="in",
+            trial_seed=inf_args.trial_seed[0],
+            holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
+        )
+        hessian_splits = [misc.MergeDataset(hessian_splits)]
+        hessian_names = ["e" + "".join(os.environ.get("HESSIAN").split(",")) + "_in"]
     else:
         hessian_splits, hessian_names = None, None
 
@@ -80,8 +82,8 @@ def main():
                 ood_results = {}
             else:
                 ood_results = get_results_for_checkpoints(
-                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits,
-                    hessian_names, hessian_splits, device
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+                    hessian_splits, device
                 )
 
             step0 = str(dict_checkpoints[checkpoint0]["step"])
@@ -202,7 +204,9 @@ def create_splits(inf_args, dataset, inf_env, filter, trial_seed, holdout_fracti
             splits.append(env)
             names.append('e{}'.format(env_i))
         else:
-            holdout_fraction = holdout_fraction or inf_args.holdout_fraction
+            holdout_fraction = (
+                holdout_fraction if holdout_fraction is not None else inf_args.holdout_fraction
+            )
             out_, in_ = misc.split_dataset(
                 env, int(len(env) * holdout_fraction), misc.seed_hash(trial_seed, env_i)
             )
@@ -526,8 +530,10 @@ def get_results_for_checkpoints(
     if hessian_splits is not None:
         hessian_loaders = [
             FastDataLoader(
-                dataset=split, batch_size=int(os.environ.get("HESSIANBS", 12)), num_workers=dataset.N_WORKERS)
-            for split in hessian_splits
+                dataset=split,
+                batch_size=int(os.environ.get("HESSIANBS", 64)),
+                num_workers=dataset.N_WORKERS
+            ) for split in hessian_splits
         ]
         hessian_evals = zip(hessian_names, hessian_loaders)
         for i, (name, loader) in enumerate(hessian_evals):
@@ -536,8 +542,8 @@ def get_results_for_checkpoints(
             for key in results:
                 clean_key = key.split("/")[-1]
                 ood_results[name + "_" + clean_key] = results[key]
-                ood_results[clean_key] = ood_results.get(
-                    clean_key, 0) + results[key] / len(hessian_names)
+                ood_results[clean_key] = ood_results.get(clean_key,
+                                                         0) + results[key] / len(hessian_names)
 
     return ood_results
 
