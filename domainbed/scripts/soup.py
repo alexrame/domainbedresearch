@@ -78,10 +78,10 @@ def main():
             checkpoint1 = sub_good_checkpoints[1]
 
             if inf_args.trial_seed == -1 and dict_checkpoints[checkpoint0]["trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
-                print(f"Skip f{good_checkpoints} because same seeds")
+                print(f"Skip f{sub_good_checkpoints} because same seeds")
                 continue
             else:
-                print(f"Process {good_checkpoints}")
+                print(f"Process {sub_good_checkpoints}")
 
             if os.environ.get("DEBUG"):
                 ood_results = {}
