@@ -344,7 +344,7 @@ class Soup(algorithms.Ensembling):
         # del self.swas[1:]
         # del self.networks[1:]
 
-        print(f"Begin Hessian soup")
+        # print(f"Begin Hessian soup")
         results = {}
         results["Flatness/souphess"] = misc.compute_hessian(
             self.soup.network_soup, loader, maxIter=10

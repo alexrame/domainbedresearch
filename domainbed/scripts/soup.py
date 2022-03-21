@@ -538,12 +538,13 @@ def get_results_for_checkpoints(
         hessian_evals = zip(hessian_names, hessian_loaders)
         for i, (name, loader) in enumerate(hessian_evals):
             print(f"Hessian at {name}")
-            results.update(ens_algorithm.compute_hessian(loader))
-            for key in results:
+            hessian_results = ens_algorithm.compute_hessian(loader)
+            for key in hessian_results:
                 clean_key = key.split("/")[-1]
-                ood_results[name + "_" + clean_key] = results[key]
-                ood_results[clean_key] = ood_results.get(clean_key,
-                                                         0) + results[key] / len(hessian_names)
+                ood_results[name + "_" + clean_key] = hessian_results[key]
+                # ood_results[clean_key] = ood_results.get(
+                #     clean_key, 0
+                # ) + hessian_results[key] / len(hessian_names)
 
     return ood_results
 
