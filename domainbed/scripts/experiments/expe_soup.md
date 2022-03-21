@@ -10,13 +10,13 @@
 HESSIAN=0 SAVE=0 STEPS=mod100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319/ef77dcccb229850e902de8f4a8bd47a4 --topk 30 --mode all
 
 
-DEBUG=1 HESSIAN=1 SAVE=0 STEPS=mod10 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319/ef77dcccb229850e902de8f4a8bd47a4 --topk 30 --mode iter_1_16_10
+DEBUG=1 HESSIAN=1 SAVE=0 STEPS=mod10 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319/ef77dcccb229850e902de8f4a8bd47a4 --topk 30 --mode iter_1_16
 
 
 STEPS="mod100"
 
-HESSIAN=1 SAVE=0 STEPS=mod100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a --topk 30 --mode iter_1_16_10 &
-HESSIAN=1 SAVE=0 STEPS=mod100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a --topk 30 --mode iter_16_30_10 &
+HESSIAN=1 SAVE=0 STEPS=mod100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a --topk 30 --mode iter_1_16 &
+HESSIAN=1 SAVE=0 STEPS=mod100 PRETRAINED=0 CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a --topk 30 --mode iter_16_31 &
 HESSIAN=1 SAVE=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=2 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --mode iter_1_15_10 &
 HESSIAN=1 SAVE=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=3 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm320sh0319 --topk 30 --mode iter_16_30_10 &
 
