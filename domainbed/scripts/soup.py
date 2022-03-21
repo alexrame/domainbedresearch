@@ -96,7 +96,7 @@ def main():
             print_results(inf_args, ood_results, len(sub_good_checkpoints))
     elif inf_args.mode.startswith("iter_"):
         start, end = [int(s) for s in inf_args.mode.split("_")[1:]]
-        if end > len(good_checkpoints):
+        if end > len(good_checkpoints) + 1:
             raise ValueError(f"{end} too big")
 
         for i in range(start, end):
