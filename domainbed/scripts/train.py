@@ -401,8 +401,8 @@ def main():
             checkpoint_vals = collections.defaultdict(lambda: [])
 
             save_epoch = os.environ.get("SAVE") or args.save_model_every_checkpoint
-            save_epoch |= os.environ.get("SCORES") is not None and step in [
-                int(s) for s in os.environ.get("SCORES").split("_")
+            save_epoch |= os.environ.get("STEPS") is not None and step in [
+                int(s) for s in os.environ.get("STEPS").split("_")
             ]
             if save_epoch:
                 save_checkpoint(
@@ -421,7 +421,7 @@ def main():
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
-    results_dumpable = {key: value for key, value in results_end.items() if misc.is_dumpable(value)}
+    results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
     save_checkpoint(
         'model.pkl',
         results=json.dumps(results_dumpable, sort_keys=True),

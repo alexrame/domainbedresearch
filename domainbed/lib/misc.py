@@ -317,19 +317,14 @@ def print_row(row, colwidth=10, latex=False):
     print(sep.join([format_val(x) for x in row]), end_)
 
 
-def print_rows(row1, row2, colwidth=10, latex=False):
-    if latex:
-        sep = " & "
-        end_ = "\\\\"
-    else:
-        raise ValueError
-
+def print_rows(row1, row2):
     def format_val(x):
         if np.issubdtype(type(x), np.floating):
             x = "{:.3f}".format(x)
-        return str(x).ljust(colwidth)[:colwidth]
+        return str(x)
 
-    print(sep.join([format_val(x1) + ":" + format_val(x2) for x1, x2 in zip(row1, row2)]), end_)
+    to_print = ", ".join([format_val(x1) + ": " + format_val(x2) for x1, x2 in zip(row1, row2)])
+    print("{" + to_print + "}")
 
 
 class _SplitDataset(torch.utils.data.Dataset):

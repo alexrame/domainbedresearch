@@ -180,7 +180,7 @@ class Soup(algorithms.Ensembling):
                 self._t_swas.append(algorithm.get_temperature("swa"))
         if algorithm.swas is not None:
             for member, swa in enumerate(algorithm.swas):
-                if int(os.environ.get('SWAMEMBER', member)) == member:
+                if int(os.environ.get('SWAMEMBER', "0")) == member:
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
                     if self._t_scaled:
