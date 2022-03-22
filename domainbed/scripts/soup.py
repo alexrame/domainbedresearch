@@ -36,7 +36,7 @@ def main():
 
     # load args
     found_checkpoints_per_cluster, dict_checkpoints = find_checkpoints(
-        inf_args, verbose=os.environ.get("VERBOSE")
+        inf_args, verbose=os.environ.get("DEBUG", "0") != "0"
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -71,7 +71,7 @@ def main():
             raise ValueError(f"{end} too big")
 
         for i in range(start, end):
-            combinations = itertools.combinations(good_checkpoints, i)
+            combinations = list(itertools.combinations(good_checkpoints, i))
             random.shuffle(combinations)
             combinations = combinations[:top]
             ood_results_at_i = {}
@@ -293,7 +293,7 @@ def find_checkpoints(inf_args, verbose=False):
         for output_dir in inf_args.output_dir.split(",")
         for path in os.listdir(output_dir)
     ]
-    if os.environ.get("SAVE", "0") != "0":
+    if os.environ.get("INFOLDER", "0") != "0":
         checkpoints = [
             os.path.join(checkpoint, path) for checkpoint in checkpoints
             if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
