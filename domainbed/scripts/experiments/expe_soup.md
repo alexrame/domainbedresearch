@@ -1,3 +1,8 @@
+
+# tolaucnh
+
+STEPS=500_1000_1500_2000_2500_3000_3250_3500_3750_4000_4250_4500_4750_5000 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0
+
 # commands to test
 
 # PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --algorithm Soup --dataset OfficeHome --mode ens --test_envs 0 --trial_seed 2 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/swaensshhpdeoa0316

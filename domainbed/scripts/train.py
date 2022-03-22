@@ -321,9 +321,13 @@ def main():
             checkpoint_vals[key].append(val)
 
         do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
-        if os.environ.get("SAVE"):
-            do_metrics |= step <= 100 and step % 10 == 0
-            do_metrics |= step <= 10 and step % 2 == 0
+
+        if os.environ.get("STEPS"):
+            if os.environ.get("STEPS") == "all":
+                do_metrics |= step <= 100 and step % 10 == 0
+                do_metrics |= step <= 10 and step % 2 == 0
+            else:
+                do_metrics |= step in [int(s) for s in os.environ.get("STEPS").split("_")]
 
         if do_metrics:
             epoch = step / steps_per_epoch
@@ -400,10 +404,14 @@ def main():
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
-            save_epoch = os.environ.get("SAVE") or args.save_model_every_checkpoint
-            save_epoch |= os.environ.get("STEPS") is not None and step in [
-                int(s) for s in os.environ.get("STEPS").split("_")
-            ]
+            save_epoch = args.save_model_every_checkpoint
+            if os.environ.get("STEPS"):
+                if os.environ.get("STEPS") == "all":
+                    save_epoch = True
+                else:
+                    save_epoch |= step in [
+                        int(s) for s in os.environ.get("STEPS").split("_")
+                    ]
             if save_epoch:
                 save_checkpoint(
                     f'{step}/model.pkl',
