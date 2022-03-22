@@ -21,6 +21,7 @@ from domainbed.lib import misc
 from domainbed.lib.fast_data_loader import FastDataLoader
 from domainbed.lib import misc, experiments_handler
 
+random.seed(os.environ.get('SEED', 4))
 
 def main():
     inf_args = _get_args()
