@@ -302,6 +302,8 @@ class Soup(algorithms.Ensembling):
 
         targets = torch.cat(batch_classes).cpu().numpy()
 
+        results_div = {}
+        count = 0
         for regex in self.regexes:
             if "_" in regex:
                 key0 = regex.split("_")[0]
@@ -312,32 +314,31 @@ class Soup(algorithms.Ensembling):
             if key0 not in dict_stats or key1 not in dict_stats:
                 print(f"{regex} not found for diversity")
                 continue
-
-            regex = regex.replace("soup", "s").replace("swa", "w").replace("net", "n").replace("_", "")
-
-            results.update(
-                self._compute_diversity(
-                    targets, dict_stats, regex, key0, key1, compute_trace, device
-                )
+            # regex = regex.replace("soup", "s").replace("swa", "w").replace("net", "n").replace("_", "")
+            _results_div = self._compute_diversity(
+                targets, dict_stats, key0, key1, compute_trace, device
             )
+            count += 1
+            for key, value in _results_div.items():
+                results_div[key] = results_div.get(key, 0) + value
 
-        del dict_stats
+        for key, value in results_div.items():
+            results[key + "_" + str(count)] = value / count
 
         return results
 
-    def _compute_diversity(self, targets, dict_stats, regex, key0, key1, compute_trace, device):
+    def _compute_diversity(self, targets, dict_stats, key0, key1, compute_trace, device):
         results = {}
         preds0 = dict_stats[key0]["preds"].numpy()
         preds1 = dict_stats[key1]["preds"].numpy()
-        results[f"Diversity/dr_{regex}"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
+        results[f"Diversity/dr"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
         # results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
         #     targets, preds0, preds1
         # )
         if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
             feats0 = dict_stats[key0]["feats"]
             feats1 = dict_stats[key1]["feats"]
-            results[f"Diversity/df_{regex}"] = 1. - CudaCKA(device).linear_CKA(
-                feats0, feats1).item()
+            results[f"Diversity/df"] = 1. - CudaCKA(device).linear_CKA(feats0, feats1).item()
         return results
 
     def compute_hessian(self, loader):

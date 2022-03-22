@@ -1,7 +1,14 @@
 
 # tolaucnh
 
-STEPS=500_1000_1500_2000_2500_3000_3250_3500_3750_4000_4250_4500_4750_5000 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0
+STEPS=1000_1500_2000_2500_3000_3250_3500_3750_4000_4250_4500_4600_4750_4900_5000 HP=D CUDA_VISIBLE_DEVICES=0,1,2,3 python3 -m domainbed.scripts.sweep launch --output_dir=/gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm151sheoa0322 --command_launcher multi_gpu --datasets OfficeHome --algorithms ERM --single_test_envs --hp shared_init /gpfswork/rech/edr/utr15kn/dataplace/data/domainbed/inits/home_0316 --test_envs 0 --n_hparams 15 --n_trials 1 --hp swa 1
+
+
+
+HESSIAN=-1 SCORES=5000_3000 SAVE=1 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319 --topk 2 --criteriontopk step --cluster dir --trial_seed -1 --regexes net0_net1 --do_ens net --mode all
+
+HESSIAN=-1 STEPS=mod100 SAVE=0 SWAMEMBER=0 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /gpfswork/rech/edr/utr15kn/dataplace/experiments/domainbed/erm24sheoa0319/ae1b6d92c1673c382dff447c31ac556a --regexes net0_net1 net0_net2 net0_net3 net0_net4 net0_net5 net0_net6 net0_net7 net0_net8 net0_net9 net1_net2 net1_net3 net1_net4 net1_net5 net1_net6 net1_net7 net1_net8 net1_net9 net2_net3 net2_net4 net2_net5 net2_net6 net2_net7 net2_net8 net2_net9 net3_net4 net3_net5 net3_net6 net3_net7 net3_net8 net3_net9 net4_net5 net4_net6 net4_net7 net4_net8 net4_net9 net5_net6 net5_net7 net5_net8 net5_net9 net6_net7 net6_net8 net6_net9 net7_net8 net7_net9 net8_net9 --do_ens net --mode all_2_11_5 --topk 20
+
 
 # commands to test
 

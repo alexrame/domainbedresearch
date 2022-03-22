@@ -65,7 +65,32 @@ def main():
     else:
         hessian_splits, hessian_names = None, None
 
-    if inf_args.mode in ["all"]:
+    if inf_args.mode.startswith("all_"):
+        start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
+        if end > len(good_checkpoints) + 1:
+            raise ValueError(f"{end} too big")
+
+        for i in range(start, end):
+            combinations = itertools.combinations(good_checkpoints, i)
+            random.shuffle(combinations)
+            combinations = combinations[:top]
+            ood_results_at_i = {}
+            for sub_good_checkpoints in combinations:
+                if os.environ.get("DEBUG", "0") != "0":
+                    ood_results = {}
+                else:
+                    ood_results = get_results_for_checkpoints(
+                        sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+                        hessian_splits, device
+                    )
+                ood_results["length"] = i
+                print_results(inf_args, ood_results, i)
+                for key, value in ood_results.items():
+                    ood_results_at_i[key] = ood_results_at_i.get(key, 0) + value/len(combinations)
+            print(f"End {len(combinations)} 'all' mode at {i}")
+            print_results(inf_args, ood_results_at_i, i)
+
+    elif inf_args.mode in ["all"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
             print("")
             checkpoint0 = sub_good_checkpoints[0]
@@ -96,7 +121,7 @@ def main():
             elif dict_checkpoints[checkpoint0]["dir"] == dict_checkpoints[checkpoint1]["dir"]:
                 ood_results["l"] = "ls"
             else:
-                ood_results["l"] = "l53"
+                ood_results["l"] = "ld"
 
             # run_name = experiments_handler.get_run_name(inf_args.__dict__, {}, {})
             # experiments_handler.main_mlflow(
