@@ -49,7 +49,7 @@ def main():
         inf_args,
         dataset,
         inf_env="test",
-        filter="full" if inf_args.selection == "train" else "in",
+        filter="full" if inf_args.selection_data == "train" else "in",
         trial_seed=inf_args.trial_seed[0]
     )
     if os.environ.get("HESSIAN", "-1") != "-1":
@@ -66,7 +66,7 @@ def main():
     else:
         hessian_splits, hessian_names = None, None
 
-    if inf_args.mode.startswith("all_"):
+    if inf_args.mode.startswith("combin_"):
         start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
         if end > len(good_checkpoints) + 1:
             raise ValueError(f"{end} too big")
@@ -91,7 +91,7 @@ def main():
             print(f"End {len(combinations)} 'all' mode at {i}")
             print_results(inf_args, ood_results_at_i, i)
 
-    elif inf_args.mode in ["all"]:
+    elif inf_args.mode in ["all2"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
             print("")
             checkpoint0 = sub_good_checkpoints[0]
@@ -377,14 +377,14 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
         if inf_args.selection_strategy == "greedy":
             print(f"Select from greedy")
             if "trial_seed" in inf_args.cluster:
-                assert inf_args.selection == "train"
+                assert inf_args.selection_data == "train"
                 trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
             else:
                 trial_seed = inf_args.trial_seed[0]
             val_splits, val_names = create_splits(
                 inf_args,
                 dataset,
-                inf_env="train" if inf_args.selection == "train" else "test",
+                inf_env="train" if inf_args.selection_data == "train" else "test",
                 filter="out",
                 trial_seed=trial_seed
             )
