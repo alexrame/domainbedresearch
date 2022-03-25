@@ -191,7 +191,7 @@ def _get_args():
 
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
-    parser.add_argument('--selection', type=str, default="train")  # or "oracle"
+    parser.add_argument('--selection_data', type=str, default="train")  # or "oracle"
     parser.add_argument('--zipf_a', type=float, default=3.)
 
     parser.add_argument('--algorithm', type=str, default="Soup")
