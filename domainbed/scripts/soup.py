@@ -150,12 +150,14 @@ def main():
                 )
             ood_results["length"] = i
             print_results(inf_args, ood_results, i)
-    else:
+    elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
             hessian_splits, device
         )
         print_results(inf_args, ood_results, len(good_checkpoints))
+    else:
+        raise ValueError(inf_args.mode)
 
 
 def _get_args():
