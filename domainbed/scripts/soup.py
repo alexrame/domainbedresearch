@@ -45,13 +45,23 @@ def main():
         found_checkpoints_per_cluster, inf_args, dataset, device
     )
 
+    if inf_args.ood_data == "test":
+        ood_env = "test"
+        ood_filter = "full" if inf_args.selection_data == "train" else "in"
+    elif inf_args.ood_data == "test":
+        ood_env = "train"
+        ood_filter= "out"
+    else:
+        raise ValueError(inf_args.ood_data)
+
     ood_splits, ood_names = create_splits(
         inf_args,
         dataset,
-        inf_env="test",
-        filter="full" if inf_args.selection_data == "train" else "in",
+        ood_env,
+        ood_filter,
         trial_seed=inf_args.trial_seed[0]
     )
+
     if os.environ.get("HESSIAN", "-1") != "-1":
         hessian_splits, hessian_names = create_splits(
             inf_args,
@@ -190,6 +200,7 @@ def _get_args():
         default=[],
         nargs='+',
     )  # "soup_soupswa", "net0_net1"
+    parser.add_argument('--ood_data', type=str, default="test")  # "test" or "train"
 
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
