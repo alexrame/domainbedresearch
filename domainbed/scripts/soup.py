@@ -48,7 +48,7 @@ def main():
     if inf_args.ood_data == "test":
         ood_env = "test"
         ood_filter = "full" if inf_args.selection_data == "train" else "in"
-    elif inf_args.ood_data == "test":
+    elif inf_args.ood_data == "train":
         ood_env = "train"
         ood_filter= "out"
     else:
