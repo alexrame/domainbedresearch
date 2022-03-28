@@ -159,7 +159,9 @@ def main():
                     hessian_splits, device
                 )
             ood_results["length"] = i
+            ood_results["dir"] = inf_args.output_dir.split("/")[-1]
             print_results(inf_args, ood_results, i)
+
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
