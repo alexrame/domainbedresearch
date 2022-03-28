@@ -326,6 +326,8 @@ def main():
             if os.environ.get("STEPS") == "all":
                 do_metrics |= step <= 100 and step % 10 == 0
                 do_metrics |= step <= 10 and step % 2 == 0
+            elif os.environ.get("STEPS").startswith("mod"):
+                do_metrics |= int(step) % int(os.environ.get("STEPS")[3:]) == 0
             else:
                 do_metrics |= step in [int(s) for s in os.environ.get("STEPS").split("_")]
 
@@ -408,6 +410,8 @@ def main():
             if os.environ.get("STEPS"):
                 if os.environ.get("STEPS") == "all":
                     save_epoch = True
+                elif os.environ.get("STEPS").startswith("mod"):
+                    save_epoch |= int(step) % int(os.environ.get("STEPS")[3:]) == 0
                 else:
                     save_epoch |= step in [
                         int(s) for s in os.environ.get("STEPS").split("_")
