@@ -95,11 +95,14 @@ def main():
                         hessian_splits, device
                     )
                 ood_results["length"] = i
-                print_results(inf_args, ood_results, i)
                 for key, value in ood_results.items():
                     ood_results_at_i[key] = ood_results_at_i.get(key, 0) + value/len(combinations)
-            print(f"End {len(combinations)} 'all' mode at {i}")
-            print_results(inf_args, ood_results_at_i, i)
+                ood_results["dirs"] = "_".join(
+                    [checkpoint.split("/")[-2][:5] for checkpoint in sub_good_checkpoints]
+                )
+                print_results(inf_args, ood_results, i)
+            # print(f"End {len(combinations)} 'all' mode at {i}")
+            # print_results(inf_args, ood_results_at_i, i)
 
     elif inf_args.mode in ["all2"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
@@ -363,7 +366,7 @@ def find_checkpoints(inf_args, verbose=False):
         dict_checkpoints[folder]["step"] = run_results.get("step", 5000)
 
     if len(found_checkpoints_per_cluster) == 0:
-        raise ValueError("No checkpoints found")
+        raise ValueError(f"No checkpoints found for: {inf_args}")
         return []
     printv(found_checkpoints_per_cluster, verbose)
     sorted_checkpoints_per_cluster = {
