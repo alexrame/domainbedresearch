@@ -337,6 +337,9 @@ def find_checkpoints(inf_args, verbose=False):
         if train_args.test_envs != inf_args.test_envs:
             printv(f"bad test env: {name_folder}", verbose)
             continue
+        if inf_args.algorithm != "" and train_args.algorithm not in inf_args.algorithm.split(","):
+            printv(f"bad algorithm: {name_folder}", verbose)
+            continue
         if (train_args.trial_seed not in inf_args.trial_seed and -1 not in inf_args.trial_seed):
             printv(f"bad trial seed: {name_folder}", verbose)
             continue
@@ -431,7 +434,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
 
 def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
 
-    ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
+    ens_algorithm_class = algorithms_inference.get_algorithm_class("Soup")
     ens_algorithm = ens_algorithm_class(
         dataset.input_shape,
         dataset.num_classes,
@@ -523,7 +526,7 @@ def get_results_for_checkpoints(
     good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names, hessian_splits,
     device
 ):
-    ens_algorithm_class = algorithms_inference.get_algorithm_class(inf_args.algorithm)
+    ens_algorithm_class = algorithms_inference.get_algorithm_class("Soup")
     ens_algorithm = ens_algorithm_class(
         dataset.input_shape,
         dataset.num_classes,
