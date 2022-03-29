@@ -163,6 +163,8 @@ def main():
                 )
             ood_results["length"] = i
             ood_results["dir"] = inf_args.output_dir.split("/")[-1]
+            if inf_args.algorithm != "":
+                ood_results["algo"] = inf_args.algorithm
             print_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["", "ens"]:
@@ -212,7 +214,7 @@ def _get_args():
     parser.add_argument('--selection_data', type=str, default="train")  # or "oracle"
     parser.add_argument('--zipf_a', type=float, default=3.)
 
-    parser.add_argument('--algorithm', type=str, default="Soup")
+    parser.add_argument('--algorithm', type=str, default="")
     parser.add_argument('--t_scaled', type=str)
     parser.add_argument('--do_ens', type=str, default="")
 
