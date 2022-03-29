@@ -98,7 +98,7 @@ def main():
                 for key, value in ood_results.items():
                     ood_results_at_i[key] = ood_results_at_i.get(key, 0) + value/len(combinations)
                 ood_results["dirs"] = "_".join(
-                    [checkpoint.split("/")[-2][:5] for checkpoint in sub_good_checkpoints]
+                    [checkpoint.split("/")[-2] for checkpoint in sub_good_checkpoints]
                 )
                 print_results(inf_args, ood_results, i)
             # print(f"End {len(combinations)} 'all' mode at {i}")

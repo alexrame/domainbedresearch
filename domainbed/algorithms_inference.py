@@ -312,7 +312,7 @@ class Soup(algorithms.Ensembling):
                 raise ValueError(regex)
 
             if key0 not in dict_stats or key1 not in dict_stats:
-                print(f"{regex} not found for diversity")
+                # print(f"{regex} not found for diversity")
                 continue
             # regex = regex.replace("soup", "s").replace("swa", "w").replace("net", "n").replace("_", "")
             _results_div = self._compute_diversity(
