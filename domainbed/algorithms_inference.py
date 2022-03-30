@@ -25,7 +25,6 @@ def get_algorithm_class(algorithm_name):
 class ERM(algorithms.ERM):
 
     def __init__(self, input_shape, num_classes, num_domains, hparams):
-        print("before init", hparams)
         algorithms.Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
         self.featurizer = networks.Featurizer(input_shape, self.hparams)
         self.classifier = networks.Classifier(
@@ -33,7 +32,6 @@ class ERM(algorithms.ERM):
         )
         self.num_classes = num_classes
         self.network = nn.Sequential(self.featurizer, self.classifier)
-        print("in init", self.hparams)
         self._init_swa()
         self._init_temperature(init_optimizers=False)
 
@@ -41,11 +39,9 @@ class ERM(algorithms.ERM):
         self.load_state_dict(save_dict["model_dict"])
         if self.hparams['swa']:
             if self.hparams['swa'] == 1:
-                print("load swa")
                 self.swa.network_swa.load_state_dict(save_dict["swa_dict"])
             else:
                 for i in range(self.hparams['swa']):
-                    print(f"load swa{i}")
                     self.swas[i].network_swa.load_state_dict(save_dict[f"swa{i}_dict"])
 
 
@@ -178,7 +174,6 @@ class Soup(algorithms.Ensembling):
                         self._t_networks.append(algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
-            print(f"Select swa from algorithm {algorithm}")
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
             if self._t_scaled:
@@ -187,13 +182,10 @@ class Soup(algorithms.Ensembling):
         if algorithm.swas is not None:
             for member, swa in enumerate(algorithm.swas):
                 if str(os.environ['SWAMEMBER']) == str(member):
-                    print(f"Selected swamember: {member}")
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
                     if self._t_scaled:
                         self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
-                else:
-                    print(f"Skipped swamember: {member}")
         self.create_soups()
 
     def delete_last(self):

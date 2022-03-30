@@ -451,7 +451,6 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
 
         save_dict = torch.load(file_with_weights(folder))
         train_args = NameSpace(save_dict["args"])
-        print("after loading", save_dict["model_hparams"])
 
         # load model
         algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
