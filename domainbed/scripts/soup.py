@@ -165,6 +165,8 @@ def main():
             ood_results["dir"] = inf_args.output_dir.split("/")[-1]
             if inf_args.algorithm != "":
                 ood_results["algo"] = inf_args.algorithm
+            if os.environ.get("SWAMEMBER"):
+                ood_results["swamember"] = os.environ.get("SWAMEMBER")
             print_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["", "ens"]:
