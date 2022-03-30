@@ -221,6 +221,7 @@ class ERM(Algorithm):
         self.swa = None
         self.swas = None
         if self.hparams['swa']:
+            print(self.hparams['swa'])
             if self.hparams['swa'] == 1:
                 self.swa = misc.SWA(self.network, hparams=self.hparams)
             else:
