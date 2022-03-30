@@ -402,7 +402,8 @@ class ERM(Algorithm):
                 continue
 
             if update_temperature:
-                for _ in range(50):
+                num_steps_temp = int(os.environ.get("NUMSTEPSTEMP", 0))
+                for _ in range(num_steps_temp):
                     for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                         if key not in dict_stats:
                             continue
