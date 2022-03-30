@@ -174,17 +174,21 @@ class Soup(algorithms.Ensembling):
                         self._t_networks.append(algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
+            print(f"Select swa from algorithm {algorithm}")
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
             if self._t_scaled:
                 self._t_swas.append(algorithm.get_temperature("swa"))
         if algorithm.swas is not None:
             for member, swa in enumerate(algorithm.swas):
-                if str(os.environ.get('SWAMEMBER', "0")) == str(member):
+                if str(os.environ['SWAMEMBER']) == str(member):
+                    print(f"Selected swamember: {member}")
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
                     if self._t_scaled:
                         self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
+                else:
+                    print(f"Skipped swamember: {member}")
         self.create_soups()
 
     def delete_last(self):
