@@ -138,20 +138,20 @@ class Soup():
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
 
-    def update_tscaled(self, temperatures):
-        if len(self.networks) == 0:
-            return
-        sum_temperatures = sum(temperatures)
-        # print(f"Weighted soup with temperatures: {temperatures} of sum: {sum_temperatures}")
-        for param in zip(
-            self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]
-        ):
-            name = param[0][0]
-            if name not in ["1.weight", "1.bias"]:
-                continue
-            param_k = param[0][1]
-            weighted_sum = sum([p.data * t for p, t in zip(param[1:], temperatures)])
-            param_k.data = weighted_sum / sum_temperatures
+    # def update_tscaled(self, temperatures):
+    #     if len(self.networks) == 0:
+    #         return
+    #     sum_temperatures = sum(temperatures)
+    #     # print(f"Weighted soup with temperatures: {temperatures} of sum: {sum_temperatures}")
+    #     for param in zip(
+    #         self.network_soup.named_parameters(), *[net.parameters() for net in self.networks]
+    #     ):
+    #         name = param[0][0]
+    #         if name not in ["1.weight", "1.bias"]:
+    #             continue
+    #         param_k = param[0][1]
+    #         weighted_sum = sum([p.data * t for p, t in zip(param[1:], temperatures)])
+    #         param_k.data = weighted_sum / sum_temperatures
 
     def get_featurizer(self):
         return get_featurizer(self.network_soup)

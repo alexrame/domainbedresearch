@@ -189,7 +189,7 @@ class ERM(Algorithm):
             return self.swa_temperature
 
         i = key[-1]
-        if key == "swa" + str(key[-1]) and self.swas is not None:
+        if key == "swa" + str(i) and self.swas is not None:
             if return_optim:
                 return self.swa_temperatures[int(i)], self.t_swa_optimizers[int(i)]
             return self.swa_temperatures[int(i)]
@@ -299,7 +299,7 @@ class ERM(Algorithm):
             for swa in self.swas:
                 swa.network_swa.train(*args)
 
-    def get_dict_stats(self, loader, device, compute_trace, do_calibration=True, max_feats=float("inf")):
+    def get_dict_stats(self, loader, device, compute_trace, do_temperature=True, max_feats=float("inf")):
         batch_classes = []
         dict_stats = {}
         with torch.no_grad():
@@ -336,7 +336,7 @@ class ERM(Algorithm):
                             dict_stats[key]["feats"] = []
                         dict_stats[key]["feats"].append(dict_feats[key])
 
-                    if do_calibration and key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
+                    if do_temperature and key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
                         temperature = self.get_temperature(key)
                         if temperature is None:
                             continue

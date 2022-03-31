@@ -117,12 +117,29 @@ class Soup(algorithms.Ensembling):
         self._init_memory()
         self.regexes = [] if regexes is None else regexes
 
+    def get_temperature(self, key, return_optim=False):
+        assert not return_optim
+        assert self._t_scaled
+
+        if key in ["net", "soup"]:
+            return torch.mean(self._t_networks)
+        if key in ["swa", "soupswa"]:
+            return torch.mean(self._t_swas)
+
+        i = key[-1]
+        if key == "net" + str(i):
+            return self._t_networks[int(i)]
+
+        if key == "swa" + str(i):
+            return self._t_swas[int(i)]
+        return None
+
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)
-        if self._t_scaled == "swa":
-            self.soup.update_tscaled(self._t_networks)
-            self.soupswa.update_tscaled(self._t_swas)
+        # if self._t_scaled == "swa":
+        #     self.soup.update_tscaled(self._t_networks)
+        #     self.soupswa.update_tscaled(self._t_swas)
 
     def to(self, device):
         algorithms.Algorithm.to(self, device)
@@ -266,40 +283,51 @@ class Soup(algorithms.Ensembling):
         return results
 
     def accuracy(self, loader, device, compute_trace, **kwargs):
+
+        do_calibration = self._t_scaled
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_calibration=False, max_feats=10
+            loader, device, compute_trace, do_temperature=do_calibration, max_feats=10
         )
 
         results = {}
         for key in dict_stats:
             results[f"Accuracies/acc_{key}"] = sum(dict_stats[key]["correct"].numpy()
                                                   ) / len(dict_stats[key]["correct"].numpy())
-            # results[f"Calibration/ece_{key}"] = misc.get_ece(
-            #     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
-            # )
+            if do_calibration:
+                results[f"Calibration/ece_{key}"] = misc.get_ece(
+                    dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
+                )
+                results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
+                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+                )
 
         if "net" in self.do_ens:
             results["Accuracies/acc_netm"] = np.mean(
                 [results[f"Accuracies/acc_net{key}"] for key in range(self.num_members())]
             )
-            # results["Calibration/ece_netm"] = np.mean(
-            #     [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
-            # )
-            # )
+            if do_calibration:
+                results["Calibration/ece_netm"] = np.mean(
+                    [results[f"Calibration/ece_net{key}"] for key in range(self.num_members())]
+                )
             for key in range(self.num_members()):
                 del results[f"Accuracies/acc_net{key}"]
-                # del results[f"Calibration/ece_net{key}"]
+                if do_calibration:
+                    del results[f"Calibration/ece_net{key}"]
+
         if "swa" in self.do_ens:
             results["Accuracies/acc_swam"] = np.mean(
                 [results[f"Accuracies/acc_swa{key}"] for key in range(self.num_members())]
             )
-            # results["Calibration/ece_swam"] = np.mean(
-            #     [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
-            # )
+            if do_calibration:
+                results["Calibration/ece_swam"] = np.mean(
+                    [results[f"Calibration/ece_swa{key}"] for key in range(self.num_members())]
+                )
+
             for key in range(self.num_members()):
                 del results[f"Accuracies/acc_swa{key}"]
-                # del results[f"Calibration/ece_swa{key}"]
+                if do_calibration:
+                    del results[f"Calibration/ece_swa{key}"]
 
         targets = torch.cat(batch_classes).cpu().numpy()
 
