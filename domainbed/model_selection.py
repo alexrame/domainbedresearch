@@ -115,6 +115,7 @@ class IIDAccuracySelectionMethod(SelectionMethod):
                 elif i < 3:
                     acc_key = f'env{i}_out_Accuracies/acc_{keyacc}0'
                     if acc_key in record:
+                        print(f"add 0 to {keyacc} at {i}")
                         keyacc = keyacc + "0"
 
             if acc_key in record:
