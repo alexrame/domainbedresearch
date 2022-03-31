@@ -118,21 +118,23 @@ class Soup(algorithms.Ensembling):
         self.regexes = [] if regexes is None else regexes
 
     def get_temperature(self, key, return_optim=False):
-        assert not return_optim
-        assert self._t_scaled
-
-        if key in ["net", "soup"]:
-            return torch.mean(torch.stack(self._t_networks)).view(-1)
-        if key in ["swa", "soupswa"]:
-            return torch.mean(torch.stack(self._t_swas)).view(-1)
-
-        i = key[-1]
-        if key == "net" + str(i):
-            return self._t_networks[int(i)]
-
-        if key == "swa" + str(i):
-            return self._t_swas[int(i)]
         return None
+
+        # assert not return_optim
+        # assert self._t_scaled
+
+        # if key in ["net", "soup"]:
+        #     return torch.mean(torch.stack(self._t_networks)).view(-1)
+        # if key in ["swa", "soupswa"]:
+        #     return torch.mean(torch.stack(self._t_swas)).view(-1)
+
+        # i = key[-1]
+        # if key == "net" + str(i):
+        #     return self._t_networks[int(i)]
+
+        # if key == "swa" + str(i):
+        #     return self._t_swas[int(i)]
+        # return None
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
@@ -283,15 +285,13 @@ class Soup(algorithms.Ensembling):
     def accuracy(self, loader, device, compute_trace, **kwargs):
 
         do_calibration = self._t_scaled
-        do_temperature = self._t_scaled == "temp"
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
             loader,
             device,
             compute_trace,
-            do_temperature=do_temperature,
+            do_temperature=False,
             max_feats=10,
-            list_temperatures=["soup", "soupswa"]
         )
 
         results = {}
