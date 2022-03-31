@@ -61,7 +61,7 @@ def main():
     if os.environ.get("HESSIAN", "-1") != "-1":
         hessian_splits, hessian_names = [], []
         for hessian in os.environ.get("HESSIAN", "-1").split("_"):
-            _hessian_splits, _hessian_names = create_splits(
+            _hessian_splits, _ = create_splits(
                 inf_args,
                 dataset,
                 dict_env_to_filter={inf_env: "in" for inf_env in hessian.split(",")},
@@ -69,7 +69,7 @@ def main():
                 holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
             )
             hessian_splits.append(misc.MergeDataset(_hessian_splits))
-            hessian_names.append("e" + "".join(_hessian_names.split(",")) + "_in")
+            hessian_names.append("e" + "".join(hessian.split(",")) + "_in")
     else:
         hessian_splits, hessian_names = None, None
 
