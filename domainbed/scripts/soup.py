@@ -244,7 +244,7 @@ def _get_args():
     parser.add_argument('--zipf_a', type=float, default=3.)
 
     parser.add_argument('--algorithm', type=str, default="")
-    parser.add_argument('--t_scaled', type=str)
+    parser.add_argument('--t_scaled', type=str, default="")
     parser.add_argument('--do_ens', type=str, default="")
 
     inf_args = parser.parse_args()
