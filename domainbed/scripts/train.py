@@ -439,6 +439,7 @@ def main():
         results=json.dumps(results_dumpable, sort_keys=True),
         filename_heavy='model_with_weights.pkl'
     )
+    algorithm._save_network_for_future()
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')

@@ -96,14 +96,21 @@ class ERM(Algorithm):
         if not self.hparams["shared_init"]:
             return
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
-        if self.hparams["shared_init"] == 1 or os.environ.get("CREATE_INIT"):
-            if os.environ.get("CREATE_INIT"):
-                assert not os.path.exists(path)
-                torch.save(self.network.state_dict(), path)
+
+        if os.environ.get("CREATE_INIT"):
+            assert not os.path.exists(path)
+            print("Not loading because creating init with linear probing")
         else:
             assert os.path.exists(path)
             weights = torch.load(path)
             self.network.load_state_dict(weights)
+
+    def _save_network_for_future(self):
+        path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
+        if os.environ.get("CREATE_INIT"):
+            assert not os.path.exists(path)
+            print('Saving network weights for future')
+            torch.save(self.network.state_dict(), path)
 
     def _init_temperature(self, init_optimizers=True):
         self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
@@ -211,8 +218,12 @@ class ERM(Algorithm):
         return None
 
     def _init_optimizer(self):
+        if os.environ.get("CREATE_INIT"):
+            parameters_to_be_optimized = self.classifier.parameters()
+        else:
+            parameters_to_be_optimized = self.network.parameters()
         self.optimizer = torch.optim.Adam(
-                self.network.parameters(),
+                parameters_to_be_optimized,
                 lr=self.hparams["lr"],
                 weight_decay=self.hparams["weight_decay"],
             )
@@ -690,15 +701,8 @@ class Ensembling(Algorithm):
         if not self.hparams["shared_init"]:
             return
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
-        if self.hparams["shared_init"] == 1 or os.environ.get("CREATE_INIT"):
-            network_0 = self.networks[0]
-            for i in range(1, self.hparams["num_members"]):
-                network_i = self.networks[i]
-                for param_0, param_i in zip(network_0.parameters(), network_i.parameters()):
-                    param_i.data = param_0.data
-            if os.environ.get("CREATE_INIT"):
-                assert not os.path.exists(path)
-                torch.save(network_0.state_dict(), path)
+        if os.environ.get("CREATE_INIT"):
+            raise ValueError("Can not create init for ensembling")
         else:
             assert os.path.exists(path)
             weights = torch.load(path)
