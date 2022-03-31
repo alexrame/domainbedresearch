@@ -77,11 +77,13 @@ def main():
             raise ValueError(f"{end} too big")
 
         for i in range(start, end):
-            combinations = list(itertools.combinations(good_checkpoints, i))
-            random.shuffle(combinations)
-            combinations = combinations[:top]
-            ood_results_at_i = {}
-            for sub_good_checkpoints in combinations:
+            random.shuffle(good_checkpoints)
+            count = 0
+
+            for sub_good_checkpoints in itertools.combinations(good_checkpoints, i):
+                if count >= top:
+                    break
+                count += 1
                 if os.environ.get("DEBUG", "0") != "0":
                     ood_results = {}
                 else:
@@ -90,14 +92,10 @@ def main():
                         hessian_splits, device
                     )
                 ood_results["length"] = i
-                for key, value in ood_results.items():
-                    ood_results_at_i[key] = ood_results_at_i.get(key, 0) + value/len(combinations)
                 ood_results["dirs"] = "_".join(
                     [checkpoint.split("/")[-2] for checkpoint in sub_good_checkpoints]
                 )
                 print_results(inf_args, ood_results, i)
-            # print(f"End {len(combinations)} 'all' mode at {i}")
-            # print_results(inf_args, ood_results_at_i, i)
 
     elif inf_args.mode in ["all2"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
