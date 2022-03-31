@@ -110,12 +110,12 @@ class IIDAccuracySelectionMethod(SelectionMethod):
                 acc_key = f'env{i}_out_acc'
             else:
                 acc_key = f'env{i}_out_Accuracies/acc_{keyacc}'
-                if acc_key in record:
-                    continue
-                else:
-                    acc_key = f'env{i}_out_Accuracies/acc_{keyacc}0'
-                    if acc_key in record:
-                        keyacc = keyacc + "0"
+                # if acc_key in record:
+                #     continue
+                # else:
+                #     acc_key = f'env{i}_out_Accuracies/acc_{keyacc}0'
+                #     if acc_key in record:
+                #         keyacc = keyacc + "0"
 
             if acc_key in record:
                 if i != test_env:
