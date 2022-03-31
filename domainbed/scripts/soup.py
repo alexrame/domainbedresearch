@@ -158,6 +158,8 @@ def main():
                 )
             ood_results["length"] = i
             ood_results["dir"] = inf_args.output_dir.split("/")[-1]
+
+            ood_results["trial_seed"] = ",".join([str(x) for x in inf_args.trial_seed])
             if inf_args.algorithm != "":
                 ood_results["algo"] = inf_args.algorithm
             if os.environ.get("SWAMEMBER"):
@@ -568,9 +570,9 @@ def get_results_for_checkpoints(
     ood_evals = zip(ood_names, ood_loaders)
     ood_results = {}
     for name, loader in ood_evals:
-        print(f"Inference at {name}")
+        # print(f"Inference at {name}")
         results = ens_algorithm.accuracy(loader, device, compute_trace=True)
-        print(results)
+        # print(results)
         for key in results:
             clean_key = key.split("/")[-1]
             ood_results[name + "_" + clean_key] = results[key]
