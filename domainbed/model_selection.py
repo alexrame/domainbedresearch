@@ -111,7 +111,7 @@ class IIDAccuracySelectionMethod(SelectionMethod):
             else:
                 acc_key = f'env{i}_out_Accuracies/acc_{keyacc}'
                 if acc_key in record:
-                    continue
+                    pass
                 elif i < 3:
                     acc_key = f'env{i}_out_Accuracies/acc_{keyacc}0'
                     if acc_key in record:
