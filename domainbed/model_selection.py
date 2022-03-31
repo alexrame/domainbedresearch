@@ -104,21 +104,29 @@ class IIDAccuracySelectionMethod(SelectionMethod):
         """Given a single record, return a {val_acc, test_acc} dict."""
         test_env = record['args']['test_envs'][0]
         val_env_keys = []
+        keyacc = os.environ.get("KEYACC")
         for i in itertools.count():
-            if not os.environ.get("KEYACC"):
+            if not keyacc:
                 acc_key = f'env{i}_out_acc'
             else:
-                acc_key = f'env{i}_out_Accuracies/acc_{os.environ.get("KEYACC")}'
+                acc_key = f'env{i}_out_Accuracies/acc_{keyacc}'
+                if acc_key in record:
+                    continue
+                else:
+                    acc_key = f'env{i}_out_Accuracies/acc_{keyacc}0'
+                    if acc_key in record:
+                        keyacc = keyacc + "0"
+
             if acc_key in record:
                 if i != test_env:
                     val_env_keys.append(acc_key)
             else:
                 break
 
-        if not os.environ.get("KEYACC"):
+        if not keyacc:
             test_in_acc_key = f'env{test_env}_in_acc'
         else:
-            test_in_acc_key = f'env{test_env}_in_Accuracies/acc_{os.environ.get("KEYACC")}'
+            test_in_acc_key = f'env{test_env}_in_Accuracies/acc_{keyacc}'
         return {
             'val_acc': np.mean([record[key] for key in val_env_keys]),
             'test_acc': record[test_in_acc_key]
