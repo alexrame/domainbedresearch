@@ -107,7 +107,7 @@ class Soup(algorithms.Ensembling):
         self._t_scaled = t_scaled
         self.swas = []
 
-        if self._t_scaled:
+        if self._t_scaled.startswith("temp"):
             self._t_swas = []
             self._t_networks = []
 
@@ -118,28 +118,30 @@ class Soup(algorithms.Ensembling):
         self.regexes = [] if regexes is None else regexes
 
     def get_temperature(self, key, return_optim=False):
+        assert not return_optim
+        assert self._t_scaled.startswith("temp")
+
+        if key in ["net", "soup"]:
+            # return torch.mean(torch.stack(self._t_networks)).view(-1)
+            return self._t_swas[0]
+
+        if key in ["swa", "soupswa"]:
+            raise ValueError(key)
+            return torch.mean(torch.stack(self._t_swas)).view(-1)
+
+        i = key[-1]
+        if key == "net" + str(i):
+            return self._t_networks[int(i)]
+
+        if key == "swa" + str(i):
+            raise ValueError(key)
+            return self._t_swas[int(i)]
         return None
-
-        # assert not return_optim
-        # assert self._t_scaled
-
-        # if key in ["net", "soup"]:
-        #     return torch.mean(torch.stack(self._t_networks)).view(-1)
-        # if key in ["swa", "soupswa"]:
-        #     return torch.mean(torch.stack(self._t_swas)).view(-1)
-
-        # i = key[-1]
-        # if key == "net" + str(i):
-        #     return self._t_networks[int(i)]
-
-        # if key == "swa" + str(i):
-        #     return self._t_swas[int(i)]
-        # return None
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)
-        # if self._t_scaled == "swa":
+        # if self._t_scaled.startswith("temp"):
         #     self.soup.update_tscaled(self._t_networks)
         #     self.soupswa.update_tscaled(self._t_swas)
 
@@ -153,13 +155,13 @@ class Soup(algorithms.Ensembling):
         if "net" in self.do_ens:
             for net in self.networks:
                 net.to(device)
-            if self._t_scaled:
+            if self._t_scaled.startswith("temp"):
                 self._t_networks = [t.to(device) for t in self._t_networks]
 
         if "swa" in self.do_ens:
             for swa in self.swas:
                 swa.to(device)
-            if self._t_scaled:
+            if self._t_scaled.startswith("temp"):
                 self._t_swas = [t.to(device) for t in self._t_swas]
 
     def train(self, *args):
@@ -180,7 +182,7 @@ class Soup(algorithms.Ensembling):
         self._init_memory()
         if isinstance(algorithm, ERM):
             self.networks.append(copy.deepcopy(algorithm.network))
-            if self._t_scaled:
+            if self._t_scaled.startswith("temp"):
                 self._t_networks.append(algorithm.get_temperature("net"))
             self.memory["net"] += 1
         else:
@@ -189,13 +191,13 @@ class Soup(algorithms.Ensembling):
                 if int(os.environ.get('NETMEMBER', member)) == member:
                     self.networks.append(copy.deepcopy(network))
                     self.memory["net"] += 1
-                    if self._t_scaled:
+                    if self._t_scaled.startswith("temp"):
                         self._t_networks.append(algorithm.get_temperature("net" + str(member)))
 
         if algorithm.swa is not None:
             self.memory["swa"] += 1
             self.swas.append(copy.deepcopy(algorithm.swa.network_swa))
-            if self._t_scaled:
+            if self._t_scaled.startswith("temp"):
                 self._t_swas.append(algorithm.get_temperature("swa"))
 
         if algorithm.swas is not None:
@@ -203,14 +205,14 @@ class Soup(algorithms.Ensembling):
                 if str(os.environ['SWAMEMBER']) == str(member):
                     self.swas.append(copy.deepcopy(swa.network_swa))
                     self.memory["swa"] += 1
-                    if self._t_scaled:
+                    if self._t_scaled.startswith("temp"):
                         self._t_swas.append(algorithm.get_temperature("swa" + str(member)))
         self.create_soups()
 
     def delete_last(self):
         self.networks = self.networks[:-self.memory["net"]]
         self.swas = self.swas[:-self.memory["swa"]]
-        if self._t_scaled:
+        if self._t_scaled.startswith("temp"):
             self._t_networks = self._t_networks[:-self.memory["net"]]
             self._t_swas = self._t_swas[:-self.memory["swa"]]
 
@@ -235,7 +237,7 @@ class Soup(algorithms.Ensembling):
         batch_logits = []
         batch_logits_swa = []
 
-        if self._t_scaled == "full":
+        if self._t_scaled.startswith("temp_ens"):
             batch_logits_tscaled = []
             batch_logits_swa_tscaled = []
 
@@ -248,17 +250,17 @@ class Soup(algorithms.Ensembling):
                 logits_swa = self.swas[num_member](x)
                 batch_logits_swa.append(logits_swa)
                 results["swa" + str(num_member)] = logits_swa
-                if self._t_scaled == "full":
+                if self._t_scaled.startswith("temp_ens"):
                     batch_logits_swa_tscaled.append(logits_swa / self._t_swas[num_member])
 
         if "net" in self.do_ens:
             results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
-            if self._t_scaled == "full":
+            if self._t_scaled.startswith("temp_ens"):
                 results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
 
         if "swa" in self.do_ens:
             results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
-            if self._t_scaled == "full":
+            if self._t_scaled.startswith("temp_ens"):
                 results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
 
         return results
@@ -288,12 +290,16 @@ class Soup(algorithms.Ensembling):
 
         do_calibration = self._t_scaled
         self.eval()
+        list_temperatures = ["soup"] + [
+            "net" + str(member) for member in range(self.num_members())
+        ]
         dict_stats, batch_classes = self.get_dict_stats(
             loader,
             device,
             compute_trace,
-            do_temperature=False,
+            do_temperature=self._t_scaled.startswith("temp"),
             max_feats=10,
+            list_temperatures=list_temperatures
         )
 
         results = {}
@@ -304,10 +310,10 @@ class Soup(algorithms.Ensembling):
                 results[f"Calibration/ece_{key}"] = misc.get_ece(
                     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
                 )
-                # if "confstemp" in dict_stats[key]:
-                #     results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
-                #         dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
-                #     )
+                if "confstemp" in dict_stats[key]:
+                    results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
+                        dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+                    )
 
         if "net" in self.do_ens:
             results["Accuracies/acc_netm"] = np.mean(
