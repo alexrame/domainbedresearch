@@ -76,7 +76,8 @@ def main():
     if inf_args.mode.startswith("combin_"):
         start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
         if end > len(good_checkpoints) + 1:
-            raise ValueError(f"{end} too big")
+            print(f"{end} too big")
+            end = len(good_checkpoints)
 
         for i in range(start, end):
             random.shuffle(good_checkpoints)
