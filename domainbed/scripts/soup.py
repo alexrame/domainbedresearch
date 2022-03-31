@@ -276,6 +276,9 @@ def create_splits(inf_args, dataset, dict_env_to_filter, trial_seed=None, holdou
         elif str(env_i) in dict_env_to_filter:
             filter = dict_env_to_filter[str(env_i)]
 
+        if filter is None:
+            continue
+
         if filter == "full":
             splits.append(env)
             names.append('e{}'.format(env_i))
