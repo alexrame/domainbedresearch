@@ -122,9 +122,10 @@ class Soup(algorithms.Ensembling):
         assert self._t_scaled
 
         if key in ["net", "soup"]:
-            return torch.mean(torch.stack(self._t_networks))
+            return torch.mean(torch.stack(self._t_networks)).view(-1)
         if key in ["swa", "soupswa"]:
-            return torch.mean(torch.stack(self._t_swas))
+            return torch.mean(torch.stack(self._t_swas)).view(-1)
+
         i = key[-1]
         if key == "net" + str(i):
             return self._t_networks[int(i)]
