@@ -299,9 +299,13 @@ class ERM(Algorithm):
             for swa in self.swas:
                 swa.network_swa.train(*args)
 
-    def get_dict_stats(self, loader, device, compute_trace, do_temperature=True, max_feats=float("inf")):
+    def get_dict_stats(self, loader, device, compute_trace, do_temperature=True, max_feats=float("inf"), list_temperatures=None):
         batch_classes = []
         dict_stats = {}
+
+        if list_temperatures is None:
+            list_temperatures = ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]
+
         with torch.no_grad():
             for i, batch in enumerate(loader):
                 x, y = batch
@@ -336,7 +340,7 @@ class ERM(Algorithm):
                             dict_stats[key]["feats"] = []
                         dict_stats[key]["feats"].append(dict_feats[key])
 
-                    if do_temperature and key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
+                    if do_temperature and key in list_temperatures:
                         temperature = self.get_temperature(key)
                         if temperature is None:
                             continue

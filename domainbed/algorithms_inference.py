@@ -285,7 +285,8 @@ class Soup(algorithms.Ensembling):
         do_calibration = self._t_scaled
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_temperature=do_calibration, max_feats=10
+            loader, device, compute_trace, do_temperature=do_calibration, max_feats=10,
+            list_temperatures=["soup", "soupswa"]
         )
 
         results = {}
