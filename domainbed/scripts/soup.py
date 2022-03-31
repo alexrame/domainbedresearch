@@ -45,20 +45,16 @@ def main():
         found_checkpoints_per_cluster, inf_args, dataset, device
     )
 
-    if inf_args.ood_data == "test":
-        ood_env = "test"
-        ood_filter = "full" if inf_args.selection_data == "train" else "in"
-    elif inf_args.ood_data == "train":
-        ood_env = "train"
-        ood_filter= "out"
-    else:
-        raise ValueError(inf_args.ood_data)
+    dict_env_to_filter = {}
+    if "test" in inf_args.ood_data.split(","):
+        dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
+    if "train" in inf_args.ood_data.split(","):
+        dict_env_to_filter["train"] = "out"
 
     ood_splits, ood_names = create_splits(
         inf_args,
         dataset,
-        ood_env,
-        ood_filter,
+        dict_env_to_filter=dict_env_to_filter,
         trial_seed=inf_args.trial_seed[0]
     )
 
@@ -66,8 +62,7 @@ def main():
         hessian_splits, hessian_names = create_splits(
             inf_args,
             dataset,
-            inf_env=os.environ.get("HESSIAN").split(","),
-            filter="in",
+            dict_env_to_filter={inf_env: "in" for inf_env in os.environ.get("HESSIAN").split(",")},
             trial_seed=inf_args.trial_seed[0],
             holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
         )
@@ -237,16 +232,19 @@ def _get_args():
     return inf_args
 
 
-def create_splits(inf_args, dataset, inf_env, filter, trial_seed, holdout_fraction=None):
+def create_splits(inf_args, dataset, dict_env_to_filter, trial_seed=None, holdout_fraction=None):
     splits = []
     names = []
+    assert len(dict_env_to_filter)
+
     for env_i, env in enumerate(dataset):
-        if inf_env == "test" and env_i not in inf_args.test_envs:
-            continue
-        elif inf_env == "train" and env_i in inf_args.test_envs:
-            continue
-        elif isinstance(inf_env, list) and str(env_i) not in inf_env:
-            continue
+        filter = None
+        if "test" in dict_env_to_filter and env_i in inf_args.test_envs:
+            filter = dict_env_to_filter["test"]
+        elif "train" in dict_env_to_filter and env_i not in inf_args.test_envs:
+            filter = dict_env_to_filter["train"]
+        elif str(env_i) in dict_env_to_filter:
+            filter = dict_env_to_filter[str(env_i)]
 
         if filter == "full":
             splits.append(env)
@@ -409,8 +407,7 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
             val_splits, val_names = create_splits(
                 inf_args,
                 dataset,
-                inf_env="train" if inf_args.selection_data == "train" else "test",
-                filter="out",
+                dict_env_to_filter={"train" if inf_args.selection_data == "train" else "test": "out"},
                 trial_seed=trial_seed
             )
             cluster_good_checkpoints = get_greedy_checkpoints(

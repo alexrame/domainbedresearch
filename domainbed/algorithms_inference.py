@@ -231,7 +231,7 @@ class Soup(algorithms.Ensembling):
         batch_logits = []
         batch_logits_swa = []
 
-        if self._t_scaled:
+        if self._t_scaled == "full":
             batch_logits_tscaled = []
             batch_logits_swa_tscaled = []
 
@@ -240,23 +240,21 @@ class Soup(algorithms.Ensembling):
                 logits = self.networks[num_member](x)
                 batch_logits.append(logits)
                 results["net" + str(num_member)] = logits
-                if self._t_scaled:
-                    batch_logits_tscaled.append(logits / self._t_networks[num_member])
             if "swa" in self.do_ens:
                 logits_swa = self.swas[num_member](x)
                 batch_logits_swa.append(logits_swa)
                 results["swa" + str(num_member)] = logits_swa
-                if self._t_scaled:
+                if self._t_scaled == "full":
                     batch_logits_swa_tscaled.append(logits_swa / self._t_swas[num_member])
 
         if "net" in self.do_ens:
             results["net"] = torch.mean(torch.stack(batch_logits, dim=0), 0)
-            if self._t_scaled:
+            if self._t_scaled == "full":
                 results["netts"] = torch.mean(torch.stack(batch_logits_tscaled, dim=0), 0)
 
         if "swa" in self.do_ens:
             results["swa"] = torch.mean(torch.stack(batch_logits_swa, dim=0), 0)
-            if self._t_scaled:
+            if self._t_scaled == "full":
                 results["swats"] = torch.mean(torch.stack(batch_logits_swa_tscaled, dim=0), 0)
 
         return results
