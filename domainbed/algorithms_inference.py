@@ -283,9 +283,14 @@ class Soup(algorithms.Ensembling):
     def accuracy(self, loader, device, compute_trace, **kwargs):
 
         do_calibration = self._t_scaled
+        do_temperature = self._t_scaled == "temp"
         self.eval()
         dict_stats, batch_classes = self.get_dict_stats(
-            loader, device, compute_trace, do_temperature=do_calibration, max_feats=10,
+            loader,
+            device,
+            compute_trace,
+            do_temperature=do_temperature,
+            max_feats=10,
             list_temperatures=["soup", "soupswa"]
         )
 
