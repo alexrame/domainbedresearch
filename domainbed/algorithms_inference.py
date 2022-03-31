@@ -224,11 +224,13 @@ class Soup(algorithms.Ensembling):
         results = {}
 
         results["soup"] = self.soup.network_soup(x)
-        results["soupswa"] = self.soupswa.network_soup(x)
 
         # results["ens"] = torch.mean(torch.stack([results["soup"], results["soupswa"]], dim=0), 0)
         if not self.do_ens:
             return results
+
+        if "swa" in self.do_ens:
+            results["soupswa"] = self.soupswa.network_soup(x)
 
         batch_logits = []
         batch_logits_swa = []

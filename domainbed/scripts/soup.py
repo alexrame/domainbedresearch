@@ -157,13 +157,8 @@ def main():
                     hessian_splits, device
                 )
             ood_results["length"] = i
-            ood_results["dir"] = inf_args.output_dir.split("/")[-1]
 
-            ood_results["trial_seed"] = ",".join([str(x) for x in inf_args.trial_seed])
-            if inf_args.algorithm != "":
-                ood_results["algo"] = inf_args.algorithm
-            if os.environ.get("SWAMEMBER"):
-                ood_results["swamember"] = os.environ.get("SWAMEMBER")
+            process_line_iter(ood_results)
             print_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["", "ens"]:
@@ -174,6 +169,30 @@ def main():
         print_results(inf_args, ood_results, len(good_checkpoints))
     else:
         raise ValueError(inf_args.mode)
+
+
+def process_line_iter(ood_results, inf_args):
+    ood_results["dir"] = inf_args.output_dir.split("/")[-1]
+
+    ood_results["trial_seed"] = ",".join([str(x) for x in inf_args.trial_seed])
+    if inf_args.algorithm != "":
+        ood_results["algo"] = inf_args.algorithm
+    if os.environ.get("SWAMEMBER"):
+        ood_results["swamember"] = os.environ.get("SWAMEMBER")
+
+    ood_results["out_acc_soup"] = np.mean(
+        [value for key, value in ood_results.items() if key.endswith("out_acc_soup")]
+    )
+    # ood_results["out_acc_soupswa"] = np.mean(
+    #     [value for key, value in ood_results.items() if key.endswith("out_acc_soupswa")]
+    # )
+    ood_results["out_ece_soup"] = np.mean(
+        [value for key, value in ood_results.items() if key.endswith("out_ece_soup")]
+    )
+    # ood_results["out_ece_soupswa"] = np.mean(
+    #     [value for key, value in ood_results.items() if key.endswith("out_ece_soupswa")]
+    # )
+    return ood_results
 
 
 def _get_args():
