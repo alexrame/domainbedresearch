@@ -94,7 +94,7 @@ def main():
                         sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                         hessian_splits, device
                     )
-                ood_results["length"] = i
+
                 ood_results["dirs"] = "_".join(
                     [checkpoint.split("/")[-2] for checkpoint in sub_good_checkpoints]
                 )
@@ -158,7 +158,6 @@ def main():
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
-            ood_results["length"] = i
 
             process_line_iter(ood_results, inf_args)
             print_results(inf_args, ood_results, i)
@@ -631,7 +630,8 @@ def get_results_for_checkpoints(
                 # ood_results[clean_key] = ood_results.get(
                 #     clean_key, 0
                 # ) + hessian_results[key] / len(hessian_names)
-
+    ood_results["gpu"] = os.environ.get("CUDA_VISIBLE_DEVICES")
+    ood_results["length"] = len(good_checkpoints)
     return ood_results
 
 
