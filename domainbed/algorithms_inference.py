@@ -298,9 +298,10 @@ class Soup(algorithms.Ensembling):
                 results[f"Calibration/ece_{key}"] = misc.get_ece(
                     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
                 )
-                results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
-                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
-                )
+                if "confstemp" in dict_stats[key]:
+                    results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
+                        dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+                    )
 
         if "net" in self.do_ens:
             results["Accuracies/acc_netm"] = np.mean(
