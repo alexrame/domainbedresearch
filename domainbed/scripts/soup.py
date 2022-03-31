@@ -178,33 +178,29 @@ def process_line_iter(ood_results, inf_args):
     if os.environ.get("SWAMEMBER"):
         ood_results["swamember"] = os.environ.get("SWAMEMBER")
 
-    ood_results["out_acc_soup"] = np.mean(
-        [value for key, value in ood_results.items() if key.endswith("_out_acc_soup")]
-    )
-    for key in ood_results.keys():
-        if key.endswith("_out_acc_soup"):
-            del ood_results[key]
+    if inf_args.t_scaled:
+        ood_results["out_acc_soup"] = np.mean(
+            [value for key, value in ood_results.items() if key.endswith("_out_acc_soup")]
+        )
+        for key in list(ood_results.keys()):
+            if key.endswith("_out_acc_soup"):
+                del ood_results[key]
 
-    # ood_results["out_acc_soupswa"] = np.mean(
-    #     [value for key, value in ood_results.items() if key.endswith("out_acc_soupswa")]
-    # )
-    ood_results["out_ece_soup"] = np.mean(
-        [value for key, value in ood_results.items() if key.endswith("_out_ece_soup")]
-    )
-    for key in ood_results.keys():
-        if key.endswith("_out_ece_soup"):
-            del ood_results[key]
+        ood_results["out_ece_soup"] = np.mean(
+            [value for key, value in ood_results.items() if key.endswith("_out_ece_soup")]
+        )
+        for key in list(ood_results.keys()):
+            if key.endswith("_out_ece_soup"):
+                del ood_results[key]
 
-    ood_results["out_ecetemp_soup"] = np.mean(
-        [value for key, value in ood_results.items() if key.endswith("_out_ecetemp_soup")]
-    )
-    for key in ood_results.keys():
-        if key.endswith("_out_ecetemp_soup"):
-            del ood_results[key]
+        if inf_args.t_scaled.startswith("temp"):
+            ood_results["out_ecetemp_soup"] = np.mean(
+                [value for key, value in ood_results.items() if key.endswith("_out_ecetemp_soup")]
+            )
+            for key in list(ood_results.keys()):
+                if key.endswith("_out_ecetemp_soup"):
+                    del ood_results[key]
 
-    # ood_results["out_ece_soupswa"] = np.mean(
-    #     [value for key, value in ood_results.items() if key.endswith("out_ece_soupswa")]
-    # )
     return ood_results
 
 
