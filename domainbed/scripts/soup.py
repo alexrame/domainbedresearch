@@ -158,7 +158,7 @@ def main():
                 )
             ood_results["length"] = i
 
-            process_line_iter(ood_results)
+            process_line_iter(ood_results, inf_args)
             print_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["", "ens"]:
