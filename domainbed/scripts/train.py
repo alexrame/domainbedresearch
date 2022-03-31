@@ -320,7 +320,9 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        do_metrics = (step % checkpoint_freq == 0) or (step >= n_steps - 10)
+        do_metrics = (step % checkpoint_freq == 0)
+        if os.environ.get('DO_LAST10'):
+            do_metrics |= step >= n_steps - 10
 
         if os.environ.get("STEPS"):
             if os.environ.get("STEPS") == "all":
@@ -385,7 +387,7 @@ def main():
                 last_results_keys = results_keys
             misc.print_row([results[key] for key in printed_keys], colwidth=12)
 
-            if 0 < n_steps - step <= 10:
+            if 0 < n_steps - step <= 10 and os.environ.get('DO_LAST10'):
                 print(f"Update results_end at step {step}")
                 if len(results_end) != 0:
                     if len(results_end) != len(results):
@@ -444,7 +446,10 @@ def main():
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')
 
+    if not os.environ.get('DO_LAST10'):
+        results_end = results
     metrics.update({k: v for k, v in results_end.items() if k not in ["hparams", "args"]})
+
     # metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
     experiments_handler.main_mlflow(
         run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams
