@@ -320,7 +320,7 @@ def main():
         for key, val in step_vals.items():
             checkpoint_vals[key].append(val)
 
-        do_metrics = (step % checkpoint_freq == 0)
+        do_metrics = (step % checkpoint_freq == 0) or step == n_steps - 1
         if os.environ.get('DO_LAST10'):
             do_metrics |= step >= n_steps - 10
 
