@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # Env variables to be considered
+# Debugging: SWAMEMBER=0 NUMSTEPSTEMP=200 PRETRAINED=0 CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.soup --dataset OfficeHome --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm24sheoa0319/2f1c184db1532874464b694a1142dd52/ --topk 30 --mode iter_1_12 --do_ens 1 --t_scaled temp_train --ood_data train,test
 # CUDA_VISIBLE_DEVICES
 # PRETRAINED
 # NETMEMBER

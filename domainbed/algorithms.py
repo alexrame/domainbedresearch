@@ -908,6 +908,11 @@ class Ensembling(Algorithm):
     def get_temperature(self, *args, **kwargs):
         return ERM.get_temperature(self, *args, **kwargs)
 
+    def _update_temperature_with_stats(self, *args, **kwargs):
+        return ERM._update_temperature_with_stats(self, *args, **kwargs)
+
+    def _compute_diversity(self, *args, **kwargs):
+        return ERM._compute_diversity(self, *args, **kwargs)
 
 class GroupDRO(ERM):
     """
