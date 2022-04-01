@@ -384,6 +384,21 @@ class ERM(Algorithm):
                 )
 
         targets_torch = torch.cat(batch_classes)
+
+
+        results.update(self._compute_diversity(dict_stats, targets_torch.cpu().numpy(), compute_trace, device))
+        results_temp = self._update_temperature_with_stats(
+            dict_stats, device, targets_torch, update_temperature=update_temperature
+        )
+        if output_temperature:
+            results.update(results_temp)
+
+        del targets_torch
+        self.train()
+        return results
+
+    def _compute_diversity(self, dict_stats, targets, compute_trace, device):
+        results = {}
         for regex in ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet",]:
             if regex == "swanet":
                 key0 = "swa"
@@ -414,29 +429,6 @@ class ERM(Algorithm):
             if key1 not in dict_stats:
                 continue
 
-            if update_temperature:
-                num_steps_temp = int(os.environ.get("NUMSTEPSTEMP", 0))
-                for _ in range(num_steps_temp):
-                    for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
-                        if key not in dict_stats:
-                            continue
-                        logits = dict_stats[key]["logits"].to(device)
-                        temperature, optimizer = self.get_temperature(key, return_optim=True)
-                        if temperature is None:
-                            continue
-                        temperature = temperature.to(device)
-                        assert temperature.requires_grad
-
-                        loss_T = F.cross_entropy(
-                            misc.apply_temperature_on_logits(logits, temperature), targets_torch
-                        )
-                        optimizer.zero_grad()
-                        loss_T.backward()
-                        optimizer.step()
-                    results["temp/" + key] = temperature.item()
-
-            targets = targets_torch.cpu().numpy()
-
             preds0 = dict_stats[key0]["preds"].numpy()
             preds1 = dict_stats[key1]["preds"].numpy()
             results[f"Diversity/{regex}ratio"] = diversity_metrics.ratio_errors(
@@ -461,17 +453,15 @@ class ERM(Algorithm):
             # probs1 = dict_stats[key1]["probs"].numpy()
             # results[f"Diversity/{regex}l2"] = diversity_metrics.l2(probs0, probs1)
             # results[f"Diversity/{regex}nd"] = diversity_metrics.normalized_disagreement(targets, probs0, probs1)
-            del targets
             # del dict_stats[key0], dict_stats[key1]
 
-        for key in dict_stats.keys():
-            if "feats" in dict_stats[key]:
-                del dict_stats[key]["feats"]
-            del dict_stats[key]["probs"]
-            del dict_stats[key]["correct"]
-            del dict_stats[key]["preds"]
+        return results
 
-        for key in ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]:
+    def _update_temperature_with_stats(self, dict_stats, device, targets_torch, update_temperature=True, list_temperatures=None):
+        if list_temperatures is None:
+            list_temperatures = ["net", "net0", "net1", "swa", "swa0", "swa1", "soup", "soupswa"]
+        results = {}
+        for key in list_temperatures:
             if key not in dict_stats:
                 continue
             if update_temperature:
@@ -482,7 +472,8 @@ class ERM(Algorithm):
                 continue
 
             if update_temperature:
-                for _ in range(20):
+                num_steps_temp = int(os.environ.get("NUMSTEPSTEMP", 20))
+                for _ in range(num_steps_temp):
                     logits = dict_stats[key]["logits"].to(device)
                     temperature = temperature.to(device)
                     assert temperature.requires_grad
@@ -493,10 +484,7 @@ class ERM(Algorithm):
                     optimizer.zero_grad()
                     loss_T.backward()
                     optimizer.step()
-            if output_temperature:
-                results["temp_" + key] = temperature.item()
-        del targets_torch
-        self.train()
+            results["temp_" + key] = temperature.item()
         return results
 
     def compute_hessian(self, loader):

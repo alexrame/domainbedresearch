@@ -7,6 +7,7 @@
 # HESSIAN
 # HESSIANFRAC
 # HESSIANBS
+# NUMSTEPSTEMP
 
 import argparse
 import itertools
@@ -45,18 +46,26 @@ def main():
         found_checkpoints_per_cluster, inf_args, dataset, device
     )
 
-    dict_env_to_filter = {}
-    if "test" in inf_args.ood_data.split(","):
-        dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
-    if "train" in inf_args.ood_data.split(","):
-        dict_env_to_filter["train"] = "out"
 
-    ood_splits, ood_names = create_splits(
-        inf_args,
-        dataset,
-        dict_env_to_filter=dict_env_to_filter,
-        trial_seed=inf_args.trial_seed[0]
-    )
+    ood_splits, ood_names = [], []
+    for ood_env in inf_args.ood_data.split(","):
+        dict_env_to_filter = {}
+        if ood_env == "test":
+            dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
+        elif ood_env == "train":
+            dict_env_to_filter["train"] = "out"
+        else:
+            raise ValueError(ood_env)
+
+        _ood_splits, _ood_names = create_splits(
+            inf_args, dataset, dict_env_to_filter=dict_env_to_filter, trial_seed=inf_args.trial_seed[0]
+        )
+        if ood_env == "train":
+            ood_splits.append(misc.MergeDataset(_ood_splits))
+            ood_names.append("train_out")
+        else:
+            ood_splits.extend(_ood_splits)
+            ood_names.extend(_ood_names)
 
     if os.environ.get("HESSIAN", "-1") != "-1":
         hessian_splits, hessian_names = [], []
@@ -173,7 +182,9 @@ def main():
 
 
 def process_line_iter(ood_results, inf_args):
-    ood_results["dir"] = inf_args.output_dir.split("/")[-1]
+    ood_results["dirs"] = ",".join(
+        [output_dir.split("/")[-1] for output_dir in inf_args.output_dir.split(",")]
+    )
 
     ood_results["trial_seed"] = ",".join([str(x) for x in inf_args.trial_seed])
     if inf_args.algorithm != "":
@@ -181,29 +192,29 @@ def process_line_iter(ood_results, inf_args):
     if os.environ.get("SWAMEMBER"):
         ood_results["swamember"] = os.environ.get("SWAMEMBER")
 
-    if "train" in inf_args.ood_data:
-        ood_results["out_acc_soup"] = np.mean(
-            [value for key, value in ood_results.items() if key.endswith("_out_acc_soup")]
-        )
-        for key in list(ood_results.keys()):
-            if key.endswith("_out_acc_soup"):
-                del ood_results[key]
+    # if "train" in inf_args.ood_data:
+    #     ood_results["out_acc_soup"] = np.mean(
+    #         [value for key, value in ood_results.items() if key.endswith("_out_acc_soup")]
+    #     )
+    #     for key in list(ood_results.keys()):
+    #         if key.endswith("_out_acc_soup"):
+    #             del ood_results[key]
 
-        if inf_args.t_scaled:
-            ood_results["out_ece_soup"] = np.mean(
-                [value for key, value in ood_results.items() if key.endswith("_out_ece_soup")]
-            )
-            for key in list(ood_results.keys()):
-                if key.endswith("_out_ece_soup"):
-                    del ood_results[key]
+    #     if inf_args.t_scaled:
+    #         ood_results["out_ece_soup"] = np.mean(
+    #             [value for key, value in ood_results.items() if key.endswith("_out_ece_soup")]
+    #         )
+    #         for key in list(ood_results.keys()):
+    #             if key.endswith("_out_ece_soup"):
+    #                 del ood_results[key]
 
-        if inf_args.t_scaled.startswith("temp"):
-            ood_results["out_ecetemp_soup"] = np.mean(
-                [value for key, value in ood_results.items() if key.endswith("_out_ecetemp_soup")]
-            )
-            for key in list(ood_results.keys()):
-                if key.endswith("_out_ecetemp_soup"):
-                    del ood_results[key]
+    #     if inf_args.t_scaled.startswith("temp"):
+    #         ood_results["out_ecetemp_soup"] = np.mean(
+    #             [value for key, value in ood_results.items() if key.endswith("_out_ecetemp_soup")]
+    #         )
+    #         for key in list(ood_results.keys()):
+    #             if key.endswith("_out_ecetemp_soup"):
+    #                 del ood_results[key]
 
     return ood_results
 
@@ -606,7 +617,11 @@ def get_results_for_checkpoints(
     ood_results = {}
     for name, loader in ood_evals:
         # print(f"Inference at {name}")
-        results = ens_algorithm.accuracy(loader, device, compute_trace=True)
+        update_temperature = (name == "train_out" and inf_args.t_scaled == "temp_out")
+        results = ens_algorithm.accuracy(
+            loader, device, compute_trace=True,
+            update_temperature=update_temperature
+            )
         # print(results)
         for key in results:
             clean_key = key.split("/")[-1]

@@ -118,14 +118,25 @@ class Soup(algorithms.Ensembling):
         self.regexes = [] if regexes is None else regexes
 
     def get_temperature(self, key, return_optim=False):
-        assert not return_optim
         assert self._t_scaled.startswith("temp")
 
-        if key in ["net", "soup"]:
+        if key == "soup":
+            if return_optim:
+                return self.soup_temperature, self.t_soup_optimizer
+            return self.soup_temperature
+
+        if key == "soupswa":
+            if return_optim:
+                return self.soupswa_temperature, self.t_soupswa_optimizer
+            return self.soupswa_temperature
+
+        assert not return_optim
+
+        if key == "net":
             # return torch.mean(torch.stack(self._t_networks)).view(-1)
             return self._t_swas[0]
 
-        if key in ["swa", "soupswa"]:
+        if key == "swa":
             raise ValueError(key)
             return torch.mean(torch.stack(self._t_swas)).view(-1)
 
@@ -141,6 +152,19 @@ class Soup(algorithms.Ensembling):
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
         self.soupswa = misc.Soup(self.swas)
+        if self._t_scaled.startswith("temp"):
+            self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.t_soup_optimizer = torch.optim.Adam(
+                [self.soup_temperature],
+                lr=1e-4,
+                weight_decay=0,
+            )
+            self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+            self.t_soupswa_optimizer = torch.optim.Adam(
+                [self.soupswa_temperature],
+                lr=1e-4,
+                weight_decay=0,
+            )
         # if self._t_scaled.startswith("temp"):
         #     self.soup.update_tscaled(self._t_networks)
         #     self.soupswa.update_tscaled(self._t_swas)
@@ -286,7 +310,7 @@ class Soup(algorithms.Ensembling):
             results["soupswa"] = self.soupswa.get_featurizer()(x)
         return results
 
-    def accuracy(self, loader, device, compute_trace, **kwargs):
+    def accuracy(self, loader, device, compute_trace, update_temperature, **kwargs):
 
         do_calibration = self._t_scaled
         self.eval()
@@ -342,7 +366,8 @@ class Soup(algorithms.Ensembling):
                 if do_calibration:
                     del results[f"Calibration/ece_swa{key}"]
 
-        targets = torch.cat(batch_classes).cpu().numpy()
+        targets_torch = torch.cat(batch_classes)
+        targets = targets_torch.cpu().numpy()
 
         results_div = {}
         count = 0
@@ -366,6 +391,17 @@ class Soup(algorithms.Ensembling):
 
         for key, value in results_div.items():
             results[key + "_" + str(count)] = value / count
+
+        if update_temperature:
+            results.update(
+                self._update_temperature_with_stats(
+                    dict_stats=dict_stats,
+                    device=device,
+                    targets_torch=targets_torch,
+                    update_temperature=update_temperature,
+                    list_temperatures=["soup", "soupswa"]
+                )
+            )
 
         return results
 
