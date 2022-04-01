@@ -83,7 +83,7 @@ def _hparams(algorithm, dataset, random_seed):
             lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
         )
 
-    elif algorithm == "Mixup":
+    elif algorithm == "Mixup" or algorithm == "LISA":
         _hparam('mixup_alpha', 0.2, lambda r: 10**r.uniform(-1, -1))
 
     elif algorithm == "GroupDRO":

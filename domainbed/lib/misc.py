@@ -391,6 +391,19 @@ def random_pairs_of_minibatches(minibatches):
     return pairs
 
 
+def random_same_label_pairs_of_minibatches(minibatches, lam):
+    perm = torch.randperm(len(minibatches)).tolist()
+    x_lisa, y_lisa = [], []
+    for i in range(len(minibatches)):
+        j = i + 1 if i < (len(minibatches) - 1) else 0
+        xi, yi = minibatches[perm[i]][0], minibatches[perm[i]][1]
+        xj, yj = minibatches[perm[j]][0], minibatches[perm[j]][1]
+        x = lam * xi[yi == yj] + (1 - lam) * xj[yi == yj]
+        x_lisa.append(x)
+        y_lisa.append(yi[yi == yj])
+    return torch.cat(x_lisa), torch.cat(y_lisa)
+
+
 def compute_correct_batch(predictions, weights, y, device):
     correct = 0
     total = 0
