@@ -30,7 +30,8 @@ ALGORITHMS = [
     "Fishr",
     "CORAL",
     "GroupDRO",
-    'Mixup'
+    'Mixup',
+    "LISA"
 ]
 
 
@@ -979,6 +980,31 @@ class Mixup(ERM):
         self.update_swa()
 
         return {'loss': objective.item()}
+
+
+class LISA(ERM):
+    """
+    Selective augmentation
+    https://arxiv.org/pdf/2201.00299.pdf
+    """
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(LISA, self).__init__(input_shape, num_classes, num_domains, hparams)
+
+    def update(self, minibatches, unlabeled=None):
+        lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
+        intra_label = True
+        if intra_label:
+            (all_x, all_y) = misc.random_same_label_pairs_of_minibatches(minibatches, lam)
+            objective = F.cross_entropy(self.network(all_x), all_y)
+        else:
+            raise Exception(f"Implement Intra-Domain LISA")
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        self.update_swa()
+
+        return {'loss': objective.item()}
+
 
 class GroupDRO(ERM):
     """
