@@ -234,7 +234,7 @@ def _get_args():
         default="-1",
         help='Trial number (used for seeding split_dataset and random_hparams).'
     )
-    parser.add_argument('--holdout_fraction', type=float, default=0.05)
+    parser.add_argument('--holdout_fraction', type=float, default=0.2)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--data_dir', type=str, default="default")
 
