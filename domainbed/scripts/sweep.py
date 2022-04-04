@@ -119,7 +119,10 @@ def make_args_list(
                 print(all_test_envs)
                 for _test_envs in all_test_envs:
                     for _hparams_seed in range(n_hparams_from, n_hparams):
-                        hparams_seed = _hparams_seed * (n_hparams * trial_seed + 1)
+                        if n_hparams != 1:
+                            hparams_seed = _hparams_seed * (n_hparams * trial_seed + 1)
+                        else:
+                            hparams_seed = trial_seed
                         train_args = {}
                         train_args['dataset'] = dataset
                         train_args['algorithm'] = algorithm
