@@ -68,6 +68,9 @@ def main():
         if ood_env == "train":
             ood_splits.append(misc.MergeDataset(_ood_splits))
             ood_names.append("train_out")
+        elif ood_env == "trainf":
+            ood_splits.append(misc.MergeDataset(_ood_splits))
+            ood_names.append("train_full")
         else:
             ood_splits.extend(_ood_splits)
             ood_names.extend(_ood_names)
@@ -622,6 +625,11 @@ def get_results_for_checkpoints(
     for name, loader in ood_evals:
         # print(f"Inference at {name}")
         update_temperature = (name == "train_out" and inf_args.t_scaled == "temp_out")
+        if name == "train_full":
+            ens_algorithm.do_ens = 0
+        else:
+            ens_algorithm.do_ens = inf_args.do_ens
+
         results = ens_algorithm.accuracy(
             loader, device, compute_trace=True,
             update_temperature=update_temperature
