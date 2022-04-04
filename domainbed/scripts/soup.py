@@ -52,10 +52,10 @@ def main():
     for ood_env in inf_args.ood_data.split(","):
         dict_env_to_filter = {}
         if ood_env == "test":
-            if inf_args.trial_seed == [-1]:
-                dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
-            else:
-                dict_env_to_filter["test"] = "in"
+            # if inf_args.trial_seed == [-1]:
+            dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
+            # else:
+            #     dict_env_to_filter["test"] = "in"
         elif ood_env == "train":
             dict_env_to_filter["train"] = "out"
         else:
