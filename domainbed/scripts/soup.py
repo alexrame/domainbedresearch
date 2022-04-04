@@ -626,7 +626,7 @@ def get_results_for_checkpoints(
         # print(f"Inference at {name}")
         update_temperature = (name == "train_out" and inf_args.t_scaled == "temp_out")
         if name == "train_full":
-            ens_algorithm.do_ens = 0
+            ens_algorithm.do_ens = []
         else:
             ens_algorithm.do_ens = inf_args.do_ens
 
