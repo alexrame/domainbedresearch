@@ -386,13 +386,14 @@ class ERM(Algorithm):
 
         targets_torch = torch.cat(batch_classes)
 
-
         results.update(self._compute_diversity(dict_stats, targets_torch.cpu().numpy(), compute_trace, device))
-        results_temp = self._update_temperature_with_stats(
-            dict_stats, device, targets_torch, update_temperature=update_temperature
-        )
-        if output_temperature:
-            results.update(results_temp)
+
+        if update_temperature or output_temperature:
+            results_temp = self._update_temperature_with_stats(
+                dict_stats, device, targets_torch, update_temperature=update_temperature
+            )
+            if output_temperature:
+                results.update(results_temp)
 
         del targets_torch
         self.train()

@@ -47,7 +47,6 @@ def main():
         found_checkpoints_per_cluster, inf_args, dataset, device
     )
 
-
     ood_splits, ood_names = [], []
     for ood_env in inf_args.ood_data.split(","):
         dict_env_to_filter = {}

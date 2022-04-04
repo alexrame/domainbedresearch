@@ -298,9 +298,26 @@ def main():
                 os.makedirs(directory)
             torch.save(save_dict, file_path_heavy)
 
+    def get_score(results):
+        import itertools
+        criteriontopk = f"Accuracies/acc_net"
+        val_env_keys = []
+        for i in itertools.count():
+            acc_key = f'env{i}_out_{criteriontopk}'
+            if acc_key in results:
+                if i not in args.test_envs:
+                    val_env_keys.append(acc_key)
+            else:
+                break
+        assert i > 0
+        return np.mean([results[key] for key in val_env_keys])
+
     last_results_keys = None
     metrics = {}
     results_end = {}
+    best_score = -float("inf")
+
+
     for step in tqdm(range(start_step, n_steps)):
         step_start_time = time.time()
         batches = [b for b in next(train_minibatches_iterator)]
@@ -334,8 +351,7 @@ def main():
                 do_metrics |= step in [int(s) for s in os.environ.get("STEPS").split("_")]
 
         if do_metrics:
-            epoch = step / steps_per_epoch
-            results = {'step': step, 'epoch': epoch}
+            results = {'step': step}
             if scheduler is not None:
                 results["lr"] = scheduler.get_lr()
 
@@ -356,11 +372,12 @@ def main():
                         compute_trace = any([("env" + str(env)) in name for env in traced_envs])
                     else:
                         compute_trace = False
-                    update_temperature = name in [
-                        'env{}_out'.format(i)
-                        for i in range(len(out_splits))
-                        if i not in args.test_envs
-                    ]
+                    update_temperature = False
+                    # name in [
+                    #     'env{}_out'.format(i)
+                    #     for i in range(len(out_splits))
+                    #     if i not in args.test_envs
+                    # ]
                     acc = algorithm.accuracy(
                         loader, device, compute_trace, update_temperature=update_temperature
                     )
@@ -405,6 +422,17 @@ def main():
                     key: value for key, value in results.items() if misc.is_dumpable(value)
                 }
                 f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
+            current_score = get_score(results)
+            if current_score > best_score:
+                best_score = current_score
+                print("Saving new best score at epoch")
+                save_checkpoint(
+                    'best/model.pkl',
+                    results=json.dumps(results_dumpable, sort_keys=True),
+                    filename_heavy=f'{step}/model_with_weights.pkl'
+                )
+                algorithm.to(device)
+
             start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
