@@ -74,7 +74,6 @@ def main():
 
     # If we ever want to implement checkpointing, just persist these values
     # every once in a while, and then load them from disk here.
-    start_step = 0
 
     print("Environment:")
     print("\tPython: {}".format(sys.version.split(" ")[0]))
@@ -318,7 +317,7 @@ def main():
     best_score = -float("inf")
 
 
-    for step in tqdm(range(start_step, n_steps)):
+    for step in tqdm(range(0, n_steps)):
         step_start_time = time.time()
         batches = [b for b in next(train_minibatches_iterator)]
         if args.task == "domain_adaptation":
@@ -425,7 +424,7 @@ def main():
             current_score = get_score(results)
             if current_score > best_score:
                 best_score = current_score
-                print("Saving new best score at epoch")
+                print(f"Saving new best score at step: {step}")
                 save_checkpoint(
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
@@ -433,7 +432,6 @@ def main():
                 )
                 algorithm.to(device)
 
-            start_step = step + 1
             checkpoint_vals = collections.defaultdict(lambda: [])
 
             save_epoch = args.save_model_every_checkpoint

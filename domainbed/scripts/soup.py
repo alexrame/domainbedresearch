@@ -92,12 +92,11 @@ def main():
             end = len(good_checkpoints)
 
         for i in range(start, end):
-            random.shuffle(good_checkpoints)
+            # random.shuffle(good_checkpoints)
             count = 0
 
-            for sub_good_checkpoints in itertools.combinations(good_checkpoints, i):
-                if count >= top:
-                    break
+            while count < top:
+                sub_good_checkpoints = misc.random_combination(good_checkpoints, i)
                 count += 1
                 if os.environ.get("DEBUG", "0") != "0":
                     ood_results = {}

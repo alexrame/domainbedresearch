@@ -318,6 +318,7 @@ def print_row(row, colwidth=10, latex=False):
 
 
 def print_rows(row1, row2):
+
     def format_val(x):
         if np.issubdtype(type(x), np.floating):
             x = "{:.3f}".format(x)
@@ -343,6 +344,7 @@ class _SplitDataset(torch.utils.data.Dataset):
 
 
 class MergeDataset(torch.utils.data.Dataset):
+
     def __init__(self, datasets):
         super(MergeDataset, self).__init__()
         self.datasets = datasets
@@ -372,6 +374,13 @@ def split_dataset(dataset, n, seed=0):
     keys_1 = keys[:n]
     keys_2 = keys[n:]
     return _SplitDataset(dataset, keys_1), _SplitDataset(dataset, keys_2)
+
+
+def random_combination(iterable, r):
+    "Random selection from itertools.combinations(iterable, r)"
+    n = len(iterable)
+    indices = sorted(random.sample(range(n), r))
+    return [iterable[i] for i in indices]
 
 
 def random_pairs_of_minibatches(minibatches):
