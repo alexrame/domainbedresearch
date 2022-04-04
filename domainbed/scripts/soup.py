@@ -57,6 +57,8 @@ def main():
             #     dict_env_to_filter["test"] = "in"
         elif ood_env == "train":
             dict_env_to_filter["train"] = "out"
+        elif ood_env == "trainf":
+            dict_env_to_filter["train"] = "full"
         else:
             raise ValueError(ood_env)
 
