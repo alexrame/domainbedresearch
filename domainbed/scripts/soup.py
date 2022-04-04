@@ -78,10 +78,11 @@ def main():
     if os.environ.get("HESSIAN", "-1") != "-1":
         hessian_splits, hessian_names = [], []
         for hessian in os.environ.get("HESSIAN", "-1").split("_"):
+            hessian_filer = os.environ.get("HESSIANFILTER", "in")
             _hessian_splits, _ = create_splits(
                 inf_args,
                 dataset,
-                dict_env_to_filter={inf_env: "in" for inf_env in hessian.split(",")},
+                dict_env_to_filter={inf_env: hessian_filer for inf_env in hessian.split(",")},
                 trial_seed=inf_args.trial_seed[0],
                 holdout_fraction=float(os.environ.get("HESSIANFRAC", 0.9))
             )
