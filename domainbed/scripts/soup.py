@@ -497,7 +497,7 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
         dataset.num_classes,
         len(dataset) - len(inf_args.test_envs),
         t_scaled=False,
-        regexes=[]
+        regexes=[],
         do_ens=[]
     )
     best_results = {}

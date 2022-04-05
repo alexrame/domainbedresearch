@@ -195,27 +195,29 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5]))
     elif os.environ.get("HP") in ["W"]:
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 2e-5, 3e-5, 4e-5, 5e-5]))
-    elif dataset == "Spirals":
-        _hparam('lr', 0.01, lambda r: 10**r.uniform(-3.5, -1.5))
-    elif dataset in SMALL_IMAGES:
-        _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
-    elif algorithm == "LFF" and dataset == "ColoredMNISTLFF":
-        # if algorithm in ['IRMAdv', "FisherMMD"]:
-        #     _hparam('lr', 1e-3, lambda r: 10**r.uniform(-3.5, -2.))
-        # else:
-        _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
-    elif dataset == "ColoredMNISTLFF":
-        _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
-    # elif dataset == "ColoredMNISTLFF":
-    #     _hparam('lr', 1e-3, lambda r: 10**r.uniform(-5, -2))
-    elif dataset == "BAR":
-        _hparam("lr", 0.0001, lambda r: 0.0001)
-    elif dataset == "Collage":
-        _hparam("lr", 0.001, lambda r: 0.001)
-    elif dataset == "TwoDirections2D":
-        _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
     else:
-        _hparam('lr', 5e-5, lambda r: 10**r.uniform(-5, -3.5))
+        assert os.environ.get("HP", "Large") == "Large"
+        if dataset == "Spirals":
+            _hparam('lr', 0.01, lambda r: 10**r.uniform(-3.5, -1.5))
+        elif dataset in SMALL_IMAGES:
+            _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
+        elif algorithm == "LFF" and dataset == "ColoredMNISTLFF":
+            # if algorithm in ['IRMAdv', "FisherMMD"]:
+            #     _hparam('lr', 1e-3, lambda r: 10**r.uniform(-3.5, -2.))
+            # else:
+            _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
+        elif dataset == "ColoredMNISTLFF":
+            _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
+        # elif dataset == "ColoredMNISTLFF":
+        #     _hparam('lr', 1e-3, lambda r: 10**r.uniform(-5, -2))
+        elif dataset == "BAR":
+            _hparam("lr", 0.0001, lambda r: 0.0001)
+        elif dataset == "Collage":
+            _hparam("lr", 0.001, lambda r: 0.001)
+        elif dataset == "TwoDirections2D":
+            _hparam('lr', 1e-3, lambda r: 10**r.uniform(-4.5, -2.5))
+        else:
+            _hparam('lr', 5e-5, lambda r: 10**r.uniform(-5, -3.5))
 
     # if os.environ.get("LRD"):
     #     _hparam('lrdecay', 0.999, lambda r: 1. - 10**r.uniform(-5, -2))
