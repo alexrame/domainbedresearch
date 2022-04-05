@@ -194,7 +194,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif os.environ.get("HP") in ["S", "SE"]:
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5]))
     elif os.environ.get("HP") in ["W"]:
-        _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 2e-5, 3e-5, 4e-5, 5e-5]))
+        _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5, 7e-5, 9e-5]))
     else:
         assert os.environ.get("HP", "Large") == "Large"
         if dataset == "Spirals":
@@ -231,7 +231,7 @@ def _hparams(algorithm, dataset, random_seed):
     elif os.environ.get("HP") == "S":
         _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-6]))
     elif os.environ.get("HP") == "W":
-        _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-5, 1e-6]))
+        _hparam('weight_decay', 0., lambda r: r.choice([0, 1e-4, 1e-5, 1e-6]))
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
     elif dataset in SMALL_IMAGES:
