@@ -39,8 +39,11 @@ def _hparams(algorithm, dataset, random_seed):
 
     if os.environ.get("HP") == "D":
         _hparam('resnet_dropout', 0., lambda r: 0.)
+    elif os.environ.get("HP") == "W":
+        _hparam('resnet_dropout', 0., lambda r: r.choice([0., 0.1, 0.2, 0.3, 0.4, 0.5]))
     else:
         _hparam('resnet_dropout', 0., lambda r: r.choice([0., 0.1, 0.5]))
+
     _hparam('class_balanced', False, lambda r: False)
     _hparam('unfreeze_resnet_bn', False, lambda r: False)
     # TODO: nonlinear classifiers disabled
@@ -190,6 +193,8 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('lr', 5e-5, lambda r: 5e-5)
     elif os.environ.get("HP") in ["S", "SE"]:
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5]))
+    elif os.environ.get("HP") in ["W"]:
+        _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 2e-5, 3e-5, 4e-5, 5e-5]))
     elif dataset == "Spirals":
         _hparam('lr', 0.01, lambda r: 10**r.uniform(-3.5, -1.5))
     elif dataset in SMALL_IMAGES:
@@ -223,6 +228,8 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -4))
     elif os.environ.get("HP") == "S":
         _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-6]))
+    elif os.environ.get("HP") == "W":
+        _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-5, 1e-6]))
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
     elif dataset in SMALL_IMAGES:

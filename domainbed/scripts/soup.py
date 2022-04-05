@@ -496,6 +496,9 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
         dataset.input_shape,
         dataset.num_classes,
         len(dataset) - len(inf_args.test_envs),
+        t_scaled=False,
+        regexes=[]
+        do_ens=[]
     )
     best_results = {}
     good_nums = []
@@ -552,14 +555,15 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
         for key in val_results:
             if not key.startswith("Accuracies"):
                 continue
-            if val_results[key] > best_results.get(key, ([], 0.))[1]:
-                if key == f"Accuracies/acc_soup":
+            if val_results[key] > best_results.get(key, -float("inf")):
+                if key == "Accuracies/acc_soup":
                     good_nums.append(num)
-                best_results[key] = (good_nums[:], val_results[key])
+                best_results[key] = val_results[key]
 
         if num not in good_nums:
-            ens_algorithm.delete_last()
-            print(f"Skip num {num}")
+            # ens_algorithm.delete_last()
+            print(f"Stop at num {num}")
+            break
         else:
             print(f"Add num {num}")
         # print("")
@@ -598,11 +602,11 @@ def get_results_for_checkpoints(
         train_args = NameSpace(save_dict["args"])
 
         # load model
-        hparams = save_dict["model_hparams"]
         algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
         algorithm = algorithm_class(
             dataset.input_shape, dataset.num_classes,
-            len(dataset) - len(inf_args.test_envs), hparams
+            len(dataset) - len(inf_args.test_envs),
+            save_dict["model_hparams"]
         )
         algorithm._init_from_save_dict(save_dict)
         ens_algorithm.add_new_algorithm(algorithm)
