@@ -125,12 +125,9 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == "IGA":
         _hparam('penalty', 1000, lambda r: 10**r.uniform(1, 5))
 
-    # if algorithm in ['SAM']:
-    #     _hparam('sam', 0, lambda r: r.choice([0]))
-    #     _hparam('samadapt', 0, lambda r: r.choice([0]))
-    #     # _hparam('phosam', 0.05, lambda r: r.choice([0.005, 0.01, 0.02, 0.05, 0.1]))
-    #     _hparam('phosam', 0.001, lambda r: r.choice([0.001, 0.002, 0.005, 0.01, 0.02, 0.05]))
-    #     _hparam('swasamcoeff', 1., lambda r: 10**r.uniform(-1, 2))
+    if algorithm in ['SAM']:
+        _hparam('samadapt', 0, lambda r: r.choice([0]))
+        _hparam('phosam', 0.05, lambda r: r.choice([0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]))
 
     if algorithm in ["Ensembling", "Ensemblingv2"]:
         _hparam("num_members", 2, lambda r: 2)
