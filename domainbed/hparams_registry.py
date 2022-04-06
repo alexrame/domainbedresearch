@@ -14,7 +14,9 @@ def _hparams(algorithm, dataset, random_seed):
     Global registry of hyperparams. Each entry is a (default, random) tuple.
     New algorithms / networks / etc. should add entries here.
     """
-    SMALL_IMAGES = ['Debug28', 'RotatedMNIST', 'ColoredMNIST', 'CustomColoredMNIST', 'CustomGrayColoredMNIST']
+    SMALL_IMAGES = [
+        'Debug28', 'RotatedMNIST', 'ColoredMNIST', 'CustomColoredMNIST', 'CustomGrayColoredMNIST'
+    ]
     MAX_EPOCH_5000 = dataset != 'CelebA_Blond'
 
     hparams = {}
@@ -82,12 +84,14 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == "IRM":
         _hparam('irm_lambda', 1e2, lambda r: 10**r.uniform(-1, 5))
         _hparam(
-            'irm_penalty_anneal_iters', 500,
-            lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
+            'irm_penalty_anneal_iters',
+            500, lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
         )
 
     elif algorithm == "Mixup" or algorithm == "LISA":
         _hparam('mixup_alpha', 0.2, lambda r: 10**r.uniform(-1, -1))
+        _hparam('mixup_proba', 1.0, lambda r: 1.)
+        # 10**r.uniform(-1, -1))
 
     elif algorithm == "GroupDRO":
         _hparam('groupdro_eta', 1e-2, lambda r: 10**r.uniform(-3, -1))
@@ -104,7 +108,8 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == "VREx":
         _hparam('vrex_lambda', 1e1, lambda r: 10**r.uniform(-1, 5))
         _hparam(
-            'vrex_penalty_anneal_iters', 500, lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
+            'vrex_penalty_anneal_iters',
+            500, lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
         )
 
     elif algorithm == "SD":
@@ -224,11 +229,11 @@ def _hparams(algorithm, dataset, random_seed):
     # else:
     _hparam('lrdecay', 0, lambda r: 0)
 
-    if os.environ.get("HP") in ["D", "W"]:
+    if os.environ.get("HP") in ["D"]:
         _hparam('weight_decay', 0., lambda r: 0)
     elif os.environ.get("HP") in ["EoA", "SE"]:
         _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -4))
-    elif os.environ.get("HP") == "S":
+    elif os.environ.get("HP") in ["S", "W"]:
         _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-6]))
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
@@ -239,7 +244,10 @@ def _hparams(algorithm, dataset, random_seed):
 
     # batch size
     if os.environ.get("HP") in ["1", "D", "EoA", "S", "SE"]:
-        _hparam('batch_size', int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * 32)
+        _hparam(
+            'batch_size',
+            int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * 32
+        )
     elif dataset == "Spirals":
         _hparam('batch_size', 512, lambda r: int(2**r.uniform(3, 9)))
     elif dataset == "ColoredMNISTLFF":
@@ -263,7 +271,11 @@ def _hparams(algorithm, dataset, random_seed):
     elif dataset == "TwoDirections2D":
         _hparam('batch_size', 512, lambda r: 256)
     else:
-        _hparam('batch_size', int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * int(2**r.uniform(3, 5.5)))
+        _hparam(
+            'batch_size',
+            int(os.environ.get("BS", 1)) *
+            32, lambda r: int(os.environ.get("BS", 1)) * int(2**r.uniform(3, 5.5))
+        )
 
     # if dataset == "Spirals":
     #     _hparam('mlp_width', 256, lambda r: int(2**r.uniform(6, 10)))

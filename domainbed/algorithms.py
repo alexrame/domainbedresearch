@@ -963,6 +963,8 @@ class Mixup(ERM):
 
     def update(self, minibatches, unlabeled=None):
         objective = 0
+        if random.random() > self.hparams.get("mixup_proba", 1.):
+            return ERM.update(self, minibatches, unlabeled=unlabeled)
 
         for (xi, yi), (xj, yj) in misc.random_pairs_of_minibatches(minibatches):
             lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
