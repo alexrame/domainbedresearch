@@ -75,6 +75,8 @@ class Algorithm(torch.nn.Module):
 
 
 
+
+
 class ERM(Algorithm):
     """
     Empirical Risk Minimization (ERM)
@@ -1265,3 +1267,41 @@ class Fishr(ERM):
         for domain_id in range(self.num_domains):
             penalty += misc.l2_between_dicts(grads_var_per_domain[domain_id], grads_var)
         return penalty / self.num_domains
+
+
+class SAM(ERM):
+    def _init_optimizer(self):
+        phosam = self.hparams["phosam"]
+        if self.hparams["samadapt"]:
+            phosam *= 10
+
+        self.optimizer = sam.SAM(
+            self.network.parameters(),
+            torch.optim.Adam,
+            adaptive=self.hparams["samadapt"],
+            rho=phosam,
+            lr=self.hparams["lr"],
+            weight_decay=self.hparams["weight_decay"],
+        )
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_classes = torch.cat([y for x, y in minibatches])
+        loss = F.cross_entropy(self.network(all_x), all_classes)
+
+        output_dict = {'loss': loss}
+
+        self.optimizer.zero_grad()
+        # first forward-backward pass
+        loss.backward()
+        self.optimizer.first_step(zero_grad=True)
+
+        # second forward-backward pass
+        loss_second_step = F.cross_entropy(self.network(all_x), all_classes)
+        # make sure to do a full forward pass
+        loss_second_step.backward()
+        self.optimizer.second_step()
+        output_dict["loss_secondstep"] = loss_second_step
+
+        self.update_swa()
+        return {key: value.item() for key, value in output_dict.items()}
