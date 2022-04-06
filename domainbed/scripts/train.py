@@ -428,7 +428,7 @@ def main():
                 save_checkpoint(
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
-                    filename_heavy=f'{step}/model_with_weights.pkl'
+                    filename_heavy=f'best/model_with_weights.pkl'
                 )
                 algorithm.to(device)
 
