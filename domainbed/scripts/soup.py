@@ -654,7 +654,7 @@ def get_results_for_checkpoints(
         ]
         hessian_evals = zip(hessian_names, hessian_loaders)
         for i, (name, loader) in enumerate(hessian_evals):
-            print(f"Hessian at {name}")
+            print(f"Hessian at {name} for {len(loader)} samples")
             hessian_results = ens_algorithm.compute_hessian(loader)
             for key in hessian_results:
                 clean_key = key.split("/")[-1]
