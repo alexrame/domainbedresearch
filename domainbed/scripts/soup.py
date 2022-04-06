@@ -99,11 +99,17 @@ def main():
 
         for i in range(start, end):
             # random.shuffle(good_checkpoints)
-            count = 0
+            if top == 0:
+                # random.shuffle(combinations_checkpoints)
+                combinations_checkpoints = itertools.combinations(good_checkpoints, i)
+            elif os.environ.get("MEMORY"):
+                _combinations_all = list(itertools.combinations(good_checkpoints, i))
+                random.shuffle(_combinations_all)
+                combinations_checkpoints = _combinations_all[:top]
+            else:
+                combinations_checkpoints = [misc.random_combination(good_checkpoints, i) for _ in range(top)]
 
-            while count < top:
-                sub_good_checkpoints = misc.random_combination(good_checkpoints, i)
-                count += 1
+            for sub_good_checkpoints in combinations_checkpoints:
                 if os.environ.get("DEBUG", "0") != "0":
                     ood_results = {}
                 else:
