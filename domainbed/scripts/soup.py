@@ -118,9 +118,12 @@ def main():
                         sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                         hessian_splits, device
                     )
-
+                index = -2 if os.environ.get("INFOLDER", "0") == "0" else -1
                 ood_results["dirs"] = "_".join(
-                    [checkpoint.split("/")[-2] for checkpoint in sub_good_checkpoints]
+                    [checkpoint.split("/")[index] for checkpoint in sub_good_checkpoints]
+                )
+                ood_results["trials"] = "_".join(
+                    [get_trial(checkpoint) for checkpoint in sub_good_checkpoints]
                 )
                 print_results(inf_args, ood_results, i)
 
@@ -371,6 +374,13 @@ def printv(s, v=True):
         print(s)
 
 
+
+def get_trial(checkpoint):
+    save_dict = torch.load(os.path.join(checkpoint, "model.pkl"))
+    train_args = NameSpace(save_dict["args"])
+    return str(train_args.trial_seed)
+
+
 def find_checkpoints(inf_args, verbose=False):
     checkpoints = [
         os.path.join(output_dir, path)
@@ -588,6 +598,7 @@ def get_from_zipf(found_checkpoints, topk, a=3):
         if z < n:
             nums.add(z)
     return [checkpoint for i, checkpoint in enumerate(found_checkpoints) if i in nums]
+
 
 
 def get_results_for_checkpoints(
