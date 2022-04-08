@@ -426,7 +426,8 @@ class MultipleEnvironmentImageFolder(MultipleDomainDataset):
 
 
 class VLCS(MultipleEnvironmentImageFolder):
-    CHECKPOINT_FREQ = 300
+    # CHECKPOINT_FREQ = 300
+    CHECKPOINT_FREQ = 50  # Default, subclasses may override
     ENVIRONMENTS = ["C", "L", "S", "V"]
 
     def __init__(self, root, test_envs, hparams):
@@ -435,7 +436,8 @@ class VLCS(MultipleEnvironmentImageFolder):
 
 
 class PACS(MultipleEnvironmentImageFolder):
-    CHECKPOINT_FREQ = 300
+    # CHECKPOINT_FREQ = 300
+    CHECKPOINT_FREQ = 100
     ENVIRONMENTS = ["A", "C", "P", "S"]
 
     def __init__(self, root, test_envs, hparams):
@@ -453,7 +455,7 @@ class DomainNet(MultipleEnvironmentImageFolder):
 
 
 class OfficeHome(MultipleEnvironmentImageFolder):
-    CHECKPOINT_FREQ = 300
+    CHECKPOINT_FREQ = 100
     ENVIRONMENTS = ["A", "C", "P", "R"]
 
     def __init__(self, root, test_envs, hparams):
@@ -462,7 +464,7 @@ class OfficeHome(MultipleEnvironmentImageFolder):
 
 
 class TerraIncognita(MultipleEnvironmentImageFolder):
-    CHECKPOINT_FREQ = 300
+    CHECKPOINT_FREQ = 100
     ENVIRONMENTS = ["100", "38", "43", "46"]
     # ENVIRONMENTS = ["L100", "L38", "L43", "L46"]
 

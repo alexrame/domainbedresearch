@@ -13,6 +13,7 @@ import PIL
 import torch
 import torchvision
 import torch.utils.data
+import itertools
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ExponentialLR
@@ -297,9 +298,7 @@ def main():
                 os.makedirs(directory)
             torch.save(save_dict, file_path_heavy)
 
-    def get_score(results):
-        import itertools
-        criteriontopk = f"Accuracies/acc_net"
+    def get_score(results, criteriontopk):
         val_env_keys = []
         for i in itertools.count():
             acc_key = f'env{i}_out_{criteriontopk}'
@@ -315,6 +314,7 @@ def main():
     metrics = {}
     results_end = {}
     best_score = -float("inf")
+    best_score_swa = -float("inf")
 
 
     for step in tqdm(range(0, n_steps)):
@@ -421,7 +421,12 @@ def main():
                     key: value for key, value in results.items() if misc.is_dumpable(value)
                 }
                 f.write(json.dumps(results_dumpable, sort_keys=True) + "\n")
-            current_score = get_score(results)
+            current_score = get_score(results, "Accuracies/acc_net")
+            if hparams['swa'] == 1:
+                current_score_swa = get_score(results, "Accuracies/acc_swa")
+            else:
+                current_score_swa = -float("inf")
+
             if current_score > best_score:
                 best_score = current_score
                 print(f"Saving new best score at step: {step}")
@@ -429,6 +434,15 @@ def main():
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'best/model_with_weights.pkl'
+                )
+                algorithm.to(device)
+            if current_score_swa > best_score_swa:
+                best_score_swa = current_score_swa
+                print(f"Saving new best score_swa at step: {step}")
+                save_checkpoint(
+                    'bestswa/model.pkl',
+                    results=json.dumps(results_dumpable, sort_keys=True),
+                    filename_heavy=f'bestswa/model_with_weights.pkl'
                 )
                 algorithm.to(device)
 
