@@ -17,6 +17,7 @@ from torch.utils.data.dataset import Dataset
 from collections import Counter
 import socket
 import copy
+import torch.nn.functional as F
 import random
 try:
     from pyhessian import hessian
@@ -318,7 +319,6 @@ def print_row(row, colwidth=10, latex=False):
 
 
 def print_rows(row1, row2):
-
     def format_val(x):
         if np.issubdtype(type(x), np.floating):
             x = "{:.3f}".format(x)
@@ -344,7 +344,6 @@ class _SplitDataset(torch.utils.data.Dataset):
 
 
 class MergeDataset(torch.utils.data.Dataset):
-
     def __init__(self, datasets):
         super(MergeDataset, self).__init__()
         self.datasets = datasets
@@ -383,34 +382,32 @@ def random_combination(iterable, r):
     return [iterable[i] for i in indices]
 
 
+def mix_up_loss(self, x, y, x2=None, y2=None, mix_label=True):
+    if x2 is None:
+        idxes = torch.randperm(len(x))
+        x1, y1 = x, y
+        x2, y2 = x[idxes], y[idxes]
+    else:
+        x1, y1 = x, y
+    lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
+    x = lam * x1 + (1 - lam) * x2
+    predictions = self.network(x)
+    if mix_label:
+        return lam * F.cross_entropy(predictions, y1) + (1 - lam) * F.cross_entropy(predictions, y2)
+    else:
+        return F.cross_entropy(predictions, y1)
+
+
 def random_pairs_of_minibatches(minibatches):
     perm = torch.randperm(len(minibatches)).tolist()
     pairs = []
-
     for i in range(len(minibatches)):
         j = i + 1 if i < (len(minibatches) - 1) else 0
-
         xi, yi = minibatches[perm[i]][0], minibatches[perm[i]][1]
         xj, yj = minibatches[perm[j]][0], minibatches[perm[j]][1]
-
         min_n = min(len(xi), len(xj))
-
         pairs.append(((xi[:min_n], yi[:min_n]), (xj[:min_n], yj[:min_n])))
-
     return pairs
-
-
-def random_same_label_pairs_of_minibatches(minibatches, lam):
-    perm = torch.randperm(len(minibatches)).tolist()
-    x_lisa, y_lisa = [], []
-    for i in range(len(minibatches)):
-        j = i + 1 if i < (len(minibatches) - 1) else 0
-        xi, yi = minibatches[perm[i]][0], minibatches[perm[i]][1]
-        xj, yj = minibatches[perm[j]][0], minibatches[perm[j]][1]
-        x = lam * xi[yi == yj] + (1 - lam) * xj[yi == yj]
-        x_lisa.append(x)
-        y_lisa.append(yi[yi == yj])
-    return torch.cat(x_lisa), torch.cat(y_lisa)
 
 
 def compute_correct_batch(predictions, weights, y, device):

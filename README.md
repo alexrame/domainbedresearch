@@ -167,6 +167,11 @@ swa_officehome_0_hessian_final_60seeds -> run 60 seeds final
 swa_officehome_0_hessian_final_60seeds_mlflow -> run 60 seeds final
 swa_officehome_0_hessian_final -> run 3 final
 
+
+python3 -m domainbed.scripts.train --output_dir=./output/mixup --algorithm Mixup --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
+CUDA_VISIBLE_DEVICES=1 python3 -m domainbed.scripts.train --output_dir=./output/mixup2 --algorithm Mixup_label --dataset OfficeHome --test_env 0 --data_dir=./data/domainbed/
+
+
 every steps
 CUDA_VISIBLE_DEVICES=0,1 python3 -m domainbed.scripts.sweep launch --output_dir=./output/swa_officehome_0_cka --command_launcher multi_gpu --datasets OfficeHome --algorithms SWA --single_test_envs --hp swa 1 --hp diversity_loss none --test_envs 0
 only end + fix hessian
