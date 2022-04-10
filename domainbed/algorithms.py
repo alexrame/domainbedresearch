@@ -13,7 +13,7 @@ from domainbed.lib.diversity_metrics import CudaCKA
 
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, losses
-from domainbed.lib.misc import count_param, set_requires_grad, mix_up_loss
+from domainbed.lib.misc import count_param, set_requires_grad, mix_up_loss, cut_mix_loss
 import copy
 try:
     from torchmetrics import Precision, Recall
@@ -32,7 +32,8 @@ ALGORITHMS = [
     "GroupDRO",
     'Mixup',
     'Mixup_vanilla',
-    'Mixup_label'
+    'Mixup_label',
+    'Cutmix_vanilla'
 ]
 
 
@@ -984,10 +985,31 @@ class Mixup_vanilla(ERM):
         super(Mixup_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
+        if random.random() > self.hparams.get("mixup_proba", 1.):
+            return ERM.update(self, minibatches, unlabeled=unlabeled)
         # minibatches: 3 x [32, 3, 224, 224]
         all_x = torch.cat([x for x, y in minibatches])  # [96, 3, 224, 224]
         all_y = torch.cat([y for x, y in minibatches])
         objective = mix_up_loss(self, all_x, all_y, x2=None, y2=None)
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        self.update_swa()
+        return {'loss': objective.item()}
+
+
+class Cutmix_vanilla(ERM):
+    """
+    Standard Cutmix
+    """
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Cutmix_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
+
+    def update(self, minibatches, unlabeled=None):
+        # minibatches: 3 x [32, 3, 224, 224]
+        all_x = torch.cat([x for x, y in minibatches])  # [96, 3, 224, 224]
+        all_y = torch.cat([y for x, y in minibatches])
+        objective = cut_mix_loss(self, all_x, all_y, x2=None, y2=None)
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
@@ -1003,6 +1025,8 @@ class Mixup_label(ERM):
         super(Mixup_label, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
+        if random.random() > self.hparams.get("mixup_proba", 1.):
+            return ERM.update(self, minibatches, unlabeled=unlabeled)
         objective = 0
         count = 0
         for c in range(self.num_classes):

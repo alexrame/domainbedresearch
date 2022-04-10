@@ -383,15 +383,47 @@ def random_combination(iterable, r):
 
 
 def mix_up_loss(self, x, y, x2=None, y2=None, mix_label=True):
+    x1, y1 = x, y
     if x2 is None:
         idxes = torch.randperm(len(x))
-        x1, y1 = x, y
         x2, y2 = x[idxes], y[idxes]
-    else:
-        x1, y1 = x, y
     lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
-    x = lam * x1 + (1 - lam) * x2
-    predictions = self.network(x)
+    x_mixed = lam * x1 + (1 - lam) * x2
+    predictions = self.network(x_mixed)
+    if mix_label:
+        return lam * F.cross_entropy(predictions, y1) + (1 - lam) * F.cross_entropy(predictions, y2)
+    else:
+        return F.cross_entropy(predictions, y1)
+
+
+def rand_bbox(size, lam):
+    W = size[2]
+    H = size[3]
+    cut_rat = np.sqrt(1. - lam)
+    cut_w = np.int(W * cut_rat)
+    cut_h = np.int(H * cut_rat)
+    # uniform
+    cx = np.random.randint(W)
+    cy = np.random.randint(H)
+    bbx1 = np.clip(cx - cut_w // 2, 0, W)
+    bby1 = np.clip(cy - cut_h // 2, 0, H)
+    bbx2 = np.clip(cx + cut_w // 2, 0, W)
+    bby2 = np.clip(cy + cut_h // 2, 0, H)
+    return bbx1, bby1, bbx2, bby2
+
+
+def cut_mix_loss(self, x, y, x2=None, y2=None, mix_label=True):
+    x1, y1 = x, y
+    if x2 is None:
+        rand_index = torch.randperm(len(y))
+        x2, y2 = x[rand_index], y[rand_index]
+    lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
+    bbx1, bby1, bbx2, bby2 = rand_bbox(x1.size(), lam)
+    # mixed input
+    x1[:, :, bbx1:bbx2, bby1:bby2] = x2[:, :, bbx1:bbx2, bby1:bby2]
+    # adjust lambda to exactly match pixel ratio
+    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x1.size()[-1] * x1.size()[-2]))
+    predictions = self.network(x1)
     if mix_label:
         return lam * F.cross_entropy(predictions, y1) + (1 - lam) * F.cross_entropy(predictions, y2)
     else:
