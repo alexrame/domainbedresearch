@@ -38,13 +38,13 @@ def main():
         raise NotImplementedError
 
     # load args
-    found_checkpoints_per_cluster, dict_checkpoints = find_checkpoints(
+    sorted_checkpoints_per_cluster, dict_checkpoints, dict_checkpoints_to_score = find_checkpoints(
         inf_args, verbose=os.environ.get("DEBUG", "0") != "0"
     )
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     good_checkpoints = get_good_checkpoints(
-        found_checkpoints_per_cluster, inf_args, dataset, device
+        sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score
     )
 
     ood_splits, ood_names = [], []
@@ -453,7 +453,13 @@ def find_checkpoints(inf_args, verbose=False):
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
     printv(sorted_checkpoints_per_cluster, verbose)
-    return sorted_checkpoints_per_cluster, dict_checkpoints
+
+    dict_checkpoints_to_score = {
+        checkpoint: found_checkpoints_per_cluster[cluster][checkpoint]
+        for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
+        for checkpoint in found_checkpoints}
+
+    return sorted_checkpoints_per_cluster, dict_checkpoints, dict_checkpoints_to_score
 
 
 def file_with_weights(folder):
@@ -467,9 +473,9 @@ def file_with_weights(folder):
     return filename
 
 
-def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, device):
+def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score):
     good_checkpoints = []
-    for cluster, found_checkpoints in found_checkpoints_per_cluster.items():
+    for cluster, found_checkpoints in sorted_checkpoints_per_cluster.items():
         print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
         if inf_args.selection_strategy == "greedy":
             print(f"Select from greedy")
@@ -503,8 +509,23 @@ def get_good_checkpoints(found_checkpoints_per_cluster, inf_args, dataset, devic
             print(f"Select all")
             cluster_good_checkpoints = found_checkpoints[:]
         print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
-        good_checkpoints.extend(cluster_good_checkpoints)
-    return good_checkpoints
+        good_checkpoints.append(cluster_good_checkpoints)
+
+    if len(good_checkpoints) == 1:
+        return good_checkpoints[0]
+    return zip_unequal(good_checkpoints, dict_checkpoints_to_score)
+
+
+def zip_unequal(good_checkpoints, dict_checkpoints_to_score):
+    max_len = max([len[l] for l in good_checkpoints])
+    outs = []
+    for i in range(max_len):
+        outs_at_i = []
+        for l in good_checkpoints:
+            if i<len(l):
+                outs_at_i[l[i]] = dict_checkpoints_to_score[l[i]]
+        outs.extend(sorted(outs_at_i.keys, key=lambda x:outs_at_i[x], reverse=True))
+    return outs
 
 
 def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
