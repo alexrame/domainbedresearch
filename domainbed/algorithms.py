@@ -13,7 +13,7 @@ from domainbed.lib.diversity_metrics import CudaCKA
 
 from domainbed import networks
 from domainbed.lib import misc, diversity_metrics, diversity, sam, losses
-from domainbed.lib.misc import count_param, set_requires_grad
+from domainbed.lib.misc import count_param, set_requires_grad, mix_up_loss, cut_mix_loss
 import copy
 try:
     from torchmetrics import Precision, Recall
@@ -31,7 +31,9 @@ ALGORITHMS = [
     "CORAL",
     "GroupDRO",
     'Mixup',
-    "LISA"
+    'Mixup_vanilla',
+    'Mixup_label',
+    'Cutmix_vanilla'
 ]
 
 
@@ -72,8 +74,6 @@ class Algorithm(torch.nn.Module):
 
     def get_tb_dict(self):
         return {}
-
-
 
 
 
@@ -959,7 +959,6 @@ class Mixup(ERM):
     https://arxiv.org/pdf/2001.00677.pdf
     https://arxiv.org/pdf/1912.01805.pdf
     """
-
     def __init__(self, input_shape, num_classes, num_domains, hparams):
         super(Mixup, self).__init__(input_shape, num_classes, num_domains, hparams)
 
@@ -969,45 +968,83 @@ class Mixup(ERM):
             return ERM.update(self, minibatches, unlabeled=unlabeled)
 
         for (xi, yi), (xj, yj) in misc.random_pairs_of_minibatches(minibatches):
-            lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
-
-            x = lam * xi + (1 - lam) * xj
-            predictions = self.network(x)
-
-            objective += lam * F.cross_entropy(predictions, yi)
-            objective += (1 - lam) * F.cross_entropy(predictions, yj)
-
+            objective += mix_up_loss(self, xi, yi, x2=xj, y2=yj)
         objective /= len(minibatches)
-
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
         self.update_swa()
-
         return {'loss': objective.item()}
 
 
-class LISA(ERM):
+class Mixup_vanilla(ERM):
     """
-    Selective augmentation
-    https://arxiv.org/pdf/2201.00299.pdf
+    Standard Mixup
     """
     def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(LISA, self).__init__(input_shape, num_classes, num_domains, hparams)
+        super(Mixup_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
-        lam = np.random.beta(self.hparams["mixup_alpha"], self.hparams["mixup_alpha"])
-        intra_label = True
-        if intra_label:
-            (all_x, all_y) = misc.random_same_label_pairs_of_minibatches(minibatches, lam)
-            objective = F.cross_entropy(self.network(all_x), all_y)
-        else:
-            raise Exception(f"Implement Intra-Domain LISA")
+        if random.random() > self.hparams.get("mixup_proba", 1.):
+            return ERM.update(self, minibatches, unlabeled=unlabeled)
+        # minibatches: 3 x [32, 3, 224, 224]
+        all_x = torch.cat([x for x, y in minibatches])  # [96, 3, 224, 224]
+        all_y = torch.cat([y for x, y in minibatches])
+        objective = mix_up_loss(self, all_x, all_y, x2=None, y2=None)
         self.optimizer.zero_grad()
         objective.backward()
         self.optimizer.step()
         self.update_swa()
+        return {'loss': objective.item()}
 
+
+class Cutmix_vanilla(ERM):
+    """
+    Standard Cutmix
+    """
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Cutmix_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
+
+    def update(self, minibatches, unlabeled=None):
+        # minibatches: 3 x [32, 3, 224, 224]
+        all_x = torch.cat([x for x, y in minibatches])  # [96, 3, 224, 224]
+        all_y = torch.cat([y for x, y in minibatches])
+        objective = cut_mix_loss(self, all_x, all_y, x2=None, y2=None)
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        self.update_swa()
+        return {'loss': objective.item()}
+
+
+class Mixup_label(ERM):
+    """
+    Mixup of minibatches per label. Check https://github.com/galatolofederico/pytorch-balanced-batch
+    """
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        super(Mixup_label, self).__init__(input_shape, num_classes, num_domains, hparams)
+
+    def update(self, minibatches, unlabeled=None):
+        if random.random() > self.hparams.get("mixup_proba", 1.):
+            return ERM.update(self, minibatches, unlabeled=unlabeled)
+        objective = 0
+        count = 0
+        for c in range(self.num_classes):
+            x_class = []
+            y_class = []
+            for minibatch in minibatches:
+                x, y = minibatch[0], minibatch[1]
+                if c in y:
+                    x_class.append(x[y == c])
+                    y_class.append(y[y == c])
+            if len(x_class) >= 1:
+                count = count + 1
+                objective += mix_up_loss(self, torch.cat(x_class), torch.cat(y_class), x2=None, y2=None, mix_label=False)
+        objective /= count
+        self.optimizer.zero_grad()
+        objective.backward()
+        self.optimizer.step()
+        self.update_swa()
         return {'loss': objective.item()}
 
 
