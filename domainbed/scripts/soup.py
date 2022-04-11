@@ -391,6 +391,7 @@ def find_checkpoints(inf_args, verbose=False):
         checkpoints = [
             os.path.join(checkpoint, path) for checkpoint in checkpoints
             if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
+            if path not in os.environ.get("SKIPSTEPS", "").split("_")
         ]
 
     found_checkpoints_per_cluster = {}
