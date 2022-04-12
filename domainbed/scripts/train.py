@@ -427,7 +427,7 @@ def main():
             else:
                 current_score_swa = -float("inf")
 
-            if current_score > best_score:
+            if current_score > best_score and step > 1500:
                 best_score = current_score
                 print(f"Saving new best score at step: {step}")
                 save_checkpoint(
