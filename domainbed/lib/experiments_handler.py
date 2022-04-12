@@ -17,7 +17,7 @@ def set_mlflow_experiment(experiment_name):
 def set_experiment_name(args, version=None):
     if os.environ.get("USER") in ["rame", "utr15kn"]:
         test_env = args["test_envs"][0]
-        if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet"]:
+        if args["dataset"] in ["ColoredMNIST", "ColoredMNISTClean", "PACS", "RotatedMNIST", "VLCS", "OfficeHome", "DomainNet", "TerraIncognita"]:
             if version is None:
                 version = "v13_" + os.environ.get("HP", "")
             return args["dataset"] + str(test_env) + version

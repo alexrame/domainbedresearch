@@ -517,14 +517,14 @@ def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, devi
 
 
 def zip_unequal(good_checkpoints, dict_checkpoints_to_score):
-    max_len = max([len[l] for l in good_checkpoints])
+    max_len = max([len(l) for l in good_checkpoints])
     outs = []
     for i in range(max_len):
-        outs_at_i = []
+        outs_at_i = {}
         for l in good_checkpoints:
-            if i<len(l):
+            if i < len(l):
                 outs_at_i[l[i]] = dict_checkpoints_to_score[l[i]]
-        outs.extend(sorted(outs_at_i.keys, key=lambda x:outs_at_i[x], reverse=True))
+        outs.extend(sorted(outs_at_i.keys(), key=lambda x:outs_at_i[x], reverse=True))
     return outs
 
 
