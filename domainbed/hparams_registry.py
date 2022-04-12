@@ -229,9 +229,9 @@ def _hparams(algorithm, dataset, random_seed):
     if os.environ.get("HP") in ["D"]:
         _hparam('weight_decay', 0., lambda r: 0)
     elif os.environ.get("HP") in ["EoA", "SE"]:
-        _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -4))
+        _hparam('weight_decay', 1e-6, lambda r: 10**r.uniform(-6, -4))
     elif os.environ.get("HP") in ["S", "W"]:
-        _hparam('weight_decay', 0., lambda r: r.choice([1e-4, 1e-6]))
+        _hparam('weight_decay', 1e-6, lambda r: r.choice([1e-4, 1e-6]))
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
     elif dataset in SMALL_IMAGES:

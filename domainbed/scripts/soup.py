@@ -421,6 +421,9 @@ def find_checkpoints(inf_args, verbose=False):
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
             printv(f"Warning different holdout fraction: {name_folder} but keep", verbose)
+        if os.environ.get("WEIGHT_DECAY") and save_dict["model_hparams"]["weight_decay"] != float(os.environ.get("WEIGHT_DECAY")):
+            printv(f"Bad weight decay: {save_dict['model_hparams']['weight_decay']} in {name_folder}", True)
+            continue
 
         printv(f"found: {name_folder}", verbose)
         run_results = json.loads(save_dict.get("results", ""))
