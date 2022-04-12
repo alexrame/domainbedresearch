@@ -207,7 +207,8 @@ def main():
                     hessian_splits, device
                 )
 
-            new_result = ood_results[inf_args.mode.split("_")[1]]
+            keymetric = inf_args.mode.split("_")[1].replace("-", "_")
+            new_result = ood_results[keymetric]
             if new_result > best_result:
                 print(f"Accepting index {i}")
             else:
