@@ -436,7 +436,7 @@ def main():
                     filename_heavy=f'best/model_with_weights.pkl'
                 )
                 algorithm.to(device)
-            if current_score_swa > best_score_swa:
+            if False and current_score_swa > best_score_swa:
                 best_score_swa = current_score_swa
                 print(f"Saving new best score_swa at step: {step}")
                 save_checkpoint(

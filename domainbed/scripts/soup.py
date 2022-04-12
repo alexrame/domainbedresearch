@@ -189,6 +189,34 @@ def main():
             process_line_iter(ood_results, inf_args)
             print_results(inf_args, ood_results, i)
 
+    elif inf_args.mode.startswith("iterg_"):
+        start, end = [int(s) for s in inf_args.mode.split("_")[2:]]
+        if end > len(good_checkpoints) + 1:
+            print(f"{end} too big")
+            end = len(good_checkpoints)
+        good_indexes = []
+        best_result = - float("inf")
+        for i in range(start, end):
+            good_indexes.append(i)
+            sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
+            if os.environ.get("DEBUG", "0") != "0":
+                ood_results = {}
+            else:
+                ood_results = get_results_for_checkpoints(
+                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+                    hessian_splits, device
+                )
+
+            new_result = ood_results[inf_args.mode.split("_")[1]]
+            if new_result > best_result:
+                print(f"Accepting index {i}")
+            else:
+                good_indexes.pop(-1)
+                print(f"Skipping index {i}")
+
+            process_line_iter(ood_results, inf_args)
+            print_results(inf_args, ood_results, i)
+
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
@@ -389,7 +417,8 @@ def find_checkpoints(inf_args, verbose=False):
     ]
     if os.environ.get("INFOLDER", "0") != "0":
         checkpoints = [
-            os.path.join(checkpoint, path) for checkpoint in checkpoints
+            os.path.join(checkpoint, path)
+            for checkpoint in checkpoints
             if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
             if path not in os.environ.get("SKIPSTEPS", "").split("_")
         ]
@@ -434,6 +463,7 @@ def find_checkpoints(inf_args, verbose=False):
             step = run_results.get("step", 5000)
             if os.environ.get("STEPS").startswith("mod"):
                 if int(step) % int(os.environ.get("STEPS")[3:]) != 0:
+                    printv(f"bad step {step} for: {name_folder}", verbose)
                     continue
             else:
                 if str(step) not in os.environ.get("STEPS").split("_"):

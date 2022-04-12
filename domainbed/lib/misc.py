@@ -54,16 +54,15 @@ def compute_hessian(network, loader, maxIter=100):
 
 class SWA():
 
-    def __init__(self, network, hparams, swa_start_iter=100):
+    def __init__(self, network, hparams, swa_start_iter=100, global_iter=0):
         self.network = network
         self.network_swa = copy.deepcopy(network)
         self.network_swa.eval()
 
-        self.global_iter = 0
+        self.global_iter = global_iter
         self.layerwise = hparams.get("layerwise", "")
         self.hparams = hparams
         self.swa_start_iter = swa_start_iter
-        self.swa_end_iter = float("inf")
         if self.layerwise:
             self.list_layers_count = [0 for _ in self.network.parameters()]
         else:
@@ -71,14 +70,12 @@ class SWA():
 
     def update(self):
         self.global_iter += 1
-        if self.swa_end_iter > self.global_iter >= self.swa_start_iter:
-            if self.global_iter == self.swa_start_iter:
-                print(f"Begin swa at iter: {self.global_iter}")
+        if self.global_iter >= self.swa_start_iter:
             if self.layerwise:
                 self._update_layerwise()
             else:
                 self._update_all()
-        elif self.swa_end_iter > self.global_iter:
+        elif True:
             for param_q, param_k in zip(self.network.parameters(), self.network_swa.parameters()):
                 param_k.data = param_q.data
         return self.compute_distance_nets()

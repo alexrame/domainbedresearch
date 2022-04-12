@@ -193,7 +193,7 @@ def _hparams(algorithm, dataset, random_seed):
     # learning rate
     if os.environ.get("HP") in ["D", "EoA"]:
         _hparam('lr', 5e-5, lambda r: 5e-5)
-    elif os.environ.get("HP") in ["S", "SE"]:
+    elif os.environ.get("HP") in ["S", "SE", "X"]:
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5]))
     elif os.environ.get("HP") in ["W"]:
         _hparam('lr', 5e-5, lambda r: r.choice([1e-5, 3e-5, 5e-5, 7e-5, 9e-5]))
@@ -232,6 +232,8 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('weight_decay', 1e-6, lambda r: 10**r.uniform(-6, -4))
     elif os.environ.get("HP") in ["S", "W"]:
         _hparam('weight_decay', 1e-6, lambda r: r.choice([1e-4, 1e-6]))
+    elif os.environ.get("HP") in ["X"]:
+        _hparam('weight_decay', 1e-6, lambda r: 1e-6)
     elif dataset == "Spirals":
         _hparam('weight_decay', 0.001, lambda r: 10**r.uniform(-6, -2))
     elif dataset in SMALL_IMAGES:
@@ -240,7 +242,7 @@ def _hparams(algorithm, dataset, random_seed):
         _hparam('weight_decay', 0., lambda r: 10**r.uniform(-6, -2))
 
     # batch size
-    if os.environ.get("HP") in ["1", "D", "EoA", "S", "SE"]:
+    if os.environ.get("HP") in ["1", "D", "EoA", "S", "SE", "X"]:
         _hparam(
             'batch_size',
             int(os.environ.get("BS", 1)) * 32, lambda r: int(os.environ.get("BS", 1)) * 32
