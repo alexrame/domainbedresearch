@@ -208,8 +208,9 @@ def main():
                 )
 
             keymetric = inf_args.mode.split("_")[1].replace("-", "_")
-            new_result = ood_results[keymetric]
+            new_result = - ood_results[keymetric]
             if new_result > best_result:
+                best_result = new_result
                 print(f"Accepting index {i}")
             else:
                 good_indexes.pop(-1)
