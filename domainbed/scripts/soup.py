@@ -26,7 +26,7 @@ from domainbed.lib import misc, experiments_handler
 random.seed(os.environ.get('SEED', 4))
 
 def gpuprint(*args, **kwargs):
-    print(os.environ.get('CUDA_VISIBLE_DEVICES'), ": ", *args, **kwargs)
+    print(os.environ.get('CUDA_VISIBLE_DEVICES', "-1") + ":", *args, **kwargs)
 
 
 def main():
@@ -188,7 +188,7 @@ def main():
             sub_good_checkpoints = good_checkpoints[:i]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {}
-                gpuprint("i", sub_good_checkpoints)
+                gpuprint(i, sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
@@ -206,12 +206,13 @@ def main():
         good_indexes = []
         best_result = - float("inf")
         keymetric = inf_args.mode.split("_")[1].replace("-", "_")
-        for i in range(start, end):
+        for i in range(start , end):
+            i = i - 1
             good_indexes.append(i)
             sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {keymetric: random.random()}
-                gpuprint("i", sub_good_checkpoints)
+                gpuprint(i, sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
@@ -220,7 +221,11 @@ def main():
 
             process_line_iter(ood_results, inf_args)
             gpuprint_results(inf_args, ood_results, i)
-            new_result = - ood_results[keymetric]
+            if "acc" in keymetric:
+                new_result = ood_results[keymetric]
+            else:
+                new_result = - ood_results[keymetric]
+
             if new_result > best_result:
                 best_result = new_result
                 gpuprint(f"Accepting index {i}")
