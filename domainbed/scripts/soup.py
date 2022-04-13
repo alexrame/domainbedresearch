@@ -194,7 +194,7 @@ def main():
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
-
+            ood_results["i"] = i - 1
             process_line_iter(ood_results, inf_args)
             gpuprint_results(inf_args, ood_results, i)
 
@@ -218,7 +218,7 @@ def main():
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
-
+            ood_results["i"] = i
             process_line_iter(ood_results, inf_args)
             gpuprint_results(inf_args, ood_results, i)
             if "acc" in keymetric:
@@ -548,7 +548,8 @@ def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, devi
             )
         elif inf_args.selection_strategy in ["random"]:
             gpuprint(f"Select random")
-            rand_nums = random.sample(range(len(found_checkpoints)), inf_args.topk)
+            topk = max(len(found_checkpoints), inf_args.topk)
+            rand_nums = sorted(random.sample(range(len(found_checkpoints)), topk))
             cluster_good_checkpoints = [found_checkpoints[i] for i in rand_nums]
         elif inf_args.topk != 0:
             gpuprint(f"Select best")

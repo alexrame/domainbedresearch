@@ -87,10 +87,14 @@ def _hparams(algorithm, dataset, random_seed):
             'irm_penalty_anneal_iters',
             500, lambda r: int(10**r.uniform(0, 4. if MAX_EPOCH_5000 else 3.5))
         )
-
-    elif "Mixup" in algorithm or "Cutmix" in algorithm:
+    elif algorithm == "Mixup":
         _hparam('mixup_alpha', 0.2, lambda r: 10**r.uniform(-1, -1))
         _hparam('mixup_proba', 1.0, lambda r: 1.)
+        # 10**r.uniform(-1, -1))
+
+    elif "Mixup" in algorithm or "Cutmix" in algorithm:
+        _hparam('mixup_alpha', 0.1, lambda r: 0.1)
+        _hparam('mixup_proba', 0.5, lambda r: 10**r.uniform(-1, 0))
         # 10**r.uniform(-1, -1))
 
     elif algorithm == "GroupDRO":
