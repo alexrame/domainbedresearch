@@ -31,6 +31,7 @@ ALGORITHMS = [
     "CORAL",
     "GroupDRO",
     'Mixup',
+    "Mixupd",
     'Mixupv',
     'Mixupl',
     'Cutmixv'
@@ -976,6 +977,10 @@ class Mixup(ERM):
         self.update_swa()
         return {'loss': objective.item()}
 
+
+
+class Mixupd(Mixup):
+    pass
 
 class Mixupv(ERM):
     """
