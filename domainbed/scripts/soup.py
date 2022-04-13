@@ -475,6 +475,7 @@ def find_checkpoints(inf_args, verbose=False):
         if os.environ.get("UNIQ", "0") != "0":
             if unique_key in set_unique_key:
                 gpuprint(f"Skip {folder} of {unique_key}")
+                continue
             else:
                 set_unique_key.add(unique_key)
 
