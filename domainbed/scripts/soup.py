@@ -25,9 +25,13 @@ from domainbed.lib import misc, experiments_handler
 
 random.seed(os.environ.get('SEED', 4))
 
+def gpuprint(*args, **kwargs):
+    print(os.environ.get('CUDA_VISIBLE_DEVICES'), ": ", *args, **kwargs)
+
+
 def main():
     inf_args = _get_args()
-    print(f"Begin soup for {inf_args}")
+    gpuprint(f"Begin soup for {inf_args}")
 
     if inf_args.dataset in vars(datasets):
         dataset_class = vars(datasets)[inf_args.dataset]
@@ -47,8 +51,8 @@ def main():
         sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score
     )
     if os.environ.get("DEBUG"):
-        print("good_checkpoints", good_checkpoints)
-        print("dict_checkpoints_to_score", dict_checkpoints_to_score)
+        gpuprint("good_checkpoints", good_checkpoints)
+        gpuprint("dict_checkpoints_to_score", dict_checkpoints_to_score)
 
     ood_splits, ood_names = [], []
     for ood_env in inf_args.ood_data.split(","):
@@ -98,7 +102,7 @@ def main():
     if inf_args.mode.startswith("combin_"):
         start, end, top = [int(s) for s in inf_args.mode.split("_")[1:]]
         if end > len(good_checkpoints) + 1:
-            print(f"{end} too big")
+            gpuprint(f"{end} too big")
             end = len(good_checkpoints)
 
         for i in range(start, end):
@@ -129,20 +133,20 @@ def main():
                     [get_trial(checkpoint) for checkpoint in sub_good_checkpoints]
                 )
                 ood_results["i"] = str(i)
-                print_results(inf_args, ood_results, i)
+                gpuprint_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["all2"]:
         for sub_good_checkpoints in itertools.combinations(good_checkpoints, 2):
-            print("")
+            gpuprint("")
             checkpoint0 = sub_good_checkpoints[0]
             checkpoint1 = sub_good_checkpoints[1]
 
             if -1 in inf_args.trial_seed and dict_checkpoints[checkpoint0][
                 "trial_seed"] == dict_checkpoints[checkpoint1]["trial_seed"]:
-                print(f"Skip f{sub_good_checkpoints} because same seeds")
+                gpuprint(f"Skip f{sub_good_checkpoints} because same seeds")
                 continue
             else:
-                print(f"Process {sub_good_checkpoints}")
+                gpuprint(f"Process {sub_good_checkpoints}")
 
             if os.environ.get("DEBUG"):
                 ood_results = {}
@@ -173,18 +177,18 @@ def main():
             #     hparams=None,
             #     version="soup"
             # )
-            print_results(inf_args, ood_results, len(sub_good_checkpoints))
+            gpuprint_results(inf_args, ood_results, len(sub_good_checkpoints))
     elif inf_args.mode.startswith("iter_"):
         start, end = [int(s) for s in inf_args.mode.split("_")[1:]]
         if end > len(good_checkpoints) + 1:
-            print(f"{end} too big")
+            gpuprint(f"{end} too big")
             end = len(good_checkpoints)
 
         for i in range(start, end):
             sub_good_checkpoints = good_checkpoints[:i]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {}
-                print("i", sub_good_checkpoints)
+                gpuprint("i", sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
@@ -192,12 +196,12 @@ def main():
                 )
 
             process_line_iter(ood_results, inf_args)
-            print_results(inf_args, ood_results, i)
+            gpuprint_results(inf_args, ood_results, i)
 
     elif inf_args.mode.startswith("iterg_"):
         start, end = [int(s) for s in inf_args.mode.split("_")[2:]]
         if end > len(good_checkpoints) + 1:
-            print(f"{end} too big")
+            gpuprint(f"{end} too big")
             end = len(good_checkpoints)
         good_indexes = []
         best_result = - float("inf")
@@ -207,30 +211,29 @@ def main():
             sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {keymetric: random.random()}
-                print("i", sub_good_checkpoints)
+                gpuprint("i", sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
 
+            process_line_iter(ood_results, inf_args)
+            gpuprint_results(inf_args, ood_results, i)
             new_result = - ood_results[keymetric]
             if new_result > best_result:
                 best_result = new_result
-                print(f"Accepting index {i}")
+                gpuprint(f"Accepting index {i}")
             else:
                 good_indexes.pop(-1)
-                print(f"Skipping index {i}")
-
-            process_line_iter(ood_results, inf_args)
-            print_results(inf_args, ood_results, i)
+                gpuprint(f"Skipping index {i}")
 
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
             hessian_splits, device
         )
-        print_results(inf_args, ood_results, len(good_checkpoints))
+        gpuprint_results(inf_args, ood_results, len(good_checkpoints))
     else:
         raise ValueError(inf_args.mode)
 
@@ -405,9 +408,9 @@ def get_score_run(results, criteriontopk, test_envs):
     return np.mean([results[key] for key in val_env_keys])
 
 
-def printv(s, v=True):
+def gpuprintv(s, v=True):
     if v:
-        print(s)
+        gpuprint(s)
 
 
 
@@ -439,30 +442,30 @@ def find_checkpoints(inf_args, verbose=False):
         name_folder = os.path.split(folder)[-1]
         model_path = os.path.join(folder, "model.pkl")
         if not os.path.exists(model_path):
-            printv(f"absent: {name_folder}", verbose)
+            gpuprintv(f"absent: {name_folder}", verbose)
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
 
         if train_args.dataset != inf_args.dataset:
-            printv(f"bad dataset: {name_folder}", verbose)
+            gpuprintv(f"bad dataset: {name_folder}", verbose)
             continue
         if train_args.test_envs != inf_args.test_envs:
-            printv(f"bad test env: {name_folder}", verbose)
+            gpuprintv(f"bad test env: {name_folder}", verbose)
             continue
         if inf_args.algorithm != "" and train_args.algorithm not in inf_args.algorithm.split(","):
-            printv(f"bad algorithm: {name_folder}", verbose)
+            gpuprintv(f"bad algorithm: {name_folder}", verbose)
             continue
         if (train_args.trial_seed not in inf_args.trial_seed and -1 not in inf_args.trial_seed):
-            printv(f"bad trial seed: {name_folder}", verbose)
+            gpuprintv(f"bad trial seed: {name_folder}", verbose)
             continue
         if train_args.holdout_fraction != inf_args.holdout_fraction:
-            printv(f"Warning different holdout fraction: {name_folder} but keep", verbose)
+            gpuprintv(f"Warning different holdout fraction: {name_folder} but keep", verbose)
         if os.environ.get("WEIGHT_DECAY") and save_dict["model_hparams"]["weight_decay"] != float(os.environ.get("WEIGHT_DECAY")):
-            printv(f"Bad weight decay: {save_dict['model_hparams']['weight_decay']} in {name_folder}", True)
+            gpuprintv(f"Bad weight decay: {save_dict['model_hparams']['weight_decay']} in {name_folder}", True)
             continue
 
-        printv(f"found: {name_folder}", verbose)
+        gpuprintv(f"found: {name_folder}", verbose)
         run_results = json.loads(save_dict.get("results", ""))
         score_folder = get_score_run(
             run_results, criteriontopk=inf_args.criteriontopk, test_envs=inf_args.test_envs
@@ -471,7 +474,7 @@ def find_checkpoints(inf_args, verbose=False):
             step = run_results.get("step", 5000)
             if os.environ.get("STEPS").startswith("mod"):
                 if int(step) % int(os.environ.get("STEPS")[3:]) != 0:
-                    printv(f"bad step {step} for: {name_folder}", verbose)
+                    gpuprintv(f"bad step {step} for: {name_folder}", verbose)
                     continue
             else:
                 if str(step) not in os.environ.get("STEPS").split("_"):
@@ -492,7 +495,7 @@ def find_checkpoints(inf_args, verbose=False):
         cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
-    printv(sorted_checkpoints_per_cluster, verbose)
+    gpuprintv(sorted_checkpoints_per_cluster, verbose)
 
     dict_checkpoints_to_score = {
         checkpoint: found_checkpoints_per_cluster[cluster][checkpoint]
@@ -508,7 +511,7 @@ def file_with_weights(folder):
     if os.path.exists(filename_heavy):
         filename = filename_heavy
     else:
-        # print(f"missing {filename_heavy}")
+        # gpuprint(f"missing {filename_heavy}")
         assert os.path.exists(filename)
     return filename
 
@@ -516,9 +519,9 @@ def file_with_weights(folder):
 def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score):
     good_checkpoints = []
     for cluster, found_checkpoints in sorted_checkpoints_per_cluster.items():
-        print(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
+        gpuprint(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
         if inf_args.selection_strategy == "greedy":
-            print(f"Select from greedy")
+            gpuprint(f"Select from greedy")
             if "trial_seed" in inf_args.cluster:
                 assert inf_args.selection_data == "train"
                 trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
@@ -534,21 +537,21 @@ def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, devi
                 found_checkpoints, dataset, inf_args, val_names, val_splits, device
             )
         elif inf_args.selection_strategy == "zipf":
-            print(f"Select from zipf")
+            gpuprint(f"Select from zipf")
             cluster_good_checkpoints = get_from_zipf(
                 found_checkpoints, inf_args.topk, a=inf_args.zipf_a
             )
         elif inf_args.selection_strategy in ["random"]:
-            print(f"Select random")
+            gpuprint(f"Select random")
             rand_nums = random.sample(range(len(found_checkpoints)), inf_args.topk)
             cluster_good_checkpoints = [found_checkpoints[i] for i in rand_nums]
         elif inf_args.topk != 0:
-            print(f"Select best")
+            gpuprint(f"Select best")
             cluster_good_checkpoints = found_checkpoints[:inf_args.topk]
         else:
-            print(f"Select all")
+            gpuprint(f"Select all")
             cluster_good_checkpoints = found_checkpoints[:]
-        print(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
+        gpuprint(f"Select {len(cluster_good_checkpoints)}/{len(found_checkpoints)} checkpoints")
         good_checkpoints.append(cluster_good_checkpoints)
 
     if len(good_checkpoints) == 1:
@@ -582,7 +585,7 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
     best_results = {}
     good_nums = []
     for num, folder in enumerate(found_checkpoints):
-        # print(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
+        # gpuprint(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
 
         save_dict = torch.load(file_with_weights(folder))
         train_args = NameSpace(save_dict["args"])
@@ -614,7 +617,7 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
         val_results = {}
         val_evals = zip(val_names, val_loaders)
         for name, loader in val_evals:
-            # print(f"Inference at {name} at num {num}")
+            # gpuprint(f"Inference at {name} at num {num}")
             results_of_one_eval = ens_algorithm.accuracy(
                 loader,
                 device,
@@ -626,10 +629,10 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
                 val_results[key] = val_results.get(key,
                                                    0) + results_of_one_eval[key] / len(val_names)
 
-        # print(f"Val results for {inf_args} at {num}")
+        # gpuprint(f"Val results for {inf_args} at {num}")
         # results_keys = sorted(val_results.keys())
-        # misc.print_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
-        # misc.print_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
+        # misc.gpuprint_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
+        # misc.gpuprint_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
 
         for key in val_results:
             if not key.startswith("Accuracies"):
@@ -641,14 +644,14 @@ def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_
 
         if num not in good_nums:
             # ens_algorithm.delete_last()
-            print(f"Stop at num {num}")
+            gpuprint(f"Stop at num {num}")
             break
         else:
-            print(f"Add num {num}")
-        # print("")
+            gpuprint(f"Add num {num}")
+        # gpuprint("")
 
-    print(f"Best OOD results for {inf_args} with {len(good_nums)} checkpoints")
-    print(best_results)
+    gpuprint(f"Best OOD results for {inf_args} with {len(good_nums)} checkpoints")
+    gpuprint(best_results)
     return [found_checkpoints[num] for num in good_nums]
 
 
@@ -677,7 +680,7 @@ def get_results_for_checkpoints(
         do_ens=inf_args.do_ens
     )
     for folder in good_checkpoints:
-        print(f"Ingredient from folder: {folder}")
+        gpuprint(f"Ingredient from folder: {folder}")
         save_dict = torch.load(file_with_weights(folder))
         train_args = NameSpace(save_dict["args"])
 
@@ -708,7 +711,7 @@ def get_results_for_checkpoints(
     ood_evals = zip(ood_names, ood_loaders)
     ood_results = {}
     for name, loader in ood_evals:
-        # print(f"Inference at {name}")
+        # gpuprint(f"Inference at {name}")
         update_temperature = (name == "train_out" and inf_args.t_scaled == "temp_out")
         if name == "train_full":
             ens_algorithm.do_ens = []
@@ -719,7 +722,7 @@ def get_results_for_checkpoints(
             loader, device, compute_trace=True,
             update_temperature=update_temperature
             )
-        # print(results)
+        # gpuprint(results)
         for key in results:
             clean_key = key.split("/")[-1]
             ood_results[name + "_" + clean_key] = results[key]
@@ -734,7 +737,7 @@ def get_results_for_checkpoints(
         ]
         hessian_evals = zip(hessian_names, hessian_loaders)
         for i, (name, loader) in enumerate(hessian_evals):
-            print(f"Hessian at {name} for {len(loader)} batches")
+            gpuprint(f"Hessian at {name} for {len(loader)} batches")
             hessian_results = ens_algorithm.compute_hessian(loader)
             for key in hessian_results:
                 clean_key = key.split("/")[-1]
@@ -747,10 +750,10 @@ def get_results_for_checkpoints(
     return ood_results
 
 
-def print_results(inf_args, ood_results, len_):
+def gpuprint_results(inf_args, ood_results, len_):
     ood_results_keys = sorted(ood_results.keys())
-    print(
-        f"OOD results for {inf_args} with {len_} and gpu: {os.environ.get('CUDA_VISIBLE_DEVICES')}"
+    gpuprint(
+        f"OOD results for {inf_args} with {len_}"
     )
     misc.print_rows(
         row1=ood_results_keys,
