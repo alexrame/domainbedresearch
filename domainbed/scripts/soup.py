@@ -46,6 +46,9 @@ def main():
     good_checkpoints = get_good_checkpoints(
         sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score
     )
+    if os.environ.get("DEBUG"):
+        print(good_checkpoints)
+        print(dict_checkpoints_to_score)
 
     ood_splits, ood_names = [], []
     for ood_env in inf_args.ood_data.split(","):
@@ -125,6 +128,7 @@ def main():
                 ood_results["trials"] = "_".join(
                     [get_trial(checkpoint) for checkpoint in sub_good_checkpoints]
                 )
+                ood_results["i"] = str(i)
                 print_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["all2"]:
@@ -729,7 +733,7 @@ def get_results_for_checkpoints(
         ]
         hessian_evals = zip(hessian_names, hessian_loaders)
         for i, (name, loader) in enumerate(hessian_evals):
-            print(f"Hessian at {name} for {len(loader)} samples")
+            print(f"Hessian at {name} for {len(loader)} batches")
             hessian_results = ens_algorithm.compute_hessian(loader)
             for key in hessian_results:
                 clean_key = key.split("/")[-1]
