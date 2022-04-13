@@ -548,7 +548,7 @@ def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, devi
             )
         elif inf_args.selection_strategy in ["random"]:
             gpuprint(f"Select random")
-            topk = max(len(found_checkpoints), inf_args.topk)
+            topk = min(len(found_checkpoints), inf_args.topk)
             rand_nums = sorted(random.sample(range(len(found_checkpoints)), topk))
             cluster_good_checkpoints = [found_checkpoints[i] for i in rand_nums]
         elif inf_args.topk != 0:
