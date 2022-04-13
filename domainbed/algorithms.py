@@ -31,9 +31,9 @@ ALGORITHMS = [
     "CORAL",
     "GroupDRO",
     'Mixup',
-    'Mixup_vanilla',
-    'Mixup_label',
-    'Cutmix_vanilla'
+    'Mixupv',
+    'Mixupl',
+    'Cutmixv'
 ]
 
 
@@ -977,12 +977,12 @@ class Mixup(ERM):
         return {'loss': objective.item()}
 
 
-class Mixup_vanilla(ERM):
+class Mixupv(ERM):
     """
     Standard Mixup
     """
     def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(Mixup_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
+        super(Mixupv, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
         if random.random() > self.hparams.get("mixup_proba", 1.):
@@ -998,12 +998,12 @@ class Mixup_vanilla(ERM):
         return {'loss': objective.item()}
 
 
-class Cutmix_vanilla(ERM):
+class Cutmixv(ERM):
     """
     Standard Cutmix
     """
     def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(Cutmix_vanilla, self).__init__(input_shape, num_classes, num_domains, hparams)
+        super(Cutmixv, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
         # minibatches: 3 x [32, 3, 224, 224]
@@ -1017,12 +1017,12 @@ class Cutmix_vanilla(ERM):
         return {'loss': objective.item()}
 
 
-class Mixup_label(ERM):
+class Mixupl(ERM):
     """
     Mixup of minibatches per label. Check https://github.com/galatolofederico/pytorch-balanced-batch
     """
     def __init__(self, input_shape, num_classes, num_domains, hparams):
-        super(Mixup_label, self).__init__(input_shape, num_classes, num_domains, hparams)
+        super(Mixupl, self).__init__(input_shape, num_classes, num_domains, hparams)
 
     def update(self, minibatches, unlabeled=None):
         if random.random() > self.hparams.get("mixup_proba", 1.):
