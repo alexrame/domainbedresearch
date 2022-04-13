@@ -90,12 +90,10 @@ def _hparams(algorithm, dataset, random_seed):
     elif algorithm == "Mixup":
         _hparam('mixup_alpha', 0.2, lambda r: 10**r.uniform(-1, -1))
         _hparam('mixup_proba', 1.0, lambda r: 1.)
-        # 10**r.uniform(-1, -1))
 
-    elif "Mixup" in algorithm or "Cutmix" in algorithm:
+    elif algorithm in ["Mixupv", "Mixupl", "Cutmixv"]:
         _hparam('mixup_alpha', 0.1, lambda r: 0.1)
         _hparam('mixup_proba', 0.5, lambda r: 10**r.uniform(-1, 0))
-        # 10**r.uniform(-1, -1))
 
     elif algorithm == "GroupDRO":
         _hparam('groupdro_eta', 1e-2, lambda r: 10**r.uniform(-3, -1))
