@@ -47,8 +47,8 @@ def main():
         sorted_checkpoints_per_cluster, inf_args, dataset, device, dict_checkpoints_to_score
     )
     if os.environ.get("DEBUG"):
-        print(good_checkpoints)
-        print(dict_checkpoints_to_score)
+        print("good_checkpoints", good_checkpoints)
+        print("dict_checkpoints_to_score", dict_checkpoints_to_score)
 
     ood_splits, ood_names = [], []
     for ood_env in inf_args.ood_data.split(","):
@@ -200,18 +200,19 @@ def main():
             end = len(good_checkpoints)
         good_indexes = []
         best_result = - float("inf")
+        keymetric = inf_args.mode.split("_")[1].replace("-", "_")
         for i in range(start, end):
             good_indexes.append(i)
             sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
             if os.environ.get("DEBUG", "0") != "0":
-                ood_results = {}
+                ood_results = {keymetric: random.random()}
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
 
-            keymetric = inf_args.mode.split("_")[1].replace("-", "_")
+
             new_result = - ood_results[keymetric]
             if new_result > best_result:
                 best_result = new_result
@@ -486,7 +487,6 @@ def find_checkpoints(inf_args, verbose=False):
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError(f"No checkpoints found for: {inf_args}")
         return []
-    printv(found_checkpoints_per_cluster, verbose)
     sorted_checkpoints_per_cluster = {
         cluster: sorted(found_checkpoints.keys(), key=lambda x: found_checkpoints[x], reverse=True)
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
