@@ -441,6 +441,7 @@ def find_checkpoints(inf_args, verbose=False):
 
     found_checkpoints_per_cluster = {}
     dict_checkpoints = {}
+    set_unique_key = set()
     for folder in checkpoints:
         if not os.path.isdir(folder):
             continue
@@ -451,7 +452,7 @@ def find_checkpoints(inf_args, verbose=False):
             continue
         save_dict = torch.load(model_path)
         train_args = NameSpace(save_dict["args"])
-        unique_key = str(save_dict["model_hparams"]["lr"]) + "_" + str(save_dict["model_hparams"]["resnet_dropout"])
+        unique_key = str(train_args.algorithm) + "_" + str(save_dict["model_hparams"]["lr"]) + "_" + str(save_dict["model_hparams"]["resnet_dropout"])
 
         if train_args.dataset != inf_args.dataset:
             gpuprintv(f"bad dataset: {name_folder}", verbose)
@@ -470,6 +471,12 @@ def find_checkpoints(inf_args, verbose=False):
         if os.environ.get("WEIGHT_DECAY") and save_dict["model_hparams"]["weight_decay"] != float(os.environ.get("WEIGHT_DECAY")):
             gpuprintv(f"Bad weight decay: {save_dict['model_hparams']['weight_decay']} in {name_folder}", True)
             continue
+
+        if os.environ.get("UNIQ", "0") != "0":
+            if unique_key in set_unique_key:
+                gpuprint(f"Skip {folder} of {unique_key}")
+            else:
+                set_unique_key.add(unique_key)
 
         gpuprintv(f"found: {name_folder}", verbose)
         run_results = json.loads(save_dict.get("results", ""))
@@ -495,6 +502,7 @@ def find_checkpoints(inf_args, verbose=False):
         dict_checkpoints[folder]["step"] = run_results.get("step", 5000)
         dict_checkpoints[folder]["unique_key"] = unique_key
 
+
     if len(found_checkpoints_per_cluster) == 0:
         raise ValueError(f"No checkpoints found for: {inf_args}")
         return []
@@ -503,20 +511,21 @@ def find_checkpoints(inf_args, verbose=False):
         for cluster, found_checkpoints in found_checkpoints_per_cluster.items()
     }
     gpuprintv(sorted_checkpoints_per_cluster, verbose)
-    if os.environ.get("UNIQ", "0") != "0":
-        filtered_dict = {}
-        for cluster, sorted_checkpoints in sorted_checkpoints_per_cluster.items():
-            set_unique_key = set()
-            filtered_dict[cluster] = []
-            for checkpoint in sorted_checkpoints:
-                unique_key = dict_checkpoints[checkpoint]["unique_key"]
-                if unique_key in set_unique_key:
-                    gpuprint(f"Skip {checkpoint} of {unique_key}")
-                else:
-                    filtered_dict[cluster].append(sorted_checkpoints)
-                    set_unique_key.add(unique_key)
-        sorted_checkpoints_per_cluster = filtered_dict
-        gpuprintv(sorted_checkpoints_per_cluster, True)
+
+    # if os.environ.get("UNIQ", "0") != "0":
+    #     filtered_dict = {}
+    #     for cluster, sorted_checkpoints in sorted_checkpoints_per_cluster.items():
+    #         set_unique_key = set()
+    #         filtered_dict[cluster] = []
+    #         for checkpoint in sorted_checkpoints:
+    #             unique_key = dict_checkpoints[checkpoint]["unique_key"]
+    #             if unique_key in set_unique_key:
+    #                 gpuprint(f"Skip {checkpoint} of {unique_key}")
+    #             else:
+    #                 filtered_dict[cluster].append(sorted_checkpoints)
+    #                 set_unique_key.add(unique_key)
+    #     sorted_checkpoints_per_cluster = filtered_dict
+    #     gpuprintv(sorted_checkpoints_per_cluster, True)
 
     dict_checkpoints_to_score = {
         checkpoint: found_checkpoints_per_cluster[cluster][checkpoint]
