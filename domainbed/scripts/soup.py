@@ -184,6 +184,7 @@ def main():
             sub_good_checkpoints = good_checkpoints[:i]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {}
+                print("i", sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
@@ -206,12 +207,12 @@ def main():
             sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
             if os.environ.get("DEBUG", "0") != "0":
                 ood_results = {keymetric: random.random()}
+                print("i", sub_good_checkpoints)
             else:
                 ood_results = get_results_for_checkpoints(
                     sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                     hessian_splits, device
                 )
-
 
             new_result = - ood_results[keymetric]
             if new_result > best_result:
