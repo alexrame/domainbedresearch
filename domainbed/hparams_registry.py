@@ -9,6 +9,26 @@ def _define_hparam(hparams, hparam_name, default_val, random_val_fn):
     hparams[hparam_name] = (hparams, hparam_name, default_val, random_val_fn)
 
 
+def hpf_to_d(seed):
+    d = {k: {} for k in range(10)}
+    for i in range(3):
+        for j in range(3):
+            k = 3 * i + j
+            if i == 0:
+                d[k]["resnet_dropout"] == 0.
+            elif i == 1:
+                d[k]["resnet_dropout"] == 0.1
+            elif i == 2:
+                d[k]["resnet_dropout"] == 0.5
+
+            if j == 0:
+                d[k]["lr"] == 5e-5
+            elif j == 1:
+                d[k]["lr"] == 3e-5
+            elif j == 2:
+                d[k]["lr"] == 1e-5
+    return d[seed]
+
 def _hparams(algorithm, dataset, random_seed):
     """
     Global registry of hyperparams. Each entry is a (default, random) tuple.

@@ -96,6 +96,10 @@ def main():
         hparams = hparams_registry.random_hparams(
             args.algorithm, args.dataset, misc.seed_hash(args.hparams_seed, args.trial_seed)
         )
+    if os.environ.get('HPF', "0") != "0":
+        assert os.environ.get("HP") == "X"
+        hparams.update(hparams_registry.hpf_to_d(args.hparams_seed))
+
     if args.hparams:
         hparams.update(json.loads(args.hparams))
     if args.hp:
@@ -286,7 +290,7 @@ def main():
         print(f"Model saved to: {file_path}")
         if filename_heavy:
             save_dict["model_dict"] = algorithm.cpu().state_dict()
-            if algorithm.hparams.get("swa"):
+            if algorithm.hparams.get("swa") and os.environ.get("SAVESWA"):
                 if algorithm.swas is not None:
                     for i, swa in enumerate(algorithm.swas):
                         save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()

@@ -37,7 +37,7 @@ class ERM(algorithms.ERM):
 
     def _init_from_save_dict(self, save_dict):
         self.load_state_dict(save_dict["model_dict"])
-        if self.hparams['swa']:
+        if self.hparams['swa'] and os.environ.get("SAVESWA"):
             if self.hparams['swa'] == 1:
                 self.swa.network_swa.load_state_dict(save_dict["swa_dict"])
             else:
@@ -151,7 +151,11 @@ class Soup(algorithms.Ensembling):
 
     def create_soups(self):
         self.soup = misc.Soup(self.networks)
-        self.soupswa = misc.Soup(self.swas)
+        if os.environ.get("SAVESWA"):
+            self.soupswa = misc.Soup(self.swas)
+        else:
+            self.soupswa = None
+
         if self._t_scaled.startswith("temp"):
             self.soup_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
             self.t_soup_optimizer = torch.optim.Adam(
@@ -159,12 +163,13 @@ class Soup(algorithms.Ensembling):
                 lr=1e-4,
                 weight_decay=0,
             )
-            self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
-            self.t_soupswa_optimizer = torch.optim.Adam(
-                [self.soupswa_temperature],
-                lr=1e-4,
-                weight_decay=0,
-            )
+            if self.soupswa is not None:
+                self.soupswa_temperature = nn.Parameter(torch.ones(1), requires_grad=True)
+                self.t_soupswa_optimizer = torch.optim.Adam(
+                    [self.soupswa_temperature],
+                    lr=1e-4,
+                    weight_decay=0,
+                )
         # if self._t_scaled.startswith("temp"):
         #     self.soup.update_tscaled(self._t_networks)
         #     self.soupswa.update_tscaled(self._t_swas)
@@ -191,7 +196,8 @@ class Soup(algorithms.Ensembling):
     def train(self, *args):
         algorithms.Algorithm.train(self, *args)
         self.soup.network_soup.train(*args)
-        self.soupswa.network_soup.train(*args)
+        if self.soupswa is not None:
+            self.soupswa.network_soup.train(*args)
         if "net" in self.do_ens:
             for net in self.networks:
                 net.train(*args)
@@ -256,6 +262,7 @@ class Soup(algorithms.Ensembling):
             return results
 
         if "swa" in self.do_ens:
+            assert self.soupswa is not None
             results["soupswa"] = self.soupswa.network_soup(x)
 
         batch_logits = []
