@@ -125,7 +125,7 @@ def main():
                         sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
                         hessian_splits, device
                     )
-                index = -2 if os.environ.get("INFOLDER", "0") == "0" else -1
+                index = -2 if os.environ.get("INFOLDER", "1") == "0" else -1
                 ood_results["dirs"] = "_".join(
                     [checkpoint.split("/")[index] for checkpoint in sub_good_checkpoints]
                 )
@@ -431,12 +431,12 @@ def find_checkpoints(inf_args, verbose=False):
         for output_dir in inf_args.output_dir.split(",")
         for path in os.listdir(output_dir)
     ]
-    if os.environ.get("INFOLDER", "0") != "0":
+    if os.environ.get("INFOLDER", "1") != "0":
         checkpoints = [
             os.path.join(checkpoint, path)
             for checkpoint in checkpoints
             if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
-            if path not in os.environ.get("SKIPSTEPS", "").split("_")
+            if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
 
     found_checkpoints_per_cluster = {}
