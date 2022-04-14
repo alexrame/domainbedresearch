@@ -417,9 +417,9 @@ class Soup(algorithms.Ensembling):
         preds0 = dict_stats[key0]["preds"].numpy()
         preds1 = dict_stats[key1]["preds"].numpy()
         results[f"Diversity/dr"] = diversity_metrics.ratio_errors(targets, preds0, preds1)
-        # results[f"Diversity/{regex}qstat"] = diversity_metrics.Q_statistic(
-        #     targets, preds0, preds1
-        # )
+        results[f"Diversity/qs"] = diversity_metrics.Q_statistic(
+            targets, preds0, preds1
+        )
         if compute_trace and "feats" in dict_stats[key0] and "feats" in dict_stats[key1]:
             feats0 = dict_stats[key0]["feats"]
             feats1 = dict_stats[key1]["feats"]
