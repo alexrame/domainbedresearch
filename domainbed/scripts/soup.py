@@ -599,7 +599,8 @@ def zip_unequal(good_checkpoints, dict_checkpoints_to_score):
         for l in good_checkpoints:
             if i < len(l):
                 outs_at_i[l[i]] = dict_checkpoints_to_score[l[i]]
-        outs.extend(sorted(outs_at_i.keys(), key=lambda x:outs_at_i[x], reverse=True))
+        reverse = (os.environ.get("REVERSEZIP", "True") == "True")
+        outs.extend(sorted(outs_at_i.keys(), key=lambda x: outs_at_i[x], reverse=reverse))
     return outs
 
 
