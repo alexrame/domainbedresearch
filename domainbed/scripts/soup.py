@@ -487,6 +487,9 @@ def find_checkpoints(inf_args, verbose=False):
         if os.environ.get("STEPS"):
             step = run_results.get("step", 5000)
             if os.environ.get("STEPS").startswith("mod"):
+                if name_folder == "best":
+                    print("Skip best")
+                    continue
                 if int(step) % int(os.environ.get("STEPS")[3:]) != 0:
                     gpuprintv(f"bad step {step} for: {name_folder}", verbose)
                     continue
