@@ -62,6 +62,9 @@ def main():
             dict_env_to_filter["test"] = "full" if inf_args.selection_data == "train" else "in"
             # else:
             #     dict_env_to_filter["test"] = "in"
+        elif ood_env == "testout":
+            # if inf_args.trial_seed == [-1]:
+            dict_env_to_filter["test"] = "out"
         elif ood_env == "train":
             dict_env_to_filter["train"] = "out"
         elif ood_env == "trainf":
@@ -384,7 +387,7 @@ class NameSpace(object):
         self.__dict__.update(adict)
 
 
-def get_score_run(results, criteriontopk, test_envs):
+def get_score_run(results, criteriontopk, test_envs, selection_data="train"):
     if not results:
         return 0.
     if criteriontopk in ["none", "0"]:
@@ -405,8 +408,14 @@ def get_score_run(results, criteriontopk, test_envs):
     for i in itertools.count():
         acc_key = f'env{i}_out_{criteriontopk}'
         if acc_key in results:
-            if i not in test_envs:
-                val_env_keys.append(acc_key)
+            if selection_data == "train":
+                if i not in test_envs:
+                    val_env_keys.append(acc_key)
+            elif selection_data == "test":
+                if i in test_envs:
+                    val_env_keys.append(acc_key)
+            else:
+                raise ValueError(selection_data)
         else:
             break
     assert i > 0
@@ -482,7 +491,7 @@ def find_checkpoints(inf_args, verbose=False):
         gpuprintv(f"found: {name_folder}", verbose)
         run_results = json.loads(save_dict.get("results", ""))
         score_folder = get_score_run(
-            run_results, criteriontopk=inf_args.criteriontopk, test_envs=inf_args.test_envs
+            run_results, criteriontopk=inf_args.criteriontopk, test_envs=inf_args.test_envs, selection_data=inf_args.selection_data
         )
         if os.environ.get("STEPS"):
             step = run_results.get("step", 5000)
