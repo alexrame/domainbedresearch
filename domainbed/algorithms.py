@@ -31,6 +31,7 @@ ALGORITHMS = [
     "CORAL",
     "GroupDRO",
     'Mixup',
+    "SagNet",
     "Mixupd",
     'Mixupv',
     'Mixupl',
