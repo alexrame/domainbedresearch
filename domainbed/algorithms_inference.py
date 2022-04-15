@@ -300,7 +300,7 @@ class Soup(algorithms.Ensembling):
         results = {}
 
         keys = [key for regex in self.regexes for key in regex.split("_")]
-        regexed_nets = [int(key[3:]) for key in keys if key.startswith("net")]
+        regexed_nets = [int(key[3:]) for key in keys if key.startswith("net") and key != "net"]
         regexed_swas = [int(key[3:]) for key in keys if key.startswith("swa")]
         # Do this stupid thing because memory error otherwise
         for num_member in range(self.num_members()):

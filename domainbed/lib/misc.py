@@ -316,12 +316,15 @@ def print_row(row, colwidth=10, latex=False):
 
 
 def print_rows(row1, row2):
-    def format_val(x):
+    def format_val(x, type_x=""):
         if np.issubdtype(type(x), np.floating):
-            x = "{:.3f}".format(x)
+            if "acc" in type_x:
+                x = "{:.5f}".format(x)
+            else:
+                x = "{:.3f}".format(x)
         return str(x)
 
-    to_print = ", ".join([format_val(x1) + ": " + format_val(x2) for x1, x2 in zip(row1, row2)])
+    to_print = ", ".join([format_val(x1) + ": " + format_val(x2, x1) for x1, x2 in zip(row1, row2)])
     print("{" + to_print + "}")
 
 
