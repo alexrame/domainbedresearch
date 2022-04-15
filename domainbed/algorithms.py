@@ -1326,7 +1326,7 @@ class SagNet(ERM):
         self.classifier_content = networks.Classifier(
             self.featurizer.n_outputs, num_classes, self.hparams["nonlinear_classifier"]
         )
-        self.network = nn.Sequential(self.featurizer, self.classifier)
+        self.network = nn.Sequential(self.featurizer, self.classifier_content)
         # style network
         self.classifier_style = networks.Classifier(
             self.featurizer.n_outputs, num_classes, self.hparams["nonlinear_classifier"]
