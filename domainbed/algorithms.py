@@ -1311,6 +1311,107 @@ class Fishr(ERM):
         return penalty / self.num_domains
 
 
+class SagNet(ERM):
+    """
+    Style Agnostic Network
+    Algorithm 1 from: https://arxiv.org/abs/1910.11645
+    """
+
+    def __init__(self, input_shape, num_classes, num_domains, hparams):
+        Algorithm.__init__(self, input_shape, num_classes, num_domains, hparams)
+        # featurizer network
+        self.featurizer = networks.Featurizer(input_shape, self.hparams)
+        # content network
+        self.classifier_content = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams["nonlinear_classifier"]
+        )
+        self.network = nn.Sequential(self.featurizer, self.classifier)
+        # style network
+        self.classifier_style = networks.Classifier(
+            self.featurizer.n_outputs, num_classes, self.hparams["nonlinear_classifier"]
+        )
+
+        self._init_network()
+        self._init_swa()
+        self._init_optimizer()
+        self._init_temperature()
+        self.weight_adv = hparams["sag_w_adv"]
+
+
+    def _init_optimizer(self):
+
+        def opt(p):
+            return torch.optim.Adam(p, lr=self.hparams["lr"], weight_decay=self.hparams["weight_decay"])
+
+        self.optimizer_f = opt(self.featurizer.parameters())
+        self.optimizer_c = opt(self.classifier_content.parameters())
+        self.optimizer_s = opt(self.classifier_style.parameters())
+
+    def forward_c(self, x):
+        # learning content network on randomized style
+        return self.classifier_content(self.randomize(self.featurizer(x), "style"))
+
+    def forward_s(self, x):
+        # learning style network on randomized content
+        return self.classifier_style(self.randomize(self.featurizer(x), "content"))
+
+    def randomize(self, x, what="style", eps=1e-5):
+        device = "cuda" if x.is_cuda else "cpu"
+        sizes = x.size()
+        alpha = torch.rand(sizes[0], 1).to(device)
+
+        if len(sizes) == 4:
+            x = x.view(sizes[0], sizes[1], -1)
+            alpha = alpha.unsqueeze(-1)
+
+        mean = x.mean(-1, keepdim=True)
+        var = x.var(-1, keepdim=True)
+
+        x = (x - mean) / (var + eps).sqrt()
+
+        idx_swap = torch.randperm(sizes[0])
+        if what == "style":
+            mean = alpha * mean + (1 - alpha) * mean[idx_swap]
+            var = alpha * var + (1 - alpha) * var[idx_swap]
+        else:
+            x = x[idx_swap].detach()
+
+        x = x * (var + eps).sqrt() + mean
+        return x.view(*sizes)
+
+    def update(self, minibatches, unlabeled=None):
+        all_x = torch.cat([x for x, y in minibatches])
+        all_y = torch.cat([y for x, y in minibatches])
+
+        # learn content
+        self.optimizer_f.zero_grad()
+        self.optimizer_c.zero_grad()
+        loss_c = F.cross_entropy(self.forward_c(all_x), all_y)
+        loss_c.backward()
+        self.optimizer_f.step()
+        self.optimizer_c.step()
+
+        # learn style
+        self.optimizer_s.zero_grad()
+        loss_s = F.cross_entropy(self.forward_s(all_x), all_y)
+        loss_s.backward()
+        self.optimizer_s.step()
+
+        # learn adversary
+        self.optimizer_f.zero_grad()
+        loss_adv = -F.log_softmax(self.forward_s(all_x), dim=1).mean(1).mean()
+        loss_adv = loss_adv * self.weight_adv
+        loss_adv.backward()
+        self.optimizer_f.step()
+
+        self.update_swa()
+        return {
+            "loss_c": loss_c.item(),
+            "loss_s": loss_s.item(),
+            "loss_adv": loss_adv.item(),
+        }
+
+
 class SAM(ERM):
     def _init_optimizer(self):
         phosam = self.hparams["phosam"]

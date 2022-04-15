@@ -226,7 +226,7 @@ def main():
             else:
                 new_result = - ood_results[keymetric]
 
-            if new_result > best_result:
+            if new_result >= best_result:
                 best_result = new_result
                 gpuprint(f"Accepting index {i}")
             else:
