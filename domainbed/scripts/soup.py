@@ -183,9 +183,9 @@ def main():
             gpuprint_results(inf_args, ood_results, len(sub_good_checkpoints))
     elif inf_args.mode.startswith("iter_"):
         start, end = [int(s) for s in inf_args.mode.split("_")[1:]]
-        if end > len(good_checkpoints) + 1:
+        if end > len(good_checkpoints) + 2:
             gpuprint(f"{end} too big")
-            end = len(good_checkpoints) + 1
+            end = len(good_checkpoints) + 2
 
         for i in range(start, end):
             sub_good_checkpoints = good_checkpoints[:i]
@@ -205,7 +205,7 @@ def main():
         start, end = [int(s) for s in inf_args.mode.split("_")[2:]]
         if end > len(good_checkpoints) + 1:
             gpuprint(f"{end} too big")
-            end = len(good_checkpoints)
+            end = len(good_checkpoints) + 1
         good_indexes = []
         best_result = - float("inf")
         keymetric = inf_args.mode.split("_")[1].replace("-", "_")
