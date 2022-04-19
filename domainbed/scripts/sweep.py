@@ -116,7 +116,7 @@ def make_args_list(
                     all_test_envs = [[i] for i in range(datasets.num_environments(dataset))]
                 else:
                     all_test_envs = all_test_env_combinations(datasets.num_environments(dataset))
-                print(all_test_envs)
+                print("all_test_envs: ", all_test_envs)
                 for _test_envs in all_test_envs:
                     for _hparams_seed in range(n_hparams_from, n_hparams):
                         if n_hparams != 1:

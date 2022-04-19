@@ -202,39 +202,45 @@ def main():
             gpuprint_results(inf_args, ood_results, i)
 
     elif inf_args.mode.startswith("iterg_"):
-        start, end = [int(s) for s in inf_args.mode.split("_")[2:]]
+        start, end = [int(s) for s in inf_args.mode.split("_")[2:4]]
+        multiples = 1 if len(inf_args.mode.split("_")) == 4 else int(inf_args.mode.split("_")[-1])
         if end > len(good_checkpoints) + 1:
             gpuprint(f"{end} too big")
             end = len(good_checkpoints) + 1
         good_indexes = []
         best_result = - float("inf")
         keymetric = inf_args.mode.split("_")[1].replace("-", "_")
-        for i in range(start , end):
-            i = i - 1
-            good_indexes.append(i)
-            sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
-            if os.environ.get("DEBUG", "0") != "0":
-                ood_results = {keymetric: random.random()}
-                gpuprint(i, sub_good_checkpoints)
-            else:
-                ood_results = get_results_for_checkpoints(
-                    sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
-                    hessian_splits, device
-                )
-            ood_results["i"] = i
-            process_line_iter(ood_results, inf_args)
-            gpuprint_results(inf_args, ood_results, i)
-            if "acc" in keymetric:
-                new_result = ood_results[keymetric]
-            else:
-                new_result = - ood_results[keymetric]
+        for multiple in range(multiples):
+            gpuprint(f"Begin multiple: {multiple}")
+            for i in range(start , end):
+                i = i - 1
+                if i in good_indexes:
+                    gpuprint(f"Skip {i} because previously added")
+                    continue
+                good_indexes.append(i)
+                sub_good_checkpoints = [good_checkpoints[index] for index in good_indexes]
+                if os.environ.get("DEBUG", "0") != "0":
+                    ood_results = {keymetric: random.random()}
+                    gpuprint(i, sub_good_checkpoints)
+                else:
+                    ood_results = get_results_for_checkpoints(
+                        sub_good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
+                        hessian_splits, device
+                    )
+                ood_results["i"] = i
+                process_line_iter(ood_results, inf_args)
+                gpuprint_results(inf_args, ood_results, i)
+                if "acc" in keymetric:
+                    new_result = ood_results[keymetric]
+                else:
+                    new_result = - ood_results[keymetric]
 
-            if new_result >= best_result:
-                best_result = new_result
-                gpuprint(f"Accepting index {i}")
-            else:
-                good_indexes.pop(-1)
-                gpuprint(f"Skipping index {i}")
+                if new_result >= best_result:
+                    best_result = new_result
+                    gpuprint(f"Accepting index {i}")
+                else:
+                    good_indexes.pop(-1)
+                    gpuprint(f"Skipping index {i}")
 
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
