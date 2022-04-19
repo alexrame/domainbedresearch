@@ -19,8 +19,11 @@ from torch.utils.data import Dataset
 import numpy as np
 from torchvision.transforms.transforms import RandomHorizontalFlip
 
-# from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
-# from wilds.datasets.fmow_dataset import FMoWDataset
+if os.environ.get("WILDS", "0") != "0":
+    from wilds.datasets.camelyon17_dataset import Camelyon17Dataset
+    from wilds.datasets.fmow_dataset import FMoWDataset
+else:
+    pass
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
