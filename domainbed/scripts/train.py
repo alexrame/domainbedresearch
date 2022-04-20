@@ -320,6 +320,10 @@ def main():
     best_score = -float("inf")
     best_score_swa = -float("inf")
 
+    if n_steps == 0:
+        assert os.environ.get("CREATE_INIT")
+        algorithm._save_network_for_future()
+        return
 
     for step in tqdm(range(0, n_steps)):
         step_start_time = time.time()
@@ -485,7 +489,8 @@ def main():
         results=json.dumps(results_dumpable, sort_keys=True),
         filename_heavy='model_with_weights.pkl'
     )
-    algorithm._save_network_for_future()
+
+    # algorithm._save_network_for_future()
 
     with open(os.path.join(args.output_dir, 'done'), 'w') as f:
         f.write('done')

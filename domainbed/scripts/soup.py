@@ -228,19 +228,21 @@ def main():
                         hessian_splits, device
                     )
                 ood_results["i"] = i
-                process_line_iter(ood_results, inf_args)
-                gpuprint_results(inf_args, ood_results, i)
                 if "acc" in keymetric:
                     new_result = ood_results[keymetric]
                 else:
                     new_result = - ood_results[keymetric]
 
                 if new_result >= best_result:
+                    ood_results["accept"] = 1
                     best_result = new_result
                     gpuprint(f"Accepting index {i}")
                 else:
+                    ood_results["accept"] = 0
                     good_indexes.pop(-1)
                     gpuprint(f"Skipping index {i}")
+                process_line_iter(ood_results, inf_args)
+                gpuprint_results(inf_args, ood_results, i)
 
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
