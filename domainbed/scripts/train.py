@@ -500,9 +500,10 @@ def main():
     metrics.update({k: v for k, v in results_end.items() if k not in ["hparams", "args"]})
 
     # metrics.update({"end" + str(k): v for k, v in results_end.items() if k not in ["hparams", "args", "step", "epoch", "lr"]})
-    experiments_handler.main_mlflow(
-        run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams
-    )
+    if os.environ.get("ADDMLFLOW"):
+        experiments_handler.main_mlflow(
+            run_name, metrics, args=args.__dict__, output_dir=args.output_dir, hparams=hparams
+        )
 
 
 if __name__ == "__main__":
