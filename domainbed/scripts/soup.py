@@ -249,7 +249,7 @@ def main():
             good_checkpoints, dataset, inf_args, ood_names, ood_splits, hessian_names,
             hessian_splits, device
         )
-        gpuprint_results(inf_args, ood_results, len(good_checkpoints))
+        gpuprint_results(inf_args, ood_results, len(good_checkpoints), mode="latex")
     else:
         raise ValueError(inf_args.mode)
 
@@ -309,7 +309,7 @@ def _get_args():
 
     # select which checkpoints
     parser.add_argument('--mode', type=str, default="")  # "" or "all",
-    parser.add_argument('--selection_strategy', type=str, default="")  # "greedy", "random", "zipf""
+    parser.add_argument('--selection_strategy', type=str, default="")  # "", "random",
     parser.add_argument(
         '--cluster',
         type=str,
@@ -327,7 +327,6 @@ def _get_args():
     parser.add_argument('--criteriontopk', type=str, default="acc_net")
     parser.add_argument('--topk', type=int, default=0)
     parser.add_argument('--selection_data', type=str, default="train")  # or "oracle"
-    parser.add_argument('--zipf_a', type=float, default=3.)
 
     parser.add_argument('--algorithm', type=str, default="")
     parser.add_argument('--t_scaled', type=str, default="")
@@ -571,27 +570,8 @@ def get_good_checkpoints(sorted_checkpoints_per_cluster, inf_args, dataset, devi
     good_checkpoints = []
     for cluster, found_checkpoints in sorted_checkpoints_per_cluster.items():
         gpuprint(f"Exploring cluster: {cluster} with {len(found_checkpoints)} checkpoints")
-        if inf_args.selection_strategy == "greedy":
-            gpuprint(f"Select from greedy")
-            if "trial_seed" in inf_args.cluster:
-                assert inf_args.selection_data == "train"
-                trial_seed = int(cluster.split("|")[inf_args.cluster.index("trial_seed")])
-            else:
-                trial_seed = inf_args.trial_seed[0]
-            val_splits, val_names = create_splits(
-                inf_args,
-                dataset,
-                dict_env_to_filter={"train" if inf_args.selection_data == "train" else "test": "out"},
-                trial_seed=trial_seed
-            )
-            cluster_good_checkpoints = get_greedy_checkpoints(
-                found_checkpoints, dataset, inf_args, val_names, val_splits, device
-            )
-        elif inf_args.selection_strategy == "zipf":
-            gpuprint(f"Select from zipf")
-            cluster_good_checkpoints = get_from_zipf(
-                found_checkpoints, inf_args.topk, a=inf_args.zipf_a
-            )
+        if inf_args.selection_strategy in ["greedy", "zipf"]:
+            raise ValueError()
         elif inf_args.selection_strategy in ["random"]:
             gpuprint(f"Select random")
             topk = min(len(found_checkpoints), inf_args.topk)
@@ -622,101 +602,6 @@ def zip_unequal(good_checkpoints, dict_checkpoints_to_score):
         reverse = (os.environ.get("REVERSEZIP", "True") == "True")
         outs.extend(sorted(outs_at_i.keys(), key=lambda x: outs_at_i[x], reverse=reverse))
     return outs
-
-
-def get_greedy_checkpoints(found_checkpoints, dataset, inf_args, val_names, val_splits, device):
-
-    ens_algorithm_class = algorithms_inference.get_algorithm_class("Soup")
-    ens_algorithm = ens_algorithm_class(
-        dataset.input_shape,
-        dataset.num_classes,
-        len(dataset) - len(inf_args.test_envs),
-        t_scaled=False,
-        regexes=[],
-        do_ens=[]
-    )
-    best_results = {}
-    good_nums = []
-    for num, folder in enumerate(found_checkpoints):
-        # gpuprint(f"Ingredient {num} from folder: {os.path.split(folder)[-1]}")
-
-        save_dict = torch.load(file_with_weights(folder))
-        train_args = NameSpace(save_dict["args"])
-
-        # load model
-        algorithm_class = algorithms_inference.get_algorithm_class(train_args.algorithm)
-        algorithm = algorithm_class(
-            dataset.input_shape,
-            dataset.num_classes,
-            len(dataset) - len(inf_args.test_envs),
-            hparams=save_dict["model_hparams"]
-        )
-        algorithm._init_from_save_dict(save_dict)
-        ens_algorithm.to("cpu")
-        ens_algorithm.add_new_algorithm(algorithm)
-        del algorithm
-        ens_algorithm.to(device)
-
-        random.seed(train_args.seed)
-        np.random.seed(train_args.seed)
-        torch.manual_seed(train_args.seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-        val_loaders = [
-            FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
-            for split in val_splits
-        ]
-        val_results = {}
-        val_evals = zip(val_names, val_loaders)
-        for name, loader in val_evals:
-            # gpuprint(f"Inference at {name} at num {num}")
-            results_of_one_eval = ens_algorithm.accuracy(
-                loader,
-                device,
-                compute_trace=False,
-                update_temperature=False,
-                output_temperature=False
-            )
-            for key in results_of_one_eval:
-                val_results[key] = val_results.get(key,
-                                                   0) + results_of_one_eval[key] / len(val_names)
-
-        # gpuprint(f"Val results for {inf_args} at {num}")
-        # results_keys = sorted(val_results.keys())
-        # misc.gpuprint_row([key.split("/")[-1] for key in results_keys], colwidth=15, latex=True)
-        # misc.gpuprint_row([val_results[key] for key in results_keys], colwidth=15, latex=True)
-
-        for key in val_results:
-            if not key.startswith("Accuracies"):
-                continue
-            if val_results[key] > best_results.get(key, -float("inf")):
-                if key == "Accuracies/acc_soup":
-                    good_nums.append(num)
-                best_results[key] = val_results[key]
-
-        if num not in good_nums:
-            # ens_algorithm.delete_last()
-            gpuprint(f"Stop at num {num}")
-            break
-        else:
-            gpuprint(f"Add num {num}")
-        # gpuprint("")
-
-    gpuprint(f"Best OOD results for {inf_args} with {len(good_nums)} checkpoints")
-    gpuprint(best_results)
-    return [found_checkpoints[num] for num in good_nums]
-
-
-def get_from_zipf(found_checkpoints, topk, a=3):
-    n = len(found_checkpoints)
-    nums = set([])
-    while len(nums) != topk:
-        z = np.random.zipf(a, 1)[0]
-        if z < n:
-            nums.add(z)
-    return [checkpoint for i, checkpoint in enumerate(found_checkpoints) if i in nums]
-
 
 
 def get_results_for_checkpoints(
@@ -803,7 +688,7 @@ def get_results_for_checkpoints(
     return ood_results
 
 
-def gpuprint_results(inf_args, ood_results, len_):
+def gpuprint_results(inf_args, ood_results, len_, mode="normal"):
     ood_results_keys = sorted(ood_results.keys())
     gpuprint(
         f"OOD results for {inf_args} with {len_}"
@@ -811,6 +696,7 @@ def gpuprint_results(inf_args, ood_results, len_):
     misc.print_rows(
         row1=ood_results_keys,
         row2=[ood_results[key] for key in ood_results_keys],
+        mode=mode
     )
 
 

@@ -315,11 +315,14 @@ def print_row(row, colwidth=10, latex=False):
     print(sep.join([format_val(x) for x in row]), end_)
 
 
-def print_rows(row1, row2):
+def print_rows(row1, row2, mode="normal"):
     def format_val(x, type_x=""):
         if np.issubdtype(type(x), np.floating):
             if "acc" in type_x:
-                x = "{:.5f}".format(x)
+                if mode == "latex":
+                    x = "{:.1f}".format(x*100)
+                else:
+                    x = "{:.5f}".format(x)
             else:
                 x = "{:.3f}".format(x)
         return str(x)
