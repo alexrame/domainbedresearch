@@ -455,7 +455,10 @@ def find_checkpoints(inf_args, verbose=False):
             if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
     elif os.environ.get("DONE", "1") != "0":
-        checkpoints = [checkpoint for checkpoint in checkpoints if "done" in os.listdir(checkpoint)]
+        checkpoints = [
+            checkpoint for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
+        ]
 
     found_checkpoints_per_cluster = {}
     dict_checkpoints = {}
