@@ -228,6 +228,10 @@ def main():
                         hessian_splits, device
                     )
                 ood_results["i"] = i
+                if keymetric not in ood_results:
+                    print(ood_results, keymetric)
+                    raise ValueError()
+
                 if "acc" in keymetric:
                     new_result = ood_results[keymetric]
                 else:
