@@ -348,17 +348,17 @@ class ERM(Algorithm):
                             dict_stats[key]["feats"] = []
                         dict_stats[key]["feats"].append(dict_feats[key])
 
-                    if do_temperature and key in list_temperatures:
-                        temperature = self.get_temperature(key)
-                        if temperature is None:
-                            continue
-                        temperature = temperature.to(device)
-                        probstemp = torch.softmax(
-                            misc.apply_temperature_on_logits(logits.detach(), temperature), dim=1
-                        )
-                        if "confstemp" not in dict_stats[key]:
-                            dict_stats[key]["confstemp"] = []
-                        dict_stats[key]["confstemp"].append(probstemp.max(dim=1)[0].cpu())
+                    # if do_temperature and key in list_temperatures:
+                    #     temperature = self.get_temperature(key)
+                    #     if temperature is None:
+                    #         continue
+                    #     temperature = temperature.to(device)
+                    #     probstemp = torch.softmax(
+                    #         misc.apply_temperature_on_logits(logits.detach(), temperature), dim=1
+                    #     )
+                    #     # if "confstemp" not in dict_stats[key]:
+                    #     #     dict_stats[key]["confstemp"] = []
+                    #     # dict_stats[key]["confstemp"].append(probstemp.max(dim=1)[0].cpu())
 
         for key0 in dict_stats:
             for key1 in dict_stats[key0]:
@@ -374,24 +374,24 @@ class ERM(Algorithm):
         for key in dict_stats:
             results[f"Accuracies/acc_{key}"] = sum(
                 dict_stats[key]["correct"].numpy()) / len(dict_stats[key]["correct"].numpy())
-            results[f"Calibration/ece_{key}"] = misc.get_ece(
-                dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
-            )
-            if "confstemp" in dict_stats[key]:
-                results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
-                    dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
-                )
+            # results[f"Calibration/ece_{key}"] = misc.get_ece(
+            #     dict_stats[key]["confs"].numpy(), dict_stats[key]["correct"].numpy()
+            # )
+            # if "confstemp" in dict_stats[key]:
+            #     results[f"Calibration/ecetemp_{key}"] = misc.get_ece(
+            #         dict_stats[key]["confstemp"].numpy(), dict_stats[key]["correct"].numpy()
+            #     )
 
         if self.hparams.get("num_members"):
             results["Accuracies/acc_netm"] = np.mean([results[f"Accuracies/acc_net{key}"] for key in range(self.hparams.get("num_members"))])
-            results["Calibration/ece_netm"] = np.mean(
-                [results[f"Calibration/ece_net{key}"] for key in range(self.hparams.get("num_members"))]
-            )
+            # results["Calibration/ece_netm"] = np.mean(
+            #     [results[f"Calibration/ece_net{key}"] for key in range(self.hparams.get("num_members"))]
+            # )
             if self.hparams.get("swa"):
                 results["Accuracies/acc_swam"] = np.mean([results[f"Accuracies/acc_swa{key}"] for key in range(self.hparams.get("num_members"))])
-                results["Calibration/ece_swam"] = np.mean(
-                    [results[f"Calibration/ece_swa{key}"] for key in range(self.hparams.get("num_members"))]
-                )
+                # results["Calibration/ece_swam"] = np.mean(
+                #     [results[f"Calibration/ece_swa{key}"] for key in range(self.hparams.get("num_members"))]
+                # )
 
         targets_torch = torch.cat(batch_classes)
 
@@ -410,7 +410,8 @@ class ERM(Algorithm):
 
     def _compute_diversity(self, dict_stats, targets, compute_trace, device):
         results = {}
-        for regex in ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet",]:
+        for regex in []:
+            # ["swanet", "swa0net0", "swa0swa1", "net01", "soupnet",]:
             if regex == "swanet":
                 key0 = "swa"
                 key1 = "net"
