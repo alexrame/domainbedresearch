@@ -480,6 +480,9 @@ def main():
         if scheduler is not None:
             scheduler.step()
 
+    if os.environ.get("CREATE_INIT"):
+        algorithm._save_network_for_future()
+
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
