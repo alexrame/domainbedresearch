@@ -111,11 +111,16 @@ class ERM(Algorithm):
             self.network.load_state_dict(weights)
 
     def _save_network_for_future(self):
+        if not os.environ.get("CREATE_INIT"):
+            return
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
-        if os.environ.get("CREATE_INIT"):
-            assert not os.path.exists(path)
-            print('Saving network weights for future')
-            torch.save(self.network.state_dict(), path)
+        assert not os.path.exists(path)
+        print('Saving network weights for future')
+        torch.save(self.network.state_dict(), path)
+        if self.hparams['swa']:
+            swa_path = str(self.hparams["shared_init"]) + "_swa_" + str(self.num_classes)
+            assert not os.path.exists(swa_path)
+            torch.save(self.swa.network_swa.state_dict(), swa_path)
 
     def _init_temperature(self, init_optimizers=True):
         self.temperature = nn.Parameter(torch.ones(1), requires_grad=True)
