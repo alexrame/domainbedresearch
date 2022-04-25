@@ -657,7 +657,7 @@ def get_results_for_checkpoints(
     ood_loaders = [
         FastDataLoader(
             dataset=split,
-            batch_size=64*float(os.environ.get("BS", 1)),
+            batch_size=64*int(os.environ.get("BS", 1)),
             num_workers=os.environ.get("NW", dataset.N_WORKERS)
             )
         for split in ood_splits
