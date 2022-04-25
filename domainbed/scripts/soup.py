@@ -209,6 +209,7 @@ def main():
             end = len(good_checkpoints) + 1
         good_indexes = []
         best_result = - float("inf")
+        best_ood_result = {}
         keymetric = inf_args.mode.split("_")[1].replace("-", "_")
         for multiple in range(multiples):
             gpuprint(f"Begin multiple: {multiple}")
@@ -238,6 +239,7 @@ def main():
                     new_result = - ood_results[keymetric]
 
                 if new_result >= best_result:
+                    best_ood_result = ood_results
                     ood_results["accept"] = 1
                     best_result = new_result
                     gpuprint(f"Accepting index {i}")
@@ -247,6 +249,8 @@ def main():
                     gpuprint(f"Skipping index {i}")
                 process_line_iter(ood_results, inf_args)
                 gpuprint_results(inf_args, ood_results, i)
+            best_ood_result["final"] = 1
+            process_line_iter(best_ood_result, inf_args)
 
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
