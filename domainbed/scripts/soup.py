@@ -679,7 +679,7 @@ def get_results_for_checkpoints(
             FastDataLoader(
                 dataset=split,
                 batch_size=int(os.environ.get("HESSIANBS", 64)),
-                num_workers=dataset.N_WORKERS
+                num_workers=os.environ.get("NW", dataset.N_WORKERS)
             ) for split in hessian_splits
         ]
         hessian_evals = zip(hessian_names, hessian_loaders)
