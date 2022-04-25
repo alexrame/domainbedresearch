@@ -250,7 +250,7 @@ def main():
                 process_line_iter(ood_results, inf_args)
                 gpuprint_results(inf_args, ood_results, i)
             best_ood_result["final"] = 1
-            process_line_iter(best_ood_result, inf_args)
+            gpuprint_results(inf_args, best_ood_result, -1)
 
     elif inf_args.mode in ["", "ens"]:
         ood_results = get_results_for_checkpoints(
