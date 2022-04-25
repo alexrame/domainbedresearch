@@ -651,7 +651,11 @@ def get_results_for_checkpoints(
     torch.backends.cudnn.benchmark = False
 
     ood_loaders = [
-        FastDataLoader(dataset=split, batch_size=64, num_workers=dataset.N_WORKERS)
+        FastDataLoader(
+            dataset=split,
+            batch_size=64*float(os.environ.get("BS", 1)),
+            num_workers=os.environ.get("NW", dataset.N_WORKERS)
+            )
         for split in ood_splits
     ]
 
