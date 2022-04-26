@@ -23,6 +23,50 @@ from domainbed.lib import misc, experiments_handler
 from domainbed.lib.fast_data_loader import InfiniteDataLoader, FastDataLoader
 
 
+def save_checkpoint(
+    dataset,
+    hparams,
+    args,
+    algorithm,
+    filename,
+    results,
+    filename_heavy=None,
+    do_save=True,
+    save_swa=False,
+    **kwargs
+):
+    save_dict = {
+        "args": vars(args),
+        "results": results,
+        "model_input_shape": dataset.input_shape,
+        "model_num_classes": dataset.num_classes,
+        "model_hparams": hparams,
+    }
+    save_dict.update(kwargs)
+    file_path = os.path.join(args.output_dir, filename)
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    if do_save:
+        torch.save(save_dict, file_path)
+    print(f"Model saved to: {file_path}")
+    if filename_heavy:
+        save_dict["model_dict"] = algorithm.cpu().state_dict()
+        if algorithm.hparams.get("swa") and os.environ.get("SAVESWA", save_swa):
+            if algorithm.swas is not None:
+                for i, swa in enumerate(algorithm.swas):
+                    save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
+            if algorithm.swa is not None:
+                save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
+        file_path_heavy = os.path.join(args.output_dir, filename_heavy)
+        directory = os.path.dirname(file_path_heavy)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        if do_save:
+            torch.save(save_dict, file_path_heavy)
+    return {key: value for key, value in save_dict.items()}, file_path
+
+
 def main():
     parser = argparse.ArgumentParser(description='Domain generalization')
     parser.add_argument('--data_dir', type=str, default="default")
@@ -271,7 +315,6 @@ def main():
         f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}"
     )
 
-
     def get_score(results, criteriontopk):
         val_env_keys = []
         for i in itertools.count():
@@ -409,8 +452,11 @@ def main():
             if current_score > best_score and step > 1000:
                 best_score = current_score
                 print(f"Saving new best score at step: {step}")
-                best_save_dict, best_file_path = misc.save_checkpoint(
-                    hparams, args, algorithm,
+                best_save_dict, best_file_path = save_checkpoint(
+                    dataset,
+                    hparams,
+                    args,
+                    algorithm,
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'best/model_with_weights.pkl',
@@ -423,7 +469,8 @@ def main():
             if False and current_score_swa > best_score_swa:
                 best_score_swa = current_score_swa
                 print(f"Saving new best score_swa at step: {step}")
-                misc.save_checkpoint(
+                save_checkpoint(
+                    dataset,
                     hparams,
                     args,
                     algorithm,
@@ -442,13 +489,14 @@ def main():
                 elif os.environ.get("STEPS").startswith("mod"):
                     save_epoch |= int(step) % int(os.environ.get("STEPS")[3:]) == 0
                 else:
-                    save_epoch |= step in [
-                        int(s) for s in os.environ.get("STEPS").split("_")
-                    ]
+                    save_epoch |= step in [int(s) for s in os.environ.get("STEPS").split("_")]
 
             if save_epoch:
-                misc.save_checkpoint(
-                    hparams, args, algorithm,
+                save_checkpoint(
+                    dataset,
+                    hparams,
+                    args,
+                    algorithm,
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'{step}/model_with_weights.pkl'
@@ -462,8 +510,6 @@ def main():
         if scheduler is not None:
             scheduler.step()
 
-
-
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
@@ -471,7 +517,8 @@ def main():
         torch.save(best_save_dict, best_file_path)
 
     results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
-    misc.save_checkpoint(
+    save_checkpoint(
+        dataset,
         hparams,
         args,
         algorithm,
