@@ -71,7 +71,7 @@ def get_run_name(args, hparams, hp):
         "algorithm",
         ]])
 
-    # name += "_".join(args["test_envs"])
+    name += "-".join(args["test_envs"])
 
     if args["algorithm"] in ["FisherMMD", "IRMAdv"]:
         keys = [
@@ -105,7 +105,7 @@ def get_run_name(args, hparams, hp):
                 param = ""
         return param.replace(".", "e")
 
-    name += "_" + "_".join([key[:3].replace("_", "") + params_to_str(hparams[key]) for key in keys])
+    name += "_" + "_".join([key[:3].replace("_", "") + params_to_str(hparams[key]).replace("/", "-") for key in keys if key != "shared_init"])
     name += "_" + datetime.datetime.now().strftime("%d%H%M%S")
     return name
 
