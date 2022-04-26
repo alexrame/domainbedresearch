@@ -71,7 +71,7 @@ def get_run_name(args, hparams, hp):
         "algorithm",
         ]])
 
-    name += "-".join(args["test_envs"])
+    name += "-".join([str(i) for i in args["test_envs"]])
 
     if args["algorithm"] in ["FisherMMD", "IRMAdv"]:
         keys = [
