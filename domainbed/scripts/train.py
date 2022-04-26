@@ -271,36 +271,6 @@ def main():
         f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}"
     )
 
-    def save_checkpoint(filename, results, filename_heavy=None, save_swa=False, **kwargs):
-        if args.skip_model_save:
-            return
-        save_dict = {
-            "args": vars(args),
-            "results": results,
-            "model_input_shape": dataset.input_shape,
-            "model_num_classes": dataset.num_classes,
-            "model_hparams": hparams,
-        }
-        save_dict.update(kwargs)
-        file_path = os.path.join(args.output_dir, filename)
-        directory = os.path.dirname(file_path)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        torch.save(save_dict, file_path)
-        print(f"Model saved to: {file_path}")
-        if filename_heavy:
-            save_dict["model_dict"] = algorithm.cpu().state_dict()
-            if algorithm.hparams.get("swa") and os.environ.get("SAVESWA", save_swa):
-                if algorithm.swas is not None:
-                    for i, swa in enumerate(algorithm.swas):
-                        save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
-                if algorithm.swa is not None:
-                    save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
-            file_path_heavy = os.path.join(args.output_dir, filename_heavy)
-            directory = os.path.dirname(file_path_heavy)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            torch.save(save_dict, file_path_heavy)
 
     def get_score(results, criteriontopk):
         val_env_keys = []
@@ -319,6 +289,7 @@ def main():
     results_end = {}
     best_score = -float("inf")
     best_score_swa = -float("inf")
+    best_save_dict = {}
 
     if n_steps == 0:
         assert os.environ.get("CREATE_INIT")
@@ -435,19 +406,27 @@ def main():
             else:
                 current_score_swa = -float("inf")
 
-            if current_score > best_score and step > 2500:
+            if current_score > best_score and step > 1000:
                 best_score = current_score
                 print(f"Saving new best score at step: {step}")
-                save_checkpoint(
+                best_save_dict, best_file_path = misc.save_checkpoint(
+                    hparams, args, algorithm,
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
-                    filename_heavy=f'best/model_with_weights.pkl'
+                    filename_heavy=f'best/model_with_weights.pkl',
+                    do_save=(os.environ.get("ONLINESAVE", "1") != "0")
                 )
+                if os.environ.get("CREATE_INIT"):
+                    algorithm._save_network_for_future()
                 algorithm.to(device)
+
             if False and current_score_swa > best_score_swa:
                 best_score_swa = current_score_swa
                 print(f"Saving new best score_swa at step: {step}")
-                save_checkpoint(
+                misc.save_checkpoint(
+                    hparams,
+                    args,
+                    algorithm,
                     'bestswa/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'bestswa/model_with_weights.pkl'
@@ -466,12 +445,15 @@ def main():
                     save_epoch |= step in [
                         int(s) for s in os.environ.get("STEPS").split("_")
                     ]
+
             if save_epoch:
-                save_checkpoint(
+                misc.save_checkpoint(
+                    hparams, args, algorithm,
                     f'{step}/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'{step}/model_with_weights.pkl'
                 )
+
                 algorithm.to(device)
 
             for key, value in algorithm.get_tb_dict().items():
@@ -480,14 +462,19 @@ def main():
         if scheduler is not None:
             scheduler.step()
 
-    if os.environ.get("CREATE_INIT"):
-        algorithm._save_network_for_future()
+
 
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
+    if os.environ.get("ONLINESAVE", "1") == "0":
+        torch.save(best_save_dict, best_file_path)
+
     results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
-    save_checkpoint(
+    misc.save_checkpoint(
+        hparams,
+        args,
+        algorithm,
         'model.pkl',
         results=json.dumps(results_dumpable, sort_keys=True),
         filename_heavy='model_with_weights.pkl',

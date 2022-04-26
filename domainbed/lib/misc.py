@@ -11,6 +11,7 @@ import operator
 import numpy as np
 import torch
 import json
+import os
 import torch.nn as nn
 from torch.utils.data import dataset
 from torch.utils.data.dataset import Dataset
@@ -50,6 +51,41 @@ def compute_hessian(network, loader, maxIter=100):
         network, nn.CrossEntropyLoss(reduction='mean'), dataloader=loader, cuda=True
     )
     return np.mean(hessian_comp_soup.trace(maxIter=maxIter))
+
+
+def save_checkpoint(hparams, args, algorithm, filename, results, filename_heavy=None, do_save=True, save_swa=False, **kwargs):
+    if args.skip_model_save:
+        return
+    save_dict = {
+        "args": vars(args),
+        "results": results,
+        "model_input_shape": dataset.input_shape,
+        "model_num_classes": dataset.num_classes,
+        "model_hparams": hparams,
+    }
+    save_dict.update(kwargs)
+    file_path = os.path.join(args.output_dir, filename)
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    if do_save:
+        torch.save(save_dict, file_path)
+    print(f"Model saved to: {file_path}")
+    if filename_heavy:
+        save_dict["model_dict"] = algorithm.cpu().state_dict()
+        if algorithm.hparams.get("swa") and os.environ.get("SAVESWA", save_swa):
+            if algorithm.swas is not None:
+                for i, swa in enumerate(algorithm.swas):
+                    save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
+            if algorithm.swa is not None:
+                save_dict["swa_dict"] = algorithm.swa.network_swa.cpu().state_dict()
+        file_path_heavy = os.path.join(args.output_dir, filename_heavy)
+        directory = os.path.dirname(file_path_heavy)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        if do_save:
+            torch.save(save_dict, file_path_heavy)
+    return {key: value for key, value in save_dict.items()}, file_path
 
 
 class SWA():

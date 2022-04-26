@@ -114,7 +114,7 @@ class ERM(Algorithm):
         if not os.environ.get("CREATE_INIT"):
             return
         path = str(self.hparams["shared_init"]) + "_" + str(self.num_classes)
-        assert not os.path.exists(path)
+        # assert not os.path.exists(path)
         print('Saving network weights for future')
         torch.save(self.network.state_dict(), path)
         if self.hparams['swa']:
