@@ -261,8 +261,7 @@ class Soup(algorithms.Ensembling):
         if not self.do_ens:
             return results
 
-        if "swa" in self.do_ens:
-            assert self.soupswa is not None
+        if self.soupswa is not None:
             results["soupswa"] = self.soupswa.network_soup(x)
 
         batch_logits = []
@@ -430,17 +429,19 @@ class Soup(algorithms.Ensembling):
         # del self.swas[1:]
         # del self.networks[1:]
 
-        # print(f"Begin Hessian soup")
+        print(f"Begin Hessian soup")
         results = {}
         results["Flatness/souphess"] = misc.compute_hessian(
             self.soup.network_soup, loader, maxIter=10
         )
         # del self.soup.network_soup
 
-        # # print(f"Begin Hessian soupswa")
-        # # results["Flatness/soupswahess"] = misc.compute_hessian(
-        # #     self.soupswa.network_soup, loader, maxIter=10
-        # # )
+        if self.soupswa is not None:
+            print(f"Begin Hessian soupswa")
+            results["Flatness/soupswahess"] = misc.compute_hessian(
+                self.soupswa.network_soup, loader, maxIter=10
+            )
+
         # del self.soupswa.network_soup
         # if "net" in self.do_ens:
         #     print("Begin Hessian net0")

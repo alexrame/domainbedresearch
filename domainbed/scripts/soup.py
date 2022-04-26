@@ -500,6 +500,11 @@ def find_checkpoints(inf_args, verbose=False):
         if os.environ.get("WEIGHT_DECAY") and save_dict["model_hparams"]["weight_decay"] != float(os.environ.get("WEIGHT_DECAY")):
             gpuprintv(f"Bad weight decay: {save_dict['model_hparams']['weight_decay']} in {name_folder}", True)
             continue
+        if os.environ.get("SAVESWA"):
+            save_dict_with_weights = torch.load(os.path.join(folder, "model_with_weights.pkl"))
+            if "swa_dict" not in save_dict_with_weights:
+                gpuprintv(f"No swa dict in {name_folder}", True)
+                continue
 
         if os.environ.get("UNIQ", "0") != "0":
             if unique_key in set_unique_key:
