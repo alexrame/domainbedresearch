@@ -271,7 +271,7 @@ def main():
         f"n_steps: {n_steps} / n_epochs: {n_steps / steps_per_epoch} / steps_per_epoch: {steps_per_epoch} / checkpoints: {n_steps / checkpoint_freq}"
     )
 
-    def save_checkpoint(filename, results, filename_heavy=None, **kwargs):
+    def save_checkpoint(filename, results, filename_heavy=None, save_swa=False, **kwargs):
         if args.skip_model_save:
             return
         save_dict = {
@@ -290,7 +290,7 @@ def main():
         print(f"Model saved to: {file_path}")
         if filename_heavy:
             save_dict["model_dict"] = algorithm.cpu().state_dict()
-            if algorithm.hparams.get("swa") and os.environ.get("SAVESWA"):
+            if algorithm.hparams.get("swa") and os.environ.get("SAVESWA", save_swa):
                 if algorithm.swas is not None:
                     for i, swa in enumerate(algorithm.swas):
                         save_dict[f"swa{i}_dict"] = swa.network_swa.cpu().state_dict()
@@ -490,7 +490,8 @@ def main():
     save_checkpoint(
         'model.pkl',
         results=json.dumps(results_dumpable, sort_keys=True),
-        filename_heavy='model_with_weights.pkl'
+        filename_heavy='model_with_weights.pkl',
+        save_swa=True
     )
 
     # algorithm._save_network_for_future()
