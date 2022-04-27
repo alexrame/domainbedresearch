@@ -119,7 +119,7 @@ class ERM(Algorithm):
         torch.save(self.network.state_dict(), path)
         if self.hparams['swa']:
             swa_path = str(self.hparams["shared_init"]) + "_swa_" + str(self.num_classes)
-            assert not os.path.exists(swa_path)
+            # assert not os.path.exists(swa_path)
             torch.save(self.swa.network_swa.state_dict(), swa_path)
 
     def _init_temperature(self, init_optimizers=True):
