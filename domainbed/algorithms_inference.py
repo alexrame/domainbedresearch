@@ -208,6 +208,13 @@ class Soup(algorithms.Ensembling):
     def _init_memory(self):
         self.memory = {"net": 0, "swa": 0}
 
+    def add_new_algorithm_dynamic(self, algorithm):
+        if self.soup.network_soup is None:
+            self.soup.network_soup = copy.deepcopy(algorithm.network)
+        else:
+            self.soup.update_dynamic(algorithm.network)
+        self.soup.global_count += 1
+
     def add_new_algorithm(self, algorithm):
         self._init_memory()
         if isinstance(algorithm, ERM):

@@ -132,6 +132,7 @@ class Soup():
             self.update()
         else:
             self.network_soup = None
+        self.global_count = len(networks)
 
     def update(self):
         for param in zip(
@@ -139,6 +140,11 @@ class Soup():
         ):
             param_k = param[0]
             param_k.data = sum(param[1:]).data / len(self.networks)
+
+    def update_dynamic(self, network):
+        for param_q, param_k in zip(network.parameters(), self.network_soup.parameters()):
+            param_k.data = (param_k.data * self.global_count + param_q.data) / (1. + self.global_count)
+
 
     # def update_tscaled(self, temperatures):
     #     if len(self.networks) == 0:
