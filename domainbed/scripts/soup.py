@@ -648,7 +648,10 @@ def get_results_for_checkpoints(
             save_dict["model_hparams"]
         )
         algorithm._init_from_save_dict(save_dict)
-        ens_algorithm.add_new_algorithm_dynamic(algorithm)
+        if not inf_args.do_ens:
+            ens_algorithm.add_new_algorithm_dynamic(algorithm)
+        else:
+            ens_algorithm.add_new_algorithm(algorithm)
         del algorithm
 
     ens_algorithm.to(device)
