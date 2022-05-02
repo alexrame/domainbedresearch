@@ -455,7 +455,19 @@ def find_checkpoints(inf_args, verbose=False):
         for output_dir in inf_args.output_dir.split(",")
         for path in os.listdir(output_dir)
     ]
-    if os.environ.get("INFOLDER", "1") != "0":
+    if os.environ.get("INFOLDER", "1") == "both":
+        same_checkpoints = [
+            checkpoint for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
+        ]
+        in_checkpoints = [
+            os.path.join(checkpoint, path)
+            for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
+            if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
+        ]
+        checkpoints = same_checkpoints + in_checkpoints
+    elif os.environ.get("INFOLDER", "1") != "0":
         checkpoints = [
             os.path.join(checkpoint, path)
             for checkpoint in checkpoints
