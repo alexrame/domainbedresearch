@@ -460,7 +460,7 @@ def main():
                     'best/model.pkl',
                     results=json.dumps(results_dumpable, sort_keys=True),
                     filename_heavy=f'best/model_with_weights.pkl',
-                    do_save=(os.environ.get("ONLINESAVE", "1") != "0")
+                    do_save=(os.environ.get("ONLINESAVE", "0") != "0")
                 )
                 if os.environ.get("CREATE_INIT"):
                     algorithm._save_network_for_future()
@@ -513,7 +513,7 @@ def main():
     if hasattr(dataset, "after_training"):
         dataset.after_training(algorithm, args.output_dir, device=device)
 
-    if os.environ.get("ONLINESAVE", "1") == "0":
+    if os.environ.get("ONLINESAVE", "0") == "0":
         torch.save(best_save_dict, best_file_path)
 
     results_dumpable = {key: value for key, value in results.items() if misc.is_dumpable(value)}
