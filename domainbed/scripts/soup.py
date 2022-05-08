@@ -491,7 +491,7 @@ def find_checkpoints(inf_args, verbose=False):
             os.path.split(checkpoint)[-1] for checkpoint in checkpoints
             if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint) and max(
                 os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))
-            ) != "done"
+            ) == "done"
         ]
         print("Done exists and is last: ", done_checkpoints)
         raise ValueError("you stop here")
