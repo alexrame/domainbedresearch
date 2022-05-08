@@ -475,11 +475,29 @@ def find_checkpoints(inf_args, verbose=False):
             if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
     elif os.environ.get("DONE", "1") != "0":
+        notdone_checkpoints = [
+            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
+            and "done" not in os.listdir(checkpoint)
+        ]
+        print("notdonelast_checkpoints: ", notdone_checkpoints)
+        notdonelast_checkpoints = [
+            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
+            and "done" in os.listdir(checkpoint)
+            and max(os.listdir(checkpoint), key=os.path.getctime) != "done"
+        ]
+        print("notdonelast_checkpoints: ", notdonelast_checkpoints)
+        done_checkpoints = [
+            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint) and
+            "done" in os.listdir(checkpoint)
+            and max(os.listdir(checkpoint), key=os.path.getctime) == "done"
+        ]
+        print("done_checkpoints: ", done_checkpoints)
+        raise KeyboardInterrupt("you stop here")
+    elif os.environ.get("DONE", "1") != "0":
         checkpoints = [
             checkpoint for checkpoint in checkpoints
             if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
         ]
-
     found_checkpoints_per_cluster = {}
     dict_checkpoints = {}
     set_unique_key = set()
