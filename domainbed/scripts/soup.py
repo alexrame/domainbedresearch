@@ -481,20 +481,28 @@ def find_checkpoints(inf_args, verbose=False):
             and "done" not in os.listdir(checkpoint)
         ]
         print("Missing file done: ", notdone_checkpoints)
+        notbest_checkpoints = [
+            os.path.split(checkpoint)[-1]
+            for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "best" not in os.listdir(checkpoint)
+        ]
+        print("Missing file done: ", notbest_checkpoints)
         notdonelast_checkpoints = [
-            os.path.split(checkpoint)[-1] for checkpoint in checkpoints if os.path.isdir(checkpoint)
-            and "done" in os.listdir(checkpoint)
-            and max(os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))) != "done"
+            os.path.split(checkpoint)[-1] for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "best" not in os.listdir(checkpoint) and "best" not in os.listdir(checkpoint)
+            and os.path.getctime(os.path.join(checkpoint, "done")) < os.path.getctime(os.path.join(checkpoint, "best", "model.pkl"))
         ]
         print("Done exists but is not last: ", notdonelast_checkpoints)
-        done_checkpoints = [
-            os.path.split(checkpoint)[-1] for checkpoint in checkpoints
-            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint) and max(
-                os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))
-            ) == "done"
+        donelast_checkpoints = [
+            os.path.split(checkpoint)[-1]
+            for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "best" not in os.listdir(checkpoint) and "best" not in
+            os.listdir(checkpoint) and
+            os.path.getctime(os.path.join(checkpoint, "done")) > os.path.getctime(os.path.join(checkpoint, "best", "model.pkl"))
         ]
-        print("Done exists and is last: ", done_checkpoints)
+        print("Done exists and is last: ", donelast_checkpoints)
         raise ValueError("you stop here")
+
     elif os.environ.get("DONE", "1") != "0":
         checkpoints = [
             checkpoint for checkpoint in checkpoints
