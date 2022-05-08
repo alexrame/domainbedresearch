@@ -484,7 +484,7 @@ def find_checkpoints(inf_args, verbose=False):
         notdonelast_checkpoints = [
             checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
             and "done" in os.listdir(checkpoint)
-            and max(os.listdir(checkpoint), key=os.path.getctime) != "done"
+            and max(os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))) != "done"
         ]
         print("notdonelast_checkpoints: ", notdonelast_checkpoints)
         done_checkpoints = [
