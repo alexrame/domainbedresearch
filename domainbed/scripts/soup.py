@@ -461,19 +461,20 @@ def find_checkpoints(inf_args, verbose=False):
             if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
         ]
         in_checkpoints = [
-            os.path.join(checkpoint, path)
-            for checkpoint in checkpoints
-            if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
+            os.path.join(checkpoint, path) for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
+            for path in os.listdir(checkpoint)
             if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
         checkpoints = same_checkpoints + in_checkpoints
     elif os.environ.get("INFOLDER", "1") != "0":
         checkpoints = [
-            os.path.join(checkpoint, path)
-            for checkpoint in checkpoints
-            if os.path.isdir(checkpoint) for path in os.listdir(checkpoint)
+            os.path.join(checkpoint, path) for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint)
+            for path in os.listdir(checkpoint)
             if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
+
     elif os.environ.get("DONE", "1") != "checklast":
         notdone_checkpoints = [
             checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
@@ -492,7 +493,7 @@ def find_checkpoints(inf_args, verbose=False):
             and max(os.listdir(checkpoint), key=os.path.getctime) == "done"
         ]
         print("done_checkpoints: ", done_checkpoints)
-        raise KeyboardInterrupt("you stop here")
+        raise ValueError("you stop here")
     elif os.environ.get("DONE", "1") != "0":
         checkpoints = [
             checkpoint for checkpoint in checkpoints
