@@ -475,7 +475,7 @@ def find_checkpoints(inf_args, verbose=False):
             if path not in os.environ.get("SKIPSTEPS", "bestswa").split("_")
         ]
 
-    elif os.environ.get("DONE", "1") != "checklast":
+    elif os.environ.get("DONE", "1") == "checklast":
         notdone_checkpoints = [
             checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
             and "done" not in os.listdir(checkpoint)
