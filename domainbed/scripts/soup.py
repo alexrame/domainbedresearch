@@ -477,22 +477,23 @@ def find_checkpoints(inf_args, verbose=False):
 
     elif os.environ.get("DONE", "1") == "checklast":
         notdone_checkpoints = [
-            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
+            os.path.split(checkpoint)[-1] for checkpoint in checkpoints if os.path.isdir(checkpoint)
             and "done" not in os.listdir(checkpoint)
         ]
-        print("notdonelast_checkpoints: ", notdone_checkpoints)
+        print("Missing file done: ", notdone_checkpoints)
         notdonelast_checkpoints = [
-            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint)
+            os.path.split(checkpoint)[-1] for checkpoint in checkpoints if os.path.isdir(checkpoint)
             and "done" in os.listdir(checkpoint)
             and max(os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))) != "done"
         ]
-        print("notdonelast_checkpoints: ", notdonelast_checkpoints)
+        print("Done exists but is not last: ", notdonelast_checkpoints)
         done_checkpoints = [
-            checkpoint for checkpoint in checkpoints if os.path.isdir(checkpoint) and
-            "done" in os.listdir(checkpoint)
-            and max(os.listdir(checkpoint), key=os.path.getctime) == "done"
+            os.path.split(checkpoint)[-1] for checkpoint in checkpoints
+            if os.path.isdir(checkpoint) and "done" in os.listdir(checkpoint) and max(
+                os.listdir(checkpoint), key=lambda x: os.path.getctime(os.path.join(checkpoint, x))
+            ) != "done"
         ]
-        print("done_checkpoints: ", done_checkpoints)
+        print("Done exists and is last: ", done_checkpoints)
         raise ValueError("you stop here")
     elif os.environ.get("DONE", "1") != "0":
         checkpoints = [
