@@ -6,6 +6,8 @@ import datetime
 from domainbed.lib import misc
 
 
+# CUDA_VISIBLE_DEVICES=0 python3 -m domainbed.scripts.diwa --data_dir /data/rame/data/domainbed/ --dataset ColoredMNIST --test_envs 0 --output_dir /data/rame/experiments/domainbed/erm203shhps0421cmnist --mode ens --do_ens 0 --ood_data test --trial_seed 0
+
 def set_mlflow_experiment(experiment_name):
     TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "mlruns")
     mlflow.set_tracking_uri(TRACKING_URI)

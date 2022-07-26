@@ -141,6 +141,12 @@ def main():
                 ood_results["trials"] = "_".join(
                     [get_trial(checkpoint) for checkpoint in sub_good_checkpoints]
                 )
+                ood_results["lrs"] = "_".join(
+                    [get_lr(checkpoint) for checkpoint in sub_good_checkpoints]
+                )
+                ood_results["batchsizes"] = "_".join(
+                    [get_bs(checkpoint) for checkpoint in sub_good_checkpoints]
+                )
                 ood_results["i"] = str(i)
                 gpuprint_results(inf_args, ood_results, i)
 
@@ -453,6 +459,16 @@ def get_trial(checkpoint):
     train_args = NameSpace(save_dict["args"])
     return str(train_args.trial_seed)
 
+
+def get_lr(checkpoint):
+    save_dict = torch.load(os.path.join(checkpoint, "model.pkl"))
+    train_args = NameSpace(save_dict["model_hparams"])
+    return str(train_args.lr)
+
+def get_bs(checkpoint):
+    save_dict = torch.load(os.path.join(checkpoint, "model.pkl"))
+    train_args = NameSpace(save_dict["model_hparams"])
+    return str(train_args.batch_size)
 
 def find_checkpoints(inf_args, verbose=False):
     checkpoints = [
