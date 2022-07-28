@@ -400,13 +400,15 @@ class Soup(algorithms.Ensembling):
                 targets, dict_stats, key0, key1, compute_trace, device
             )
             count += 1
-            name= "soupnet" if regex == "soup_net" else ""
+            name = regex
+            # "soupnet" if regex == "soup_net" else ""
             for key, value in _results_div.items():
                 results_div[name + key] = results_div.get(key, 0) + value
 
         for key, value in results_div.items():
             results[key + "_" + str(count)] = value
 
+        print("results_div", results_div)
         if update_temperature:
             results.update(
                 self._update_temperature_with_stats(
