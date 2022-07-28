@@ -402,12 +402,12 @@ class Soup(algorithms.Ensembling):
             count += 1
             name = "_soupnet" if regex == "soup_net" else ""
             for key, value in _results_div.items():
-                results_div[key + name] = results_div.get(key, 0) + value
+                results_div[key + name] = results_div.get(key + name, 0) + value
 
         for key, value in results_div.items():
             results[key + "_" + str(count)] = value
 
-        print("results_div", results_div)
+        # print("results_div", results_div)
         if update_temperature:
             results.update(
                 self._update_temperature_with_stats(
