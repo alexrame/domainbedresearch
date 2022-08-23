@@ -17,10 +17,11 @@ from domainbed.lib.misc import count_param, set_requires_grad, mix_up_loss, cut_
 import copy
 try:
     from torchmetrics import Precision, Recall
+    from backpack import backpack, extend
+    from backpack.extensions import BatchGrad
 except:
     Precision, Recall = None, None
-from backpack import backpack, extend
-from backpack.extensions import BatchGrad
+
 
 
 ALGORITHMS = [

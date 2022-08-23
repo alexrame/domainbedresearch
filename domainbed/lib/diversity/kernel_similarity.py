@@ -1,7 +1,10 @@
 import torch
 import torch.nn.functional as F
-from backpack import backpack
-from backpack.extensions import BatchGrad
+try:
+    from backpack import backpack
+    from backpack.extensions import BatchGrad
+except:
+    pass
 
 
 def compute_kernels(loss, classifiers, bsize, detach_first=False, center_gradients="none", all_y=None, normalize_gradients=False):
@@ -19,7 +22,7 @@ def compute_kernels(loss, classifiers, bsize, detach_first=False, center_gradien
             indexes = (all_y==val).nonzero().squeeze()
             mean = fmaps[:, indexes].mean(dim=2, keepdim=True)
             fmaps[:, indexes] = fmaps[:, indexes]  - mean
-    
+
     if normalize_gradients:
         fmaps = [fmap / fmap.norm(dim=1, keepdim=True) for fmap in fmaps]
 
@@ -79,7 +82,7 @@ def batch_cos(kernels):
     kernels: (num_kernels, bsize, bsize)
     """
     # normalize kernels
-    norm_kernels = kernels / torch.norm(kernels, dim=[1, 2], keepdim=True) 
+    norm_kernels = kernels / torch.norm(kernels, dim=[1, 2], keepdim=True)
     similarity_matrix = torch.einsum("nab,mab->nm", norm_kernels, norm_kernels)  # num_kernels, bsize, bsize
 
     sim = similarity_matrix.mean()

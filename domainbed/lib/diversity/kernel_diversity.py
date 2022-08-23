@@ -1,7 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from backpack import backpack, extend
-from backpack.extensions import BatchGrad
+try:
+    from backpack import backpack, extend
+    from backpack.extensions import BatchGrad
+except:
+    pass
 import torch
 from domainbed.lib.diversity.standard_diversity import DiversityLoss
 from domainbed.lib.diversity import kernel_similarity
